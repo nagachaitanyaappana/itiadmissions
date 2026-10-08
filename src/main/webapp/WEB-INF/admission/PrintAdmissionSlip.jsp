@@ -133,7 +133,9 @@
 <body>
 
     <jsp:include page="/WEB-INF/bannernew.jsp" />
-    <jsp:include page="/WEB-INF/authNavbar.jsp" />
+    <%-- /WEB-INF/authNavbar.jsp does not exist anywhere in the tree; the real role-aware
+         auth navbar lives under checkmeritschedule/ (same include the other auth pages use). --%>
+    <jsp:include page="/WEB-INF/checkmeritschedule/authNavbar.jsp" />
 
     <div class="container main-container">
         

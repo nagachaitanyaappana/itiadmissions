@@ -26,8 +26,18 @@
         </li>
         <li><a href="#">Admissions</a>
             <ul>
+                <li><a href="${pageContext.request.contextPath}/AdmissionCounseling/Start">ADMISSIONS PHASE 1</a></li>
+                <li><a href="${pageContext.request.contextPath}/AdmissionCounseling/Counseling">Admission Counseling (Rank)</a></li>
+                <li><a href="${pageContext.request.contextPath}/SeatMatrix">seatmatrix</a></li>
+                <li><a href="${pageContext.request.contextPath}/CallLetterView">Call Letter</a></li>
+                <li><a href="${pageContext.request.contextPath}/AddTrade">Add Trade</a></li>
                 <li><a href="${pageContext.request.contextPath}/reports/shift-unit-report">DGT Permitted Shifts Report</a></li>
                 <li><a href="${pageContext.request.contextPath}/admissions/discharge">Discharge Admission</a></li>
+                <li><a href="${pageContext.request.contextPath}/reports/shift-unit-report">DGT Permitted Shifts Report</a></li>
+                <li><a href="${pageContext.request.contextPath}/admissions/discharge">Discharge Admission</a></li>
+                <li><a href="${pageContext.request.contextPath}/ScheduleEntry">Schedule Entry</a></li>
+                <li><a href="${pageContext.request.contextPath}/DeleteScheduleEntry">Delete Schedule Entry</a></li>
+
             </ul>
         </li>
         <li><a href="#">SCVT Exams</a>

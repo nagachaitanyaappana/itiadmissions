@@ -98,10 +98,10 @@ public class HomeController {
         return "checkmeritschedule/distVerification";
     }
 
-    @GetMapping("/PrintAdmissionSlip")
-    public String printAdmissionSlip() {
-        return "checkmeritschedule/admissionIntialization";
-    }
+    // NOTE: legacy @GetMapping("/PrintAdmissionSlip") -> checkmeritschedule/admissionIntialization
+    // was removed: admission/PrintAdmissionSlipController (the newer Print Admission Slip page)
+    // also maps /PrintAdmissionSlip, and Spring fails such requests with an ambiguous-handler 500.
+    // admissionIntialization.jsp remains reachable via /dev/view/checkmeritschedule/admissionIntialization.
 
     @GetMapping("/applicant-report-by-phase")
     public String applicantReportByPhase() {
@@ -113,6 +113,11 @@ public class HomeController {
         return "reports/state-dashboard";
     }
 
+    @GetMapping("/admissions/discharge")
+    public String dischargeAdmissionLegacy() {
+        return "redirect:/admissions/discharge-admission";
+    }
+
     @GetMapping({
         "/under-construction",
         "/services/password-change",
@@ -120,7 +125,6 @@ public class HomeController {
         "/services/register-new-user",
         "/admissions/status-master",
         "/scvt/exam-initialization",
-        "/admissions/discharge",
         "/scvt/exam-verification",
         "/scvt/certificate",
         "/services/registration",
