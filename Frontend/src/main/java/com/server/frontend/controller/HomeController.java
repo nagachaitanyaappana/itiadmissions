@@ -1,0 +1,141 @@
+package com.server.frontend.controller;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class HomeController {
+
+    // ========== PUBLIC STUDENT PAGES (no session required) ==========
+
+    @GetMapping("/student-registration")
+    public String studentRegistration() {
+        return "student/StudentRegistration";
+    }
+
+    @GetMapping("/student-apply")
+    public String studentApply() {
+        return "student/StudentApply";
+    }
+
+    @GetMapping("/student-edit-details")
+    public String studentEditDetails() {
+        return "student/StudentEditDetails";
+    }
+
+    @GetMapping("/forgot-regid")
+    public String forgotRegId() {
+        return "student/ForgotRegId";
+    }
+
+    @GetMapping("/authHome")
+    public String authHome(HttpServletRequest request) {
+        HttpSession authSession = request.getSession(false);
+        if (authSession == null || authSession.getAttribute("sessionUser") == null) {
+            return "redirect:/?error=session";
+        }
+        // role 4 = ITI user -> ITI landing page; other roles get the generic welcome page for now
+        Object roleId = authSession.getAttribute("roleId");
+        if (roleId != null && "4".equals(String.valueOf(roleId))) {
+            return "jsp/authHome_iti";
+        }
+        if (roleId != null && "2".equals(String.valueOf(roleId))) {
+            return "jsp/authHome_admin";
+        }
+        if (roleId != null && "3".equals(String.valueOf(roleId))) {
+            return "jsp/authHome_district";
+        }
+        if (roleId != null && "10".equals(String.valueOf(roleId))) {
+            return "jsp/authHome_nodal";
+        }
+        return "jsp/authHome";
+    }
+
+    @GetMapping("/authHome/admin")
+    public String authHomeAdmin() {
+        return "jsp/authHome_admin";
+    }
+
+    @GetMapping("/authHome/district")
+    public String authHomeDistrict() {
+        return "jsp/authHome_district";
+    }
+
+    @GetMapping("/authHome/iti")
+    public String authHomeIti() {
+        return "jsp/authHome_iti";
+    }
+
+    @GetMapping("/authHome/nodal")
+    public String authHomeNodal() {
+        return "jsp/authHome_nodal";
+    }
+
+    @GetMapping("/MeritList")
+    public String meritList() {
+        return "checkmeritschedule/MeritList";
+    }
+
+    @GetMapping("/MeritResults")
+    public String meritResults() {
+        return "checkmeritschedule/MeritResults";
+    }
+
+    @GetMapping("/AdmissionPhase")
+    public String admissionPhase() {
+        return "checkmeritschedule/AdmissionPhase";
+    }
+
+    @GetMapping("/DgtPermittedShift")
+    public String dgtPermittedShift() {
+        return "checkmeritschedule/DscList";
+    }
+
+    @GetMapping("/VerificationReport")
+    public String verificationReport() {
+        return "checkmeritschedule/distVerification";
+    }
+
+    // NOTE: legacy @GetMapping("/PrintAdmissionSlip") -> checkmeritschedule/admissionIntialization
+    // was removed: admission/PrintAdmissionSlipController (the newer Print Admission Slip page)
+    // also maps /PrintAdmissionSlip, and Spring fails such requests with an ambiguous-handler 500.
+    // admissionIntialization.jsp remains reachable via /dev/view/checkmeritschedule/admissionIntialization.
+
+    @GetMapping("/applicant-report-by-phase")
+    public String applicantReportByPhase() {
+        return "reports/district-applicant-report-view";
+    }
+
+    @GetMapping("/nodal-report/dashboard")
+    public String nodalReportDashboard() {
+        return "reports/state-dashboard";
+    }
+
+    @GetMapping("/admissions/discharge")
+    public String dischargeAdmissionLegacy() {
+        return "redirect:/admissions/discharge-admission";
+    }
+
+    @GetMapping({
+        "/under-construction",
+        "/services/password-change",
+        "/services/dget-iti-code",
+        "/services/register-new-user",
+        "/admissions/status-master",
+        "/scvt/exam-initialization",
+        "/scvt/exam-verification",
+        "/scvt/certificate",
+        "/services/registration",
+        "/reports/DeleteAdmission_interface"
+    })
+    public String legacyModuleNotice() {
+        return "jsp/under_construction";
+    }
+
+    @GetMapping("/")
+    public String home() {
+        return "jsp/index";
+    }
+}

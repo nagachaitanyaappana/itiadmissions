@@ -1,8 +1,21 @@
+# itiadmissions monorepo root .gitignore
+# (union of the former Backend/ + Frontend/ ignores)
+
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+### Run logs / local output ###
+*.txt
+!README.md
+app_run_*.txt
+run_app.ps1
+
+### Build logs / generated ###
+*.log
+openapi.json
 
 ### STS ###
 .apt_generated
@@ -19,25 +32,16 @@ target/
 *.iml
 *.ipr
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+### AI agent scratch ###
+.kilo/
 
-### VS Code ###
-.vscode/
+### OS / editor noise ###
+.DS_Store
+Thumbs.db
+*.swp
+*~
 
-### Run logs / local output ###
-*.txt
-!README.md
-app_run_*.txt
-run_app.ps1
-
-### Local env overrides — NEVER commit real credentials ###
+### Credentials - never commit ###
 .env
 .env.*.local
+*.properties.local
