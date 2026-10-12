@@ -7,9 +7,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.server.backend.entity.AdmissionTiming;
+import com.server.backend.entity.AdmissionTimingId;
 
 public interface Admission_Timing_Repository
-        extends JpaRepository<AdmissionTiming, Long> {
+        extends JpaRepository<AdmissionTiming, AdmissionTimingId> {
 
     List<AdmissionTiming> findByMinqulAndCasteAndPhaseAndYear(
             String minqul,
