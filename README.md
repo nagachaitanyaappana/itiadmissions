@@ -7,9 +7,10 @@ Admissions-only split of the ITIAP workspace. Two Spring Boot apps, one repo.
 | Backend | `Backend/` | 6050 | yes — Frontend calls its REST API |
 | Frontend | `Frontend/` | 6051 | no — needs Backend up |
 
-## Build / run (always use the wrapper — system `mvn` breaks Lombok)
+## Build / run (always use the wrapper — system `mvn` breaks Lombok; use JDK 22)
 
 ```bash
+export JAVA_HOME=/usr/lib/jvm/jdk-22.0.2+9   # pom pins java.version=22, lombok 1.18.46
 cd Backend && ./mvnw -o clean compile   # build backend
 cd Frontend && ./mvnw -o clean test     # build frontend + run tests
 ```
