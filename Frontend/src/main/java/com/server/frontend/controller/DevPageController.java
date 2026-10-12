@@ -163,8 +163,9 @@ public class DevPageController {
         m.put("checkmeritschedule/AdmissionPhase", "/AdmissionPhase");
         m.put("checkmeritschedule/DscList", "/DgtPermittedShift");
         m.put("checkmeritschedule/distVerification", "/VerificationReport");
+        m.put("checkmeritschedule/admissionIntialization", "/PrintAdmissionSlip");
         m.put("admission/dischargeAdmission", "/admissions/discharge-admission");
-        m.put("admission/PrintAdmissionSlip", "/PrintAdmissionSlip");
+        m.put("admission/DscList", "/admissions/dsc-list");
         m.put("checkmeritschedule/ScheduleEntry", "/ScheduleEntry");
         m.put("reports/district-applicant-report-view", "/applicant-report-by-phase");
         m.put("reports/state-dashboard", "/nodal-report/dashboard");

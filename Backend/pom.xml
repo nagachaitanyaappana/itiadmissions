@@ -14,7 +14,12 @@
     <name>backend</name>
     <description>ITI Admission Backend</description>
     <properties>
-        <java.version>21</java.version>
+        <java.version>22</java.version>
+        <!-- Lombok version: Spring Boot 4.0.8 manages 1.18.46 which
+             supports JDK 22 and includes support for Flexible Constructor
+             Bodies (JEP 513, finalized in JDK 22). No longer need to pin
+             to pre-JDK22 1.18.38. -->
+        <lombok.version>1.18.46</lombok.version>
     </properties>
     <dependencies>
         <dependency>
@@ -47,6 +52,7 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+            <version>${lombok.version}</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>

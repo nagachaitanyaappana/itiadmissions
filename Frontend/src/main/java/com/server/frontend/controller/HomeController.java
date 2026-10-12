@@ -98,10 +98,10 @@ public class HomeController {
         return "checkmeritschedule/distVerification";
     }
 
-    // NOTE: legacy @GetMapping("/PrintAdmissionSlip") -> checkmeritschedule/admissionIntialization
-    // was removed: admission/PrintAdmissionSlipController (the newer Print Admission Slip page)
-    // also maps /PrintAdmissionSlip, and Spring fails such requests with an ambiguous-handler 500.
-    // admissionIntialization.jsp remains reachable via /dev/view/checkmeritschedule/admissionIntialization.
+    @GetMapping("/PrintAdmissionSlip")
+    public String printAdmissionSlip() {
+        return "checkmeritschedule/admissionIntialization";
+    }
 
     @GetMapping("/applicant-report-by-phase")
     public String applicantReportByPhase() {
