@@ -173,7 +173,8 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
         entity.setShiftAllowed(String.valueOf(entryDto.getShiftAllowed()));
         entity.setUnitAllowed(String.valueOf(entryDto.getUnitAllowed()));
         entity.setStrength(entryDto.getStrength());
-        entity.setStrengthVacant(entryDto.getStrengthVacant());
+        Integer vacant = entryDto.getStrengthVacant();
+        entity.setStrengthVacant(vacant != null ? vacant : entryDto.getStrength());
 
         return entity;
     }

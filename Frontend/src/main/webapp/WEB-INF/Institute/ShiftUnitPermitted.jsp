@@ -156,8 +156,8 @@
                         <div class="col-md-4">
                             <label class="detail-label">Available for Year</label>
                             <select class="form-select" id="availableYear">
+                                <option value="true" selected>Yes</option>
                                 <option value="false">No</option>
-                                <option value="true">Yes</option>
                             </select>
                         </div>
                     </div>
@@ -408,7 +408,7 @@
                     strength: 20,
                     shiftAllowed: 1,
                     unitAllowed: 1,
-                    strengthVacant: 0
+                    strengthVacant: 20
                 });
                 renderEntries();
                 hideMessages();

@@ -5,12 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admission Phase - AP ITI</title>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Portal stylesheets (same set as ScheduleEntry / MeritList) -->
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
     
     <style>
         :root {
@@ -285,8 +284,69 @@
 
         #printSection { display: none; }
     </style>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
+
+    <!-- Portal palette overrides (match ScheduleEntry / MeritList / index.jsp) -->
+    <style>
+        body {
+            background-color: #ffffff;
+            font-family: Verdana, Arial, sans-serif;
+            color: #1e293b;
+        }
+        h2, h3, h4, h5 { font-family: Verdana, Arial, sans-serif; font-weight: 700; }
+        .main-container { padding: 1.5rem 0 3rem; }
+
+        .form-card {
+            border: 1px solid #b9c46d;
+            border-radius: 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+        }
+        .card-header-custom {
+            background: #e4eeb9;
+            color: #000000;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .card-body-custom { padding: 30px; }
+
+        .form-label-custom {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #660000;
+            text-transform: uppercase;
+        }
+        .form-control-custom, .form-select-custom {
+            border: 1.5px solid #b9c46d;
+            border-radius: 8px;
+        }
+        .form-control-custom:focus, .form-select-custom:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 0.25rem rgba(76, 175, 80, 0.25);
+        }
+        .form-select option:hover { background-color: #b9c46d !important; color: #000000 !important; }
+
+        .btn-submit {
+            background-color: #1aab1f !important;
+            border-radius: 50px;
+            padding: 10px 30px;
+            font-weight: 700;
+        }
+        .btn-submit:hover { background-color: #3d8b40; transform: none; box-shadow: none; }
+        .btn-clear {
+            background-color: #e4eeb9;
+            color: #333333;
+            border: 1px solid #b9c46d;
+            border-radius: 50px;
+            font-weight: 700;
+        }
+
+        .table-custom thead th { background-color: #e4eeb9; color: #000000; }
+        .category-header { background: #e4eeb9 !important; border-bottom: 2px solid #b9c46d !important; }
+        .tfv-header { background: #f4f8e8 !important; }
+        .student-card { background: #ffffff; border-left: 4px solid #b9c46d; }
+        .search-input { border: 1.5px solid #b9c46d !important; border-radius: 10px; }
+        .badge-phase { background: #b9c46d; color: #ffffff; padding: 2px 10px; border-radius: 50px; }
+    </style>
 </head>
 <body>
 
@@ -344,7 +404,7 @@
         <!-- Section 2: Results Table -->
         <div id="resultsSection" style="display: none;">
             <div class="d-flex align-items-center gap-3 mb-4">
-                <div style="width: 4px; height: 24px; background: var(--primary-color); border-radius: 2px;"></div>
+                <div style="width: 4px; height: 24px; background: #b9c46d; border-radius: 2px;"></div>
                 <h4 class="mb-0">ADMISSION COUNSELLING</h4>
             </div>
             <div class="table-responsive">
@@ -603,9 +663,6 @@
         </div>
     </div>
 
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
         // Global error handling for debugging
         window.onerror = function(msg, url, line, col, error) {
@@ -674,8 +731,8 @@
                     const select = document.getElementById('casteSelect');
                     casteRes.data.forEach(item => {
                         const opt = document.createElement('option');
-                        opt.value = item.caste_code;
-                        opt.textContent = item.caste_code;
+                        opt.value = item.casteCode || item.caste_code;
+                        opt.textContent = item.casteName || item.casteCode || item.caste_code;
                         select.appendChild(opt);
                     });
                 }
