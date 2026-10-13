@@ -12,6 +12,9 @@ public class ReservationTradeDto {
     private Integer strengthFill;
     private Integer strengthVacant;
 
+    /** Sanctioned course duration in months (ititrade_master.durationyrs); shown by the trade pages. */
+    private Integer durationYrs;
+
     public ReservationTradeDto() {
     }
 

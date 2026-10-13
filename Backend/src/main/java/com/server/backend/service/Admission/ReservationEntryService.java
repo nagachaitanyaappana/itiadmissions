@@ -35,7 +35,7 @@ public class ReservationEntryService {
 
     public List<ReservationTradeDto> getTradesForIti(String itiCode) {
         List<Map<String, Object>> rows = jdbc.getJdbcTemplate().queryForList(
-                "SELECT t.trade_code, t.trade_short, m.trade_name, t.strength,"
+                "SELECT t.trade_code, t.trade_short, m.trade_name, m.durationyrs, t.strength,"
                         + " t.strength_fill, t.strength_vacant"
                         + " FROM ititrade t LEFT JOIN ititrade_master m ON m.trade_short = t.trade_short"
                         + " WHERE t.iti_code = ?"
@@ -43,13 +43,15 @@ public class ReservationEntryService {
                 itiCode);
         List<ReservationTradeDto> trades = new ArrayList<>();
         for (Map<String, Object> row : rows) {
-            trades.add(new ReservationTradeDto(
+            ReservationTradeDto dto = new ReservationTradeDto(
                     asInteger(row.get("trade_code")),
                     row.get("trade_short") == null ? null : String.valueOf(row.get("trade_short")),
                     row.get("trade_name") == null ? null : String.valueOf(row.get("trade_name")),
                     asInteger(row.get("strength")),
                     asInteger(row.get("strength_fill")),
-                    asInteger(row.get("strength_vacant"))));
+                    asInteger(row.get("strength_vacant")));
+            dto.setDurationYrs(asInteger(row.get("durationyrs")));
+            trades.add(dto);
         }
         return trades;
     }

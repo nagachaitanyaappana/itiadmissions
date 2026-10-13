@@ -69,6 +69,42 @@ function hideResult() {
     document.getElementById('btnReject').disabled = true;
 }
 
+/** Fetches the stored photo (base64 in JSON) and shows it as a data URI in both previews. */
+function loadStudentPhoto() {
+    const photoEl = document.getElementById('studentPhoto');
+    const photoLarge = document.getElementById('studentPhotoLarge');
+    const noPhotoEl = document.getElementById('noPhotoPlaceholder');
+    const noPhotoLarge = document.getElementById('noPhotoLarge');
+    fetch(`${API_BASE_URL}/api/student/photo/${encodeURIComponent(currentRegid)}`)
+        .then(r => r.json())
+        .then(payload => {
+            const b64 = payload && payload.photo ? String(payload.photo) : '';
+            if (!b64) {
+                showNoPhoto();
+                return;
+            }
+            const src = b64.startsWith('data:image') ? b64 : 'data:image/jpeg;base64,' + b64;
+            photoEl.src = src;
+            photoEl.style.display = 'block';
+            noPhotoEl.style.display = 'none';
+            photoLarge.src = src;
+            photoLarge.style.display = 'block';
+            noPhotoLarge.style.display = 'none';
+        })
+        .catch(err => {
+            console.error('Photo load failed:', err);
+            showNoPhoto();
+        });
+}
+
+/** Hides both photo previews and shows the "No Photo" placeholders. */
+function showNoPhoto() {
+    document.getElementById('studentPhoto').style.display = 'none';
+    document.getElementById('noPhotoPlaceholder').style.display = 'block';
+    document.getElementById('studentPhotoLarge').style.display = 'none';
+    document.getElementById('noPhotoLarge').style.display = 'block';
+}
+
 function renderResult(data) {
     const app = data.student;
     const marks = data.marks;
@@ -87,28 +123,13 @@ function renderResult(data) {
     badge.style.fontSize = '12px';
     badge.style.fontWeight = 'bold';
 
-    // Student photo (small)
-    const photoEl = document.getElementById('studentPhoto');
-    const noPhotoEl = document.getElementById('noPhotoPlaceholder');
+    // Student photo. The backend's GET /api/student/photo/{regid} returns the image *base64 in
+    // JSON* ({"regid":..,"photo":"..."}), not raw image bytes. Pointing <img src=...> straight at
+    // it made the browser receive JSON and render nothing, so fetch it and embed a data URI.
     if (data.hasPhoto) {
-        photoEl.src = `${API_BASE_URL}/api/student/photo/${encodeURIComponent(currentRegid)}`;
-        photoEl.style.display = 'block';
-        noPhotoEl.style.display = 'none';
+        loadStudentPhoto();
     } else {
-        photoEl.style.display = 'none';
-        noPhotoEl.style.display = 'block';
-    }
-
-    // Student photo (large)
-    const photoLarge = document.getElementById('studentPhotoLarge');
-    const noPhotoLarge = document.getElementById('noPhotoLarge');
-    if (data.hasPhoto) {
-        photoLarge.src = `${API_BASE_URL}/api/student/photo/${encodeURIComponent(currentRegid)}`;
-        photoLarge.style.display = 'block';
-        document.getElementById('noPhotoLarge').style.display = 'none';
-    } else {
-        photoLarge.style.display = 'none';
-        document.getElementById('noPhotoLarge').style.display = 'block';
+        showNoPhoto();
     }
 
     // Personal details

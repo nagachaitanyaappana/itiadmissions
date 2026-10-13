@@ -26,8 +26,8 @@
         </li>
         <li><a href="#">Admissions</a>
             <ul>
-                <li><a href="${pageContext.request.contextPath}/AdmissionCounseling/Start">ADMISSIONS PHASE 1</a></li>
-                <li><a href="${pageContext.request.contextPath}/AdmissionCounseling/Counseling">Admission Counseling (Rank)</a></li>
+                <li><a href="${pageContext.request.contextPath}/AdmissionPhase">ADMISSIONS PHASE 1</a></li>
+                <li><a href="${pageContext.request.contextPath}/AdmissionPhase">Admission Counseling (Rank)</a></li>
                 <li><a href="${pageContext.request.contextPath}/SeatMatrix">seatmatrix</a></li>
                 <li><a href="${pageContext.request.contextPath}/CallLetterView">Call Letter</a></li>
                 <li><a href="${pageContext.request.contextPath}/AddTrade">Add Trade</a></li>

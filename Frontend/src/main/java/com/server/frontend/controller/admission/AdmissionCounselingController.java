@@ -61,7 +61,22 @@ public class AdmissionCounselingController {
 
     /** Timeout + small result cache so repeat rank lookups feel instant. */
     private static final long RESOLVE_TIMEOUT_MS = 25000L;
-    private static final Map<String, Object> RESOLVE_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * Rank resolution is cached only briefly. The rank -> candidate mapping is not immutable: it
+     * changes every time the merit list is regenerated (a rank can start pointing at a different
+     * regid, or the candidate's details can change). An entry that never expires therefore keeps
+     * serving a superseded candidate for the life of the JVM -- the counseling page showed an old
+     * candidate after a fresh merit run because of exactly that. Entries older than this TTL are
+     * treated as misses and re-resolved from the backend.
+     */
+    private static final long RESOLVE_CACHE_TTL_MS = 30000L;
+
+    private static final Map<String, CacheEntry> RESOLVE_CACHE = new ConcurrentHashMap<>();
+
+    /** A cached resolve result plus the instant it stops being served. */
+    private record CacheEntry(Object value, long expiresAt) {
+    }
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
@@ -232,7 +247,8 @@ public class AdmissionCounselingController {
                                                    HttpServletRequest request) {
         String ins = sessionValue(request, "insCode");
         String key = ins + "|" + rank + "|" + phase + "|" + year;
-        if (RESOLVE_CACHE.containsKey(key)) return ResponseEntity.ok(RESOLVE_CACHE.get(key));
+        Object cached = cacheGet(key);
+        if (cached != null) return ResponseEntity.ok(cached);
 
         // 1) primary path: the verified rank-lookup, scoped to the caller's district/ITI. The old
         // primary (GET /admission/candidate) returned a row with every field null -- its entity/DTO
@@ -240,13 +256,13 @@ public class AdmissionCounselingController {
         // rank String->Integer) -- so the page always rendered an empty candidate.
         Map<String, Object> resolved = resolveFromRankLookup(rank, phase, year, request);
         if (resolved != null) {
-            RESOLVE_CACHE.put(key, resolved);
+            cachePut(key, resolved);
             return ResponseEntity.ok(resolved);
         }
         // 2) fallback scan below (parallel student-details merit match, bounded)
         Map<String, Object> fb = fallbackByMerit(rank, phase, year);
         if (fb != null) {
-            RESOLVE_CACHE.put(key, fb);
+            cachePut(key, fb);
             return ResponseEntity.ok(fb);
         }
         Map<String, Object> out = new LinkedHashMap<>();
@@ -256,6 +272,24 @@ public class AdmissionCounselingController {
         out.put("year", year);
         out.put("candidate", null);
         return ResponseEntity.ok(out);
+    }
+
+    /** Returns a still-fresh cached resolve, or null (evicting the entry) once its TTL elapsed. */
+    private static Object cacheGet(String key) {
+        CacheEntry entry = RESOLVE_CACHE.get(key);
+        if (entry == null) {
+            return null;
+        }
+        if (System.currentTimeMillis() >= entry.expiresAt()) {
+            RESOLVE_CACHE.remove(key);
+            return null;
+        }
+        return entry.value();
+    }
+
+    /** Stores a resolve result that stays valid for {@link #RESOLVE_CACHE_TTL_MS}. */
+    private static void cachePut(String key, Object value) {
+        RESOLVE_CACHE.put(key, new CacheEntry(value, System.currentTimeMillis() + RESOLVE_CACHE_TTL_MS));
     }
 
     /**
