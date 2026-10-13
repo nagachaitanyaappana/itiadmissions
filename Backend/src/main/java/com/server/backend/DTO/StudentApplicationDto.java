@@ -16,6 +16,11 @@ public class StudentApplicationDto {
 
     private Integer regid;
 
+    // Set on the /api/student/save response when an application already exists for the
+    // submitted SSC registration number and the entered details match, so the page resumes
+    // the existing regid instead of creating a duplicate. Not a persisted column.
+    private Boolean resumed;
+
     private String sscRegNo;
     private String sscBoard;
     private String sscYear;

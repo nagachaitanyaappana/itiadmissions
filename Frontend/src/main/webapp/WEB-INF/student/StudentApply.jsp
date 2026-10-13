@@ -430,7 +430,9 @@
                         },
                         error: function (xhr) {
                             setApplySubmitting(false);
-                            alert("Failed to save application details. Please check the values and try again.");
+                            var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message
+                                : "Failed to save application details. Please check the values and try again.";
+                            alert(msg);
                         }
                     });
                 }

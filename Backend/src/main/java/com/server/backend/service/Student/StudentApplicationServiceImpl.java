@@ -19,6 +19,7 @@ import com.server.backend.Repository.Student.SubCasteMasterPublicRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Service
 public class StudentApplicationServiceImpl implements StudentApplicationService {
@@ -56,6 +57,33 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
     @Override
     public StudentApplicationDto saveStudent(StudentApplicationDto dto) {
 
+        // ssc_regno de-duplication (legacy open_Application_Step1Action /
+        // open_Application_InterfaceAction_Student): if an application already exists for this
+        // hall ticket, resume it when the entered board/year/type match, otherwise block the
+        // duplicate outright. No new regid is ever issued for an already-used hall ticket.
+        String sscRegNo = dto.getSscRegNo() == null ? null : dto.getSscRegNo().trim();
+        if (sscRegNo != null && !sscRegNo.isEmpty()) {
+            List<Map<String, Object>> existing = jdbcTemplate.queryForList(
+                    "SELECT regid, ssc_board, ssc_year, ssc_type FROM student_application "
+                            + "WHERE upper(trim(ssc_regno)) = upper(?)",
+                    sscRegNo);
+            if (!existing.isEmpty()) {
+                Map<String, Object> row = existing.get(0);
+                boolean matches = equalsNormalized(dto.getSscBoard(), row.get("ssc_board"))
+                        && equalsNormalized(dto.getSscYear(), row.get("ssc_year"))
+                        && equalsNormalized(dto.getSscType(), row.get("ssc_type"));
+                if (!matches) {
+                    throw new IllegalArgumentException(
+                            "Details do not match the existing application for this SSC Registration Number.");
+                }
+                StudentApplicationDto resumed = new StudentApplicationDto();
+                resumed.setRegid(toIntegerId(str(row.get("regid"))));
+                resumed.setSscRegNo(sscRegNo);
+                resumed.setResumed(true);
+                return resumed;
+            }
+        }
+
         StudentApplication entity = new StudentApplication();
 
         // Copy request fields
@@ -74,6 +102,20 @@ entity.setSscPassed(true);
         StudentApplication saved = repository.save(entity);
 
         return toDto(saved);
+    }
+
+    /** Null-safe, trim- and case-insensitive comparison of a submitted vs. stored value. */
+    private static boolean equalsNormalized(Object a, Object b) {
+        String sa = a == null ? null : a.toString().trim();
+        String sb = b == null ? null : b.toString().trim();
+        if (sa == null || sb == null) {
+            return sa == null && sb == null;
+        }
+        return sa.equalsIgnoreCase(sb);
+    }
+
+    private static String str(Object o) {
+        return o == null ? null : o.toString();
     }
 
     /** regid is stored as character varying; the JSON API exposes it as a number. */
@@ -119,7 +161,8 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
 
         String propertyName = pd.getName();
 
-        if ("class".equals(propertyName) || "regid".equals(propertyName)) {
+        if ("class".equals(propertyName) || "regid".equals(propertyName)
+                || "resumed".equals(propertyName)) {
             continue;
         }
 
@@ -143,10 +186,40 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
         entity.setPhase(currentPhase);
     }
 
+    // Phone / e-mail / Aadhaar must be unique across candidates (legacy
+    // open_Application_InterfaceAction_Student). Exclude the candidate's own regid so an edit
+    // that leaves these values unchanged is still allowed.
+    assertUnique("phno", entity.getPhno(), regid,
+            "Given Phone is already available for another candidate.");
+    assertUnique("email", entity.getEmail(), regid,
+            "Given Email is already available for another candidate.");
+    assertUnique("adarno", entity.getAdarno(), regid,
+            "Given Aadhaar Number is already available for another candidate.");
+
     StudentApplication updated = repository.save(entity);
 
     return toDto(updated);
 }
+
+    /**
+     * Blocks a save when value already belongs to a different candidate. column is always a
+     * fixed literal supplied by this class (never client input). Blank strings are treated as
+     * absent so an empty e-mail/Aadhaar is not flagged as a duplicate.
+     */
+    private void assertUnique(String column, Object value, Integer selfRegid, String message) {
+        if (value == null) {
+            return;
+        }
+        if (value instanceof CharSequence cs && cs.toString().trim().isEmpty()) {
+            return;
+        }
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM student_application WHERE " + column + " = ? AND regid::text <> ?",
+                Integer.class, value, String.valueOf(selfRegid));
+        if (count != null && count > 0) {
+            throw new IllegalArgumentException(message);
+        }
+    }
 
     @Override
     public StudentApplicationDto getStudentById(Integer regid) {

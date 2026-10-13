@@ -411,8 +411,10 @@
                             document.getElementById("editDiv").style.display = "none";
                             window.scrollTo(0, 0);
                         },
-                        error: function () {
-                            alert("Failed to update details. Please check the values and try again.");
+                        error: function (xhr) {
+                            var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message
+                                : "Failed to update details. Please check the values and try again.";
+                            alert(msg);
                         }
                     });
                     return false;

@@ -26,7 +26,14 @@ public class StudentApplicationController {
     public ResponseEntity<StudentApplicationDto> saveStudent(
             @RequestBody StudentApplicationDto dto) {
 
-        return new ResponseEntity<>(service.saveStudent(dto), HttpStatus.CREATED);
+        StudentApplicationDto saved = service.saveStudent(dto);
+
+        // 200 when the hall ticket already had an application and the details matched (the
+        // page resumes the existing regid); 201 only when a new application was created.
+        if (Boolean.TRUE.equals(saved.getResumed())) {
+            return ResponseEntity.ok(saved);
+        }
+        return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }
 
     // Get Student By RegId

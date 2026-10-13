@@ -292,10 +292,18 @@
                         contentType: 'application/json',
                         data: JSON.stringify(payload),
                         success: function (student) {
+                            var resumed = student && student.resumed === true;
+                            var heading = resumed
+                                ? 'Already Registered for this SSC Hall Ticket'
+                                : 'Registration Successful!';
+                            var regLine = resumed
+                                ? '<p style="font-size:18px;color:#155724;">An application already exists for this SSC Hall Ticket Number and the details match. '
+                                  + 'Your existing Registration ID is: <b>' + student.regid + '</b></p>'
+                                : '<p style="font-size:18px;color:#155724;">Your Registration ID is: <b>' + student.regid + '</b></p>';
                             $('#regResult').html(
                                 '<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:60%;">'
-                                + '<h3 style="color:#155724;">Registration Successful!</h3>'
-                                + '<p style="font-size:18px;color:#155724;">Your Registration ID is: <b>' + student.regid + '</b></p>'
+                                + '<h3 style="color:#155724;">' + heading + '</h3>'
+                                + regLine
                                 + '<p style="color:#155724;">Please note down your Registration ID. '
                                 + 'You will need it for the application, edit and all further steps.</p>'
                                 + '<p><a href="${pageContext.request.contextPath}/student-apply">Click here to proceed to Step 2 - Application to apply for ITI</a></p>'

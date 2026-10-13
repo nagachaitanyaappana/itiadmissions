@@ -189,7 +189,7 @@ public class MeritListService {
             "rank_generation AS (\n" +
             "    SELECT \n" +
             "        regid, \n" +
-            "        RANK() OVER (\n" +
+            "        ROW_NUMBER() OVER (\n" +
             "            ORDER BY \n" +
             "                ssc_passed DESC, \n" +
             String.format(safeGpa, "ssc_tot_gpa") + " DESC NULLS LAST, \n" +
@@ -205,9 +205,10 @@ public class MeritListService {
             "    FROM (\n" +
             "        SELECT a.name, a.regid, a.dob, a.ssc_passed, b.ssc_tot_gpa, b.ssc_math_gpa, b.ssc_sci_gpa, b.ssc_social_gpa, b.ssc_eng_gpa, b.ssc_first_lang_gpa, b.ssc_second_lang_gpa\n" +
             "        FROM application a\n" +
-            // student_cand_marks is one row per regid (PRIMARY KEY since the 2026-09-30
-            // cleanup; re-saves overwrite via upsert). DISTINCT kept as a harmless guard.
-            "        LEFT JOIN (SELECT DISTINCT * FROM student_cand_marks) b ON a.regid::character varying = b.regid\n" +
+            // cand_marks is the promoted marks table (one row per regid), matching the legacy
+            // merit source. student_cand_marks is the per-phase staging table that is only
+            // promoted to cand_marks at verification, so ranking off it would miss/duplicate.
+            "        LEFT JOIN (SELECT DISTINCT * FROM cand_marks) b ON a.regid::character varying = b.regid\n" +
             "        WHERE hstore(a.phase)->:phase = 'true'\n" +
             "        AND a.app_status = 'A'\n" +
             "        AND EXISTS (\n" +

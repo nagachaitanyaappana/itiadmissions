@@ -51,6 +51,9 @@ public class AdmissionProcessService {
     /** Merit ranks are 1-based and are submitted as text; only digits are accepted. */
     private static final String NUMERIC = "^[0-9]+$";
 
+    /** Legacy {@code statecode} used to build {@code htno} (DistrictAdmissionAction). */
+    private static final String STATE_CODE = "28";
+
     private final NamedParameterJdbcTemplate jdbc;
 
     public AdmissionProcessService(NamedParameterJdbcTemplate jdbc) {
@@ -394,20 +397,25 @@ public class AdmissionProcessService {
 
     private static final String INSERT_ADMISSION_SQL = """
             INSERT INTO admissions.iti_admissions
-                (adm_num, regid, name, fname, addr, mname, phno, gender, caste, dob, phc, exservice,
-                 iti_code, dist_code, trade_code, year_of_admission, phase, date_of_admission,
-                 type_admission, idmarks1, idmarks2, ssc_regno, ssc_board, ssc_year, ssc_month, mode_adm,
-                 shift, unit)
+                (adm_num, regid, name, fname, addr, mname, phno, adarno, gender, caste,
+                 ssc_passed, inter_passed, inter_marks, local, pincode, dob, phc, exservice,
+                 iti_code, trade_code, res_category, year_of_admission, trno, dist_code, mode_adm,
+                 fromd_training, tod_training, idmarks1, idmarks2, ssc_regno, ssc_board, ssc_year,
+                 ssc_month, date_of_admission, type_admission, phase, htno, sem_nonsem,
+                 dgettrade_code, email_id, pwd_category, sub_caste, shift, unit)
             SELECT :admNum,
                    c.regid::text,
-                   c.name, c.fname, c.addr, c.mname, c.phno, c.gender, c.caste, c.dob, c.phc, c.exservice,
-                   :itiCode, :distCode, :tradeCode, :year, :phase, CURRENT_DATE,
-                   :typeAdmission, :idmarks1, :idmarks2,
+                   c.name, c.fname, c.addr, c.mname, c.phno, c.adarno, c.gender, c.caste,
+                   c.ssc_passed, c.inter_passed, c.inter_marks, c.local, c.pincode, c.dob,
+                   c.phc, c.exservice,
+                   :itiCode, :tradeCode, :resCategory, :year, :trno, :distCode, :modeAdmission,
+                   :fromdTraining, :todTraining, :idmarks1, :idmarks2,
                    COALESCE(NULLIF(:sscRegno, ''), c.ssc_regno),
                    COALESCE(NULLIF(:sscBoard, ''), c.ssc_board),
                    COALESCE(NULLIF(:sscYear,  ''), c.ssc_year),
                    COALESCE(NULLIF(:sscMonth, ''), c.ssc_month),
-                   :modeAdmission,
+                   CURRENT_DATE, :typeAdmission, :phase, :htno, :semNonsem,
+                   :dgetTradeCode, c.email, c.pwd_category, c.sub_caste,
                    :shift, :unit
             FROM public.%s c
             WHERE c.regid = CAST(:regid AS integer)
@@ -519,7 +527,38 @@ public class AdmissionProcessService {
         }
         Map<String, Object> candidate = candidateRows.get(0);
 
-        String admNum = nextAdmissionNumber(itiCode, tradeShort, year);
+        String admNum = nextAdmissionNumber(itiCode, tradeCode, tradeShort, year);
+
+        // Training dates, exam identifiers and reservation code for the legacy columns the rewrite
+        // used to omit (see INSERT_ADMISSION_SQL). fromd/tod follow the legacy 01-08 run: the
+        // course starts 01-08-<yy> and ends the day before the same date after the trade's
+        // duration in MONTHS (ititrade_master.durationyrs holds 6/12/24). Legacy added the raw
+        // month count to the 2-digit year (a 2021 two-year course ended in 2045); we store the
+        // correct month-based end date instead.
+        String yy = year.length() >= 2 ? year.substring(year.length() - 2) : year;
+        java.time.LocalDate fromdTraining;
+        java.time.LocalDate todTraining;
+        try {
+            fromdTraining = java.time.LocalDate.of(2000 + Integer.parseInt(yy), 8, 1);
+            Integer durationMonths = jdbc.getJdbcTemplate().queryForObject(
+                    "SELECT durationyrs FROM public.ititrade_master WHERE trade_code = ?",
+                    Integer.class, tradeCode);
+            todTraining = (durationMonths == null)
+                    ? fromdTraining
+                    : fromdTraining.plusMonths(durationMonths).minusDays(1);
+        } catch (NumberFormatException ex) {
+            fromdTraining = null;
+            todTraining = null;
+        }
+
+        Map<String, Object> dget = dgetTradeMeta(tradeCode);
+        String dgetTradeCode = text(dget.get("dget_tradecode"));
+        String noOfSem = text(dget.get("noofsem"));
+        String htno = buildHtno(distCode, dgetTradeCode, noOfSem, year);
+
+        String semNonsem = "N".equalsIgnoreCase(typeAdmission) ? "SEM" : "NONSEM";
+        String resCategory = categoryBucket(candidate);
+        Long trno = jdbc.getJdbcTemplate().queryForObject("SELECT nextval('trno_seq')", Long.class);
 
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("admNum", admNum)
@@ -537,6 +576,13 @@ public class AdmissionProcessService {
                 .addValue("sscYear", emptyToNull(request.sscYear()))
                 .addValue("sscMonth", emptyToNull(request.sscMonth()))
                 .addValue("modeAdmission", DEFAULT_MODE_OF_ADMISSION)
+                .addValue("fromdTraining", fromdTraining)
+                .addValue("todTraining", todTraining)
+                .addValue("resCategory", resCategory)
+                .addValue("trno", trno)
+                .addValue("htno", htno)
+                .addValue("semNonsem", semNonsem)
+                .addValue("dgetTradeCode", dgetTradeCode)
                 .addValue("shift", shift)
                 .addValue("unit", unit);
 
@@ -587,18 +633,34 @@ public class AdmissionProcessService {
     /**
      * {@code <iti_code><trade_short><yy>} plus the next free serial, e.g. {@code 1536FI25012}.
      *
-     * <p>The serial is the highest one already recorded for that prefix, so numbers continue the
-     * published series instead of restarting.
+     * <p>Mirrors legacy {@code Select_tradeAction}: the serial is the highest 3-digit group at
+     * offset 9 of {@code adm_num} across <em>both</em> the live admissions table and the 13M-row
+     * {@code admissions.iti_admissions_archive}. The live table is empty in this database, so
+     * without the union every new admission would restart at {@code 001} and collide with the
+     * archived series. {@code adm_num} = {@code iti_code(4)+trade_short(2)+yy(2)+serial(3)}; the
+     * legacy rows whose {@code length(adm_num)!=9} and whose {@code regid} is null are ignored,
+     * exactly as the legacy query did.
      */
-    private String nextAdmissionNumber(String itiCode, String tradeShort, String year) {
+    private String nextAdmissionNumber(String itiCode, int tradeCode, String tradeShort, String year) {
         String yy = year.length() >= 2 ? year.substring(year.length() - 2) : year;
         String prefix = itiCode + tradeShort + yy;
-        int serialStart = prefix.length() + 1;
         Integer highest = jdbc.getJdbcTemplate().queryForObject(
-                "SELECT COALESCE(MAX(SUBSTRING(adm_num FROM " + serialStart + ")::int), 0) "
-                        + "FROM admissions.iti_admissions "
-                        + "WHERE adm_num LIKE ? AND SUBSTRING(adm_num FROM " + serialStart + ") ~ '^[0-9]+$'",
-                Integer.class, prefix + "%");
+                "SELECT MAX(serial) FROM ("
+                        + "  SELECT SUBSTRING(adm_num FROM 9 FOR 3)::int AS serial "
+                        + "  FROM admissions.iti_admissions "
+                        + "  WHERE iti_code = ? AND trade_code = ? AND year_of_admission = ? "
+                        + "    AND LENGTH(adm_num) != 9 AND regid IS NOT NULL "
+                        + "    AND SUBSTRING(adm_num FROM 9 FOR 3) ~ '^[0-9]+$' "
+                        + "  UNION ALL "
+                        + "  SELECT SUBSTRING(adm_num FROM 9 FOR 3)::int AS serial "
+                        + "  FROM admissions.iti_admissions_archive "
+                        + "  WHERE iti_code = ? AND trade_code = ? AND year_of_admission = ? "
+                        + "    AND LENGTH(adm_num) != 9 AND regid IS NOT NULL "
+                        + "    AND SUBSTRING(adm_num FROM 9 FOR 3) ~ '^[0-9]+$' "
+                        + ") c",
+                Integer.class,
+                itiCode, tradeCode, year,
+                itiCode, tradeCode, year);
         int next = (highest == null ? 0 : highest) + 1;
         if (next > 999) {
             logger.warn("Admission serial for {} passed 999 ({}); admission numbers will grow a digit",
@@ -722,6 +784,50 @@ public class AdmissionProcessService {
         String text = text(value);
         return "t".equalsIgnoreCase(text) || "true".equalsIgnoreCase(text)
                 || "y".equalsIgnoreCase(text) || "1".equals(text);
+    }
+
+    /** DGT exam metadata for a trade ({@code dgettrade_code}/{@code noofsem}), or empty. */
+    private Map<String, Object> dgetTradeMeta(int tradeCode) {
+        // dget_trademaster.trade_code is character varying (ititrade_master.trade_code is integer),
+        // so compare as text to avoid a varchar = integer error at runtime.
+        List<Map<String, Object>> rows = jdbc.getJdbcTemplate().queryForList(
+                "SELECT dget_tradecode, noofsem FROM public.dget_trademaster WHERE trade_code = ?",
+                String.valueOf(tradeCode));
+        return rows.isEmpty() ? new HashMap<>() : rows.get(0);
+    }
+
+    /**
+     * Builds the DGT hall-ticket number for the candidate:
+     * {@code state(2)+dget_tradecode(3)+noofsem(1)+yy(2)+dist(2)+serial(4)}, e.g.
+     * {@code 28096226120001}. Mirrors legacy {@code DistrictAdmissionAction}, including its
+     * {@code sem_nonsem='SEM'} filter for the running serial. That legacy query read only the live
+     * table, which is empty here, so the archive is unioned too — otherwise every new hall ticket
+     * would restart at {@code 0001} and collide with the archived series. Returns null when the
+     * trade has no DGT mapping (nothing sensible to build).
+     */
+    private String buildHtno(String distCode, String dgetTradeCode, String noOfSem, String year) {
+        if (blank(dgetTradeCode) || blank(noOfSem) || blank(distCode) || blank(year)) {
+            return null;
+        }
+        String yy = year.length() >= 2 ? year.substring(year.length() - 2) : year;
+        String prefix = STATE_CODE + dgetTradeCode + noOfSem + yy + distCode;
+        Integer highest = jdbc.getJdbcTemplate().queryForObject(
+                "SELECT MAX(serial) FROM ("
+                        + "  SELECT SUBSTRING(htno FROM 11 FOR 4)::int AS serial "
+                        + "  FROM admissions.iti_admissions "
+                        + "  WHERE dist_code = ? AND sem_nonsem = 'SEM' AND dgettrade_code = ? "
+                        + "    AND year_of_admission = ? AND SUBSTRING(htno FROM 11 FOR 4) ~ '^[0-9]+$' "
+                        + "  UNION ALL "
+                        + "  SELECT SUBSTRING(htno FROM 11 FOR 4)::int AS serial "
+                        + "  FROM admissions.iti_admissions_archive "
+                        + "  WHERE dist_code = ? AND sem_nonsem = 'SEM' AND dgettrade_code = ? "
+                        + "    AND year_of_admission = ? AND SUBSTRING(htno FROM 11 FOR 4) ~ '^[0-9]+$' "
+                        + ") c",
+                Integer.class,
+                distCode, dgetTradeCode, year,
+                distCode, dgetTradeCode, year);
+        int next = (highest == null ? 0 : highest) + 1;
+        return prefix + String.format("%04d", next);
     }
 
     // ------------------------------------------------------------------ helpers
