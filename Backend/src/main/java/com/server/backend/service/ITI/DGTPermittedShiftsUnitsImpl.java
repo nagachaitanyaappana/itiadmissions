@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +21,12 @@ import com.server.backend.Repository.ITI.ShiftUnitPermittedRepository;
 public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
     private final ShiftUnitPermittedRepository repository;
+    private final NamedParameterJdbcTemplate jdbc;
 
-    public DGTPermittedShiftsUnitsImpl(ShiftUnitPermittedRepository repository) {
+    public DGTPermittedShiftsUnitsImpl(ShiftUnitPermittedRepository repository,
+            NamedParameterJdbcTemplate jdbc) {
         this.repository = repository;
+        this.jdbc = jdbc;
     }
 
     @Override
@@ -32,6 +36,16 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
         // 1. Validate all entries together (including duplicate check)
         validateEntries(dto.getEntries());
 
+        // Strength is not entered on this screen any more: it always mirrors the sanctioned
+        // strength recorded against the trade in Add Trade (ititrade.strength), so a permitted
+        // shift/unit can never drift out of sync with the trade.
+        Integer tradeStrength = lookUpTradeStrength(dto.getItiCode(), dto.getTradeCode());
+        if (tradeStrength == null) {
+            throw new IllegalArgumentException("Trade " + dto.getTradeCode()
+                    + " is not sanctioned for ITI " + dto.getItiCode()
+                    + "; add the trade first");
+        }
+
         // 2. Delete all existing records for this ITI + Trade
         repository.deleteByItiCodeAndTradeCode(dto.getItiCode(), dto.getTradeCode());
 
@@ -40,7 +54,7 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
         List<ShiftUnitPermitted> entitiesToSave = new ArrayList<>();
         for (ShiftUnitEntryDto entryDto : dto.getEntries()) {
-            ShiftUnitPermitted entity = mapToEntity(dto, entryDto);
+            ShiftUnitPermitted entity = mapToEntity(dto, entryDto, tradeStrength);
             entitiesToSave.add(entity);
         }
         
@@ -50,7 +64,7 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
         }
 
         // 4. Build and return response
-        return buildResponse(dto, savedEntries);
+        return buildResponse(dto, savedEntries, tradeStrength);
     }
 
     @Override
@@ -63,7 +77,11 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
                 itiCode, tradeCode);
 
         if (entities.isEmpty()) {
-            return new ShiftUnitPermittedResponseDto();
+            ShiftUnitPermittedResponseDto empty = new ShiftUnitPermittedResponseDto();
+            empty.setItiCode(itiCode);
+            empty.setTradeCode(tradeCode);
+            empty.setTradeStrength(lookUpTradeStrength(itiCode, tradeCode));
+            return empty;
         }
 
         List<ShiftUnitEntryDto> entries = entities.stream()
@@ -74,6 +92,7 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
         response.setItiCode(itiCode);
         response.setTradeCode(tradeCode);
         response.setAvailableYear(entities.get(0).getAvailableYear());
+        response.setTradeStrength(lookUpTradeStrength(itiCode, tradeCode));
         response.setEntries(entries);
 
         return response;
@@ -125,14 +144,6 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
     private void validateEntry(ShiftUnitEntryDto dto) {
 
-        // Strength: only 20 or 24
-        if (dto.getStrength() == null ||
-                (dto.getStrength() != 20 && dto.getStrength() != 24)) {
-
-            throw new IllegalArgumentException(
-                    "Strength must be either 20 or 24");
-        }
-
         // Shift: only 1 to 3
         if (dto.getShiftAllowed() == null ||
                 dto.getShiftAllowed() < 1 || dto.getShiftAllowed() > 3) {
@@ -162,7 +173,8 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
     private ShiftUnitPermitted mapToEntity(
             ShiftUnitPermittedRequestDto requestDto,
-            ShiftUnitEntryDto entryDto) {
+            ShiftUnitEntryDto entryDto,
+            Integer tradeStrength) {
 
         ShiftUnitPermitted entity = new ShiftUnitPermitted();
 
@@ -172,11 +184,25 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
         entity.setShiftAllowed(String.valueOf(entryDto.getShiftAllowed()));
         entity.setUnitAllowed(String.valueOf(entryDto.getUnitAllowed()));
-        entity.setStrength(entryDto.getStrength());
+        // Strength is derived from Add Trade; the entry's value is ignored. Vacant still honours a
+        // value the caller sends (so an existing consumed count survives a resave), else defaults
+        // to the full strength.
+        entity.setStrength(tradeStrength);
         Integer vacant = entryDto.getStrengthVacant();
-        entity.setStrengthVacant(vacant != null ? vacant : entryDto.getStrength());
+        entity.setStrengthVacant(vacant != null ? vacant : tradeStrength);
 
         return entity;
+    }
+
+    /** Sanctioned strength recorded for the trade in Add Trade ({@code ititrade.strength}). */
+    private Integer lookUpTradeStrength(String itiCode, String tradeCode) {
+        if (tradeCode == null || !tradeCode.trim().matches("-?\\d+")) {
+            return null;
+        }
+        List<Integer> rows = jdbc.getJdbcTemplate().queryForList(
+                "SELECT strength FROM public.ititrade WHERE iti_code = ? AND trade_code = ?",
+                Integer.class, itiCode, Integer.valueOf(tradeCode.trim()));
+        return rows.isEmpty() ? null : rows.get(0);
     }
 
     private ShiftUnitEntryDto mapToEntryDto(ShiftUnitPermitted entity) {
@@ -193,13 +219,15 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
     private ShiftUnitPermittedResponseDto buildResponse(
             ShiftUnitPermittedRequestDto requestDto,
-            List<ShiftUnitEntryDto> entries) {
+            List<ShiftUnitEntryDto> entries,
+            Integer tradeStrength) {
 
         ShiftUnitPermittedResponseDto response = new ShiftUnitPermittedResponseDto();
 
         response.setItiCode(requestDto.getItiCode());
         response.setTradeCode(requestDto.getTradeCode());
         response.setAvailableYear(requestDto.getAvailableYear());
+        response.setTradeStrength(tradeStrength);
         response.setEntries(entries);
 
         return response;

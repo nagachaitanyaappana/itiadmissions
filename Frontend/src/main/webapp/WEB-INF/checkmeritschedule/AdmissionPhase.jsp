@@ -382,15 +382,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label-custom">Admission Timings (HH:MM):</label>
-                            <div class="d-flex gap-2">
-                                <select id="hour" class="form-select form-select-custom">
-                                    <option value="">HH</option>
-                                    <% for(int i=0; i<24; i++){ %>
-                                        <option value="<%= String.format("%02d", i) %>"><%= String.format("%02d", i) %></option>
-                                    <% } %>
-                                </select>
-                                <input type="number" id="minute" class="form-control form-control-custom" placeholder="MM" min="0" max="59" step="1" oninput="if(value > 59) value=59; if(value < 0) value=0;">
-                            </div>
+                            <input type="time" id="timeSelect" class="form-control form-control-custom">
                         </div>
                         <div class="col-md-2 text-center">
                             <button type="submit" class="btn btn-submit btn-success w-100">Submit</button>
@@ -838,16 +830,14 @@
             const caste = document.getElementById('casteSelect').value;
             const minqul = document.getElementById('qualSelect').value;
             const date = document.getElementById('dateSelect').value;
-            const h = document.getElementById('hour').value;
-            const m = document.getElementById('minute').value;
-            
+            const time = document.getElementById('timeSelect').value;
+
             const payload = { caste, minqul };
             if (date) {
                 payload.cal_date = date;
             }
-            if (h && m) {
-                const paddedM = m.toString().padStart(2, '0');
-                payload.cal_time = `\${h}:\${paddedM}`;
+            if (time) {
+                payload.cal_time = time;
             }
 
             try {

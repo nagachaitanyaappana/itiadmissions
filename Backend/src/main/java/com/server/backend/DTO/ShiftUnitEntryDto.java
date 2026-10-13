@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class ShiftUnitEntryDto {
 
-    @NotNull(message = "Strength is required")
+    /** Ignored on save: strength is derived from the trade's sanctioned strength (Add Trade). */
     private Integer strength;
 
     @NotNull(message = "Shift allowed is required")
