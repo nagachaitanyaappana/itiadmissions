@@ -1205,33 +1205,24 @@ public class ReportServiceImpl implements ReportService {
             ));
         }
 
-        // 5. Merit list
+        // 5. Merit list (single ranks table, scoped by regid; phase distinguishes phases)
         List<MeritListDetail> meritList = new ArrayList<>();
-        String[] ranksTables = {
-                "public.ranks" + detectedYear + "phase1",
-                "public.ranks" + detectedYear + "phase2",
-                "public.ranks" + detectedYear + "phase3",
-                "public.ranks" + detectedYear + "phase4",
-                "public.ranks" + detectedYear + "phase5"
-        };
-        for (String ranksTable : ranksTables) {
-            String meritSql = "SELECT d.dist_name, i.iti_name, r.rank, r.phase, r.qual AS qualification " +
-                    "FROM " + ranksTable + " r " +
-                    "LEFT JOIN public.dist_mst d ON r.dist_code = d.dist_code " +
-                    "LEFT JOIN public.iti i ON r.iti_code = i.iti_code " +
-                    "WHERE r.regid = ? " +
-                    "ORDER BY r.phase";
-            try {
-                List<Map<String, Object>> meritRows = jdbcTemplate.queryForList(meritSql, Integer.parseInt(finalRegid));
-                for (Map<String, Object> m : meritRows) {
-                    meritList.add(new MeritListDetail(
-                            str(m.get("dist_name")), str(m.get("iti_name")),
-                            str(m.get("rank")), str(m.get("phase")), str(m.get("qualification"))
-                    ));
-                }
-            } catch (Exception e) {
+        String meritSql = "SELECT d.dist_name, i.iti_name, r.rank, r.phase, r.qual AS qualification " +
+                "FROM public.ranks r " +
+                "LEFT JOIN public.dist_mst d ON r.dist_code = d.dist_code " +
+                "LEFT JOIN public.iti i ON r.iti_code = i.iti_code " +
+                "WHERE r.regid = ? " +
+                "ORDER BY r.phase";
+        try {
+            List<Map<String, Object>> meritRows = jdbcTemplate.queryForList(meritSql, finalRegid);
+            for (Map<String, Object> m : meritRows) {
+                meritList.add(new MeritListDetail(
+                        str(m.get("dist_name")), str(m.get("iti_name")),
+                        str(m.get("rank")), str(m.get("phase")), str(m.get("qualification"))
+                ));
+            }
+        } catch (Exception e) {
             System.err.println("[ReportServiceImpl] Unexpected error: " + e.getMessage());
-        }
         }
         response.setMeritList(meritList);
 

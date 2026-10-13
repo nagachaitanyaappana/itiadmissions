@@ -38,8 +38,7 @@
 		<img src="./images/gen.jpg" class="img-fluid" />
 	</div>
 	<div id="navbar">
-		<jsp:include page="/WEB-INF/bannernew.jsp" />
-		<jsp:include page="/WEB-INF/checkmeritschedule/authNavbar.jsp" />
+		<jsp:include page="/WEB-INF/reports/header.jsp" />
 <%-- 		<%@include file="/WEB-INF/userpages/Navbar.jsp"%> --%>
 	</div>
 	

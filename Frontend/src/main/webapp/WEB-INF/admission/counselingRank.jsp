@@ -38,12 +38,12 @@ body{font-family:Verdana,Arial,sans-serif;background:#fff;}
 <br/>
 <c:choose><c:when test="${not empty sessionScope.roleId}"><%@ include file="/WEB-INF/reports/header.jsp" %></c:when><c:otherwise><%@ include file="/WEB-INF/bannernew.jsp" %><%@ include file="/WEB-INF/navbars/openNavbar.jsp" %></c:otherwise></c:choose>
 <div class="page-title">Admission Counseling</div>
-<div class="sub-line no-print">Rank lookup resolves via <b>/AdmissionCounseling/api/candidate-resolve</b> (primary <b>/admission/candidate</b> + <b>student-details</b> fallback). Try <b>Rank 1417 / Phase 1 / Year 2025</b> (VAKADA SAI).</div>
+<div class="sub-line no-print">Rank lookup resolves via <b>/AdmissionCounseling/api/candidate-resolve</b> (verified <b>/api/admission/rank-lookup</b>). Enter the merit rank for the running phase.</div>
 <div class="rank-box no-print"><table>
 <tr><td class="cand-head" colspan="2">Enter Rank for process counseling</td></tr>
 <tr><td class="label">Enter Rank :</td><td><input type="text" id="rank" value="${param.rank}" maxlength="6" /></td></tr>
-<tr><td class="label">Phase :</td><td><input type="text" id="phase" value="${not empty param.phase ? param.phase : '1'}" maxlength="2" /></td></tr>
-<tr><td class="label">Year :</td><td><input type="text" id="year" value="${not empty param.year ? param.year : '2025'}" maxlength="4" /></td></tr>
+<tr><td class="label">Phase :</td><td><input type="text" id="phase" value="${not empty param.phase ? param.phase : currentPhase}" maxlength="2" /></td></tr>
+<tr><td class="label">Year :</td><td><input type="text" id="year" value="${not empty param.year ? param.year : currentYear}" maxlength="4" /></td></tr>
 <tr class="btn-row"><td colspan="2"><input type="button" class="submit-btn" value="Submit" onclick="lookupRank();" /> <span class="err" id="rankError"></span></td></tr>
 </table></div>
 <div id="resultArea" style="width:96%;margin:0 auto;"></div>
@@ -91,7 +91,7 @@ var list=c?[c]:(Array.isArray(resp)?resp:(resp&&resp.data?resp.data:[]));
 document.getElementById('memoBox').style.display='none';
 if(!list||list.length===0){document.getElementById('candBox').style.display='none';
 var src=(resp&&resp.source)?' (source: '+esc(resp.source)+')':'';
-document.getElementById('resultArea').innerHTML='<div class="box"><table><tr><td class="cand-head">No candidate found for Rank='+esc(rank)+', Phase='+esc(phase)+', Year='+esc(year)+src+'. Try a known rank, e.g. <b>1417 / 1 / 2025</b> (VAKADA SAI) or <b>50 / 1 / 2025</b>.</td></tr></table></div>';return;}
+document.getElementById('resultArea').innerHTML='<div class="box"><table><tr><td class="cand-head">No candidate found for Rank='+esc(rank)+', Phase='+esc(phase)+', Year='+esc(year)+src+'. Check the rank and the running phase.</td></tr></table></div>';return;}
 cur=list[0];document.getElementById('resultArea').innerHTML='';
 document.getElementById('admYear').innerHTML=esc(cur.year||year);
 document.getElementById('candRow').innerHTML='<td>Name:<b>'+esc(cur.name||cur.regid)+'</b><br/>Community:<b>'+esc(cur.caste||cur.qual)+'</b><br/>Rank:<b>'+esc(cur.rank)+'</b><br/>Year:<b>'+esc(cur.year)+'</b></td><td>Father Name:<b>'+esc(cur.fatherName||'-')+'</b><br/>Reg No:<b>'+esc(cur.regid)+'</b><br/>Exservice:<b>'+esc(cur.app_status)+'</b></td><td>Dist:<b>'+esc(cur.distName||cur.dist_code)+'</b><br/>ITI:<b>'+esc(cur.iti_code)+'</b><br/>Phase:<b>'+esc(cur.phase)+'</b></td><td>Status:<b>'+esc(cur.app_status)+'</b><br/>Qual:<b>'+esc(cur.qual)+'</b></td>';

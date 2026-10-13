@@ -87,22 +87,34 @@ public class HomeController {
     }
 
     @GetMapping("/MeritResults")
-    public String meritResults() {
+    public String meritResults(HttpServletRequest request) {
+        if (notLoggedIn(request)) {
+            return "redirect:/?error=session";
+        }
         return "checkmeritschedule/MeritResults";
     }
 
     @GetMapping("/AdmissionPhase")
-    public String admissionPhase() {
+    public String admissionPhase(HttpServletRequest request) {
+        if (notLoggedIn(request)) {
+            return "redirect:/?error=session";
+        }
         return "checkmeritschedule/AdmissionPhase";
     }
 
     @GetMapping("/DgtPermittedShift")
-    public String dgtPermittedShift() {
+    public String dgtPermittedShift(HttpServletRequest request) {
+        if (notLoggedIn(request)) {
+            return "redirect:/?error=session";
+        }
         return "checkmeritschedule/DscList";
     }
 
     @GetMapping("/VerificationReport")
-    public String verificationReport() {
+    public String verificationReport(HttpServletRequest request) {
+        if (notLoggedIn(request)) {
+            return "redirect:/?error=session";
+        }
         return "checkmeritschedule/distVerification";
     }
 
@@ -120,7 +132,10 @@ public class HomeController {
     }
 
     @GetMapping("/PrintAdmissionSlip")
-    public String printAdmissionSlip() {
+    public String printAdmissionSlip(HttpServletRequest request) {
+        if (notLoggedIn(request)) {
+            return "redirect:/?error=session";
+        }
         return "checkmeritschedule/admissionIntialization";
     }
 
@@ -158,5 +173,11 @@ public class HomeController {
     @GetMapping("/")
     public String home() {
         return "jsp/index";
+    }
+
+    /** True when the request has no authenticated session; callers redirect to the login page. */
+    private static boolean notLoggedIn(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        return session == null || session.getAttribute("sessionUser") == null;
     }
 }

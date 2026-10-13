@@ -1,8 +1,12 @@
 package com.server.frontend.controller.admission;
 
 import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestTemplate;
 
-/** Add Trade (DISTLOGIN - Admissions - Add Trade). Same legacy UI as SeatMatrix. */
+/** Add Trade (DISTLOGIN - Admissions - Add Trade). Port of the legacy addnew_trade flow. */
 @Controller
 @RequestMapping("/AddTrade")
 public class AddTradeController {
@@ -24,6 +28,11 @@ public class AddTradeController {
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
 
+    public AddTradeController() {
+        // Keep 4xx bodies (e.g. "already approved") instead of letting RestTemplate throw and hide them.
+        rest.setErrorHandler(response -> false);
+    }
+
     @GetMapping({ "", "/", "/Interface" })
     public String addTrade() {
         return "admission/addTrade";
@@ -32,60 +41,66 @@ public class AddTradeController {
     @GetMapping("/api/district/{distCode}/itis")
     @ResponseBody
     public ResponseEntity<Object> itis(@PathVariable("distCode") String d) {
-        return proxy(backendBaseUrl + "/admission/district/" + d.trim() + "/itis");
+        return proxyGet(backendBaseUrl + "/admission/district/" + d.trim() + "/itis");
     }
 
     @GetMapping("/api/itis/{distCode}")
     @ResponseBody
     public ResponseEntity<Object> names(@PathVariable("distCode") String d) {
-        return proxy(backendBaseUrl + "/admission/itis/" + d.trim());
+        return proxyGet(backendBaseUrl + "/admission/itis/" + d.trim());
     }
 
-    @GetMapping("/api/iti/{itiCode}/trades")
+    /** Catalogue of addable master trades + the ITI's existing trades + approved flag. */
+    @GetMapping("/api/iti/{itiCode}/available-trades")
     @ResponseBody
-    public ResponseEntity<Object> trades(@PathVariable("itiCode") String c) {
-        return proxy(backendBaseUrl + "/admission/iti/" + c.trim() + "/trades");
-    }
-
-    @GetMapping("/api/iti/{itiCode}/seat-details")
-    @ResponseBody
-    public ResponseEntity<Object> seats(@PathVariable("itiCode") String c) {
-        return proxy(backendBaseUrl + "/admission/iti/" + c.trim() + "/seat-details");
+    public ResponseEntity<Object> availableTrades(@PathVariable("itiCode") String c) {
+        return proxyGet(backendBaseUrl + "/admission/add-trade/" + c.trim());
     }
 
     @GetMapping("/api/trade/{tradeShort}")
     @ResponseBody
     public ResponseEntity<Object> trade(@PathVariable("tradeShort") String t) {
-        return proxy(backendBaseUrl + "/admission/trade/" + t.trim());
+        return proxyGet(backendBaseUrl + "/admission/trade/" + t.trim());
     }
 
     @GetMapping("/api/trades")
     @ResponseBody
     public ResponseEntity<Object> allTrades() {
-        return proxy(backendBaseUrl + "/api/trades");
+        return proxyGet(backendBaseUrl + "/api/trades");
     }
 
     @PostMapping("/api/iti/{itiCode}/trades")
     @ResponseBody
     public ResponseEntity<Object> add(@PathVariable("itiCode") String c,
             @RequestBody(required = false) Map<String, Object> b) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(Map.of("success", false,
-                "error", "Add Trade unavailable: no backend write endpoint for ITI " + c));
+        return proxyWrite(HttpMethod.POST, backendBaseUrl + "/admission/add-trade/" + c.trim() + "/trade", b);
     }
 
     @PutMapping("/api/iti/{itiCode}/approve-all")
     @ResponseBody
     public ResponseEntity<Object> approve(@PathVariable("itiCode") String c) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(Map.of("success", false,
-                "error", "Approve All unavailable: no backend approval endpoint for ITI " + c));
+        return proxyWrite(HttpMethod.PUT, backendBaseUrl + "/admission/add-trade/" + c.trim() + "/approve-all", null);
     }
 
-    private ResponseEntity<Object> proxy(String url) {
+    private ResponseEntity<Object> proxyGet(String url) {
         try {
             ResponseEntity<Object> r = rest.getForEntity(url, Object.class);
             return ResponseEntity.status(r.getStatusCode()).body(r.getBody());
         } catch (Exception e) {
             return ResponseEntity.ok(new Object[0]);
+        }
+    }
+
+    private ResponseEntity<Object> proxyWrite(HttpMethod method, String url, Object body) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        try {
+            ResponseEntity<Object> r = rest.exchange(url, method,
+                    new HttpEntity<>(body, headers), Object.class);
+            return ResponseEntity.status(r.getStatusCode()).body(r.getBody());
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("success", false,
+                    "message", "Unable to reach Add Trade service"));
         }
     }
 }

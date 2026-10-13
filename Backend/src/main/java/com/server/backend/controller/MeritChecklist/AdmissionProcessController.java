@@ -91,6 +91,24 @@ public class AdmissionProcessController {
                 resolveUser(roleId, insCode, itiCode, distCode)));
     }
 
+    @Operation(summary = "Permitted shift/unit options for an ITI and trade")
+    @GetMapping("/shift-unit")
+    public ResponseEntity<Map<String, Object>> getShiftUnits(
+            @org.springframework.web.bind.annotation.RequestParam(name = "itiCode") String itiCode,
+            @org.springframework.web.bind.annotation.RequestParam(name = "tradeCode") String tradeCode,
+            @RequestHeader(name = "X-Role-Id", required = false) String roleId,
+            @RequestHeader(name = "X-Ins-Code", required = false) String insCode,
+            @RequestHeader(name = "X-Iti-Code", required = false) String itiCodeHeader,
+            @RequestHeader(name = "X-Dist-Code", required = false) String distCode) {
+        return handle(() -> {
+            resolveUser(roleId, insCode, itiCodeHeader, distCode);
+            Map<String, Object> body = new java.util.LinkedHashMap<>();
+            body.put("success", true);
+            body.put("shifts", admissionProcessService.getShiftUnits(itiCode, tradeCode));
+            return body;
+        });
+    }
+
     /** Keeps every endpoint's error shape identical: {@code {success:false, error:"..."}} at 400. */
     private ResponseEntity<Map<String, Object>> handle(
             java.util.function.Supplier<Map<String, Object>> action) {

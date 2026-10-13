@@ -149,8 +149,7 @@
 </head>
 <body>
 
-    <jsp:include page="/WEB-INF/bannernew.jsp" />
-    <jsp:include page="/WEB-INF/navbars/iti_navbar.jsp" />
+    <jsp:include page="/WEB-INF/reports/header.jsp" />
 
     <div class="page-header-custom text-center">
         <div class="container">

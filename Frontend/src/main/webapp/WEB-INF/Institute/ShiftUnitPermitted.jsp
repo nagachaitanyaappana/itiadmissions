@@ -93,7 +93,7 @@
 <body>
     <!-- Global Header -->
     <header>
-        <%@ include file="../bannernew.jsp" %>
+        <jsp:include page="/WEB-INF/reports/header.jsp" />
     </header>
 
     <div class="container-fluid px-5 mt-4 mb-5" style="min-height: 50vh;">

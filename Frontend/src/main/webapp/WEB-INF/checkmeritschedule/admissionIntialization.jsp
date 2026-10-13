@@ -31,14 +31,12 @@
 
 	<div id="404Msg" align="center">
 		<img src="./images/gen.jpg" class="img-fluid" />
-		<%@include file="../navbars/openNavbar.jsp"%>
 	</div>
 
 
 	<div align="center" id="contentDiv">
 <%-- 		<%@include file="/WEB-INF/userpages/Navbar.jsp"%> --%>
-		<%@include file="/WEB-INF/bannernew.jsp"%>
-	<%@include file="/WEB-INF/checkmeritschedule/authNavbar.jsp"%>
+	<jsp:include page="/WEB-INF/reports/header.jsp" />
 		<div
 			class="container mt-2 mb-4 border font-weight-bolder shadow-lg "
 			style="background-color: #e6ffff; border-radius: 20px;">

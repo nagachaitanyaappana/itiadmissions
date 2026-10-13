@@ -213,6 +213,70 @@ List<Object[]> findOverlappingMeritRange(
     @Param("meritTo") Integer meritTo
 );
 
+/**
+ * Count of today's counselling sessions for the caller's district/ITI. Legacy
+ * {@code StartAdmissionProcess} blocks the admission process with {@code CouncilDates_notFound}
+ * when {@code admission_timings} has no row for the district with {@code cal_date = today}; this
+ * reproduces that gate. Same native projection rule as the reads above (a district row has a null
+ * iti_code and cannot be hydrated into the entity).
+ */
+@Query(value = "SELECT COUNT(*) FROM public.admission_timings "
+    + "WHERE ((:useDist = true AND dist_code = :code) OR (:useDist = false AND iti_code = :code)) "
+    + "AND cal_date = CURRENT_DATE "
+    + "AND (:phase IS NULL OR phase = :phase) AND (:year IS NULL OR year = :year)", nativeQuery = true)
+long countSchedulesToday(
+    @Param("useDist") boolean useDist,
+    @Param("code") String code,
+    @Param("phase") String phase,
+    @Param("year") String year
+);
+
+// ---------------------------------------------------------------------------
+// Delete-Schedule-Entry admin reads. These are deliberately NOT scoped to the caller's own
+// district: the delete page lets an administrator pick any Government/Private district and ITI, so
+// the rows are filtered by what the page sends, not by the session. project plain columns for the
+// same @IdClass reason as the reads above -- a district (phase 1) row has a null iti_code.
+// ---------------------------------------------------------------------------
+
+/** Districts that have at least one ITI of the given govt; a blank govt returns all districts. */
+@Query(value = "SELECT DISTINCT d.dist_code, d.dist_name FROM public.dist_mst d "
+    + "JOIN public.iti i ON i.dist_code = d.dist_code "
+    + "WHERE (:govt IS NULL OR i.govt = :govt) ORDER BY d.dist_name", nativeQuery = true)
+List<Object[]> findDistrictsForDelete(@Param("govt") String govt);
+
+/** ITIs of a district for the given govt; a blank govt returns all of the district's ITIs. */
+@Query(value = "SELECT i.iti_code, i.iti_name FROM public.iti i "
+    + "WHERE i.dist_code = :distCode AND (:govt IS NULL OR i.govt = :govt) "
+    + "ORDER BY i.iti_name", nativeQuery = true)
+List<Object[]> findItisForDelete(@Param("distCode") String distCode, @Param("govt") String govt);
+
+/**
+ * Schedule rows for the running phase/year, filtered by whatever the page selected. Any of
+ * district/ITI/govt may be null and is then ignored. The LEFT JOINs keep phase 1 (district-level,
+ * iti_code NULL) rows visible while still allowing an ITI/govt filter in later phases.
+ */
+@Query(value = "SELECT a.sid, a.dist_code, c.dist_name, a.iti_code, b.iti_name, a.caste, a.minqul, "
+    + "a.merit_from, a.merit_to, a.cal_date, a.cal_time FROM public.admission_timings a "
+    + "LEFT JOIN public.iti b ON b.iti_code = a.iti_code "
+    + "LEFT JOIN public.dist_mst c ON c.dist_code = a.dist_code "
+    + "WHERE a.phase = :phase AND a.year = :year "
+    + "AND (:distCode IS NULL OR a.dist_code = :distCode) "
+    + "AND (:itiCode IS NULL OR a.iti_code = :itiCode) "
+    + "AND (:govt IS NULL OR b.govt = :govt) "
+    + "ORDER BY a.dist_code, a.iti_code, a.caste, a.minqul", nativeQuery = true)
+List<Object[]> findScheduleRowsForDelete(
+    @Param("phase") String phase,
+    @Param("year") String year,
+    @Param("distCode") String distCode,
+    @Param("itiCode") String itiCode,
+    @Param("govt") String govt
+);
+
+/** Deletes one schedule row by its identity column ({@code sid} is unique, unlike {@code temp_pk}). */
+@Modifying
+@Query(value = "DELETE FROM public.admission_timings WHERE sid = :sid", nativeQuery = true)
+int deleteBySid(@Param("sid") Long sid);
+
 // The /view search is the native findFilteredScheduleRows() added above; the JPQL version that used
 // to live here returned the entity and therefore dropped every district row on null iti_code.
 }

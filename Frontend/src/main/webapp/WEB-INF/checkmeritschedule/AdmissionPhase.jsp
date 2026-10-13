@@ -290,8 +290,7 @@
 </head>
 <body>
 
-    <jsp:include page="/WEB-INF/bannernew.jsp" />
-    <jsp:include page="/WEB-INF/checkmeritschedule/authNavbar.jsp" />
+    <jsp:include page="/WEB-INF/reports/header.jsp" />
 
     <div class="container main-container">
         <!-- Section 1: Filter Selection -->
@@ -475,6 +474,30 @@
                 </div>
             </div>
 
+            <!-- Shift / Unit -->
+            <div class="card form-card" id="shiftUnitCard" style="display: none;">
+                <div class="card-header-custom">
+                    <i class="fas fa-clock me-2"></i> Select Shift and Unit
+                </div>
+                <div class="card-body card-body-custom">
+                    <div class="seat-matrix-container">
+                        <table class="table table-bordered table-seat-matrix">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">Select</th>
+                                    <th class="text-center">Shift</th>
+                                    <th class="text-center">Unit</th>
+                                    <th class="text-center">Strength</th>
+                                    <th class="text-center">Strength Vacant</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shiftUnitBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="shiftUnitEmpty" class="text-muted text-center py-2" style="display:none;">No shift/unit is permitted for this ITI and trade.</div>
+                </div>
+            </div>
+
             <!-- Additional Details & Final Submit -->
             <div class="card form-card">
                 <div class="card-header-custom">
@@ -618,6 +641,7 @@
 
         let currentStudent = null;
         let seatMatrixData = [];
+        let shiftUnitOptions = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             console.log("DOM Content Loaded - Initializing...");
@@ -671,6 +695,15 @@
             const iSearch = document.getElementById('itiSearch');
             if (iSearch) iSearch.addEventListener('input', (e) => renderSeatMatrix(e.target.value));
 
+            const seatBody = document.getElementById('seatMatrixBody');
+            if (seatBody) {
+                seatBody.addEventListener('change', (e) => {
+                    if (e.target && e.target.name === 'selectedTrade') {
+                        loadShiftUnit(e.target.dataset.iti, e.target.dataset.trade);
+                    }
+                });
+            }
+
             const takeBtn = document.getElementById('btnTakeAdmission');
             if (takeBtn) {
                 takeBtn.addEventListener('click', () => {
@@ -683,6 +716,10 @@
                     const board = document.getElementById('admissionBoard').value;
                     if (!board) {
                         alert("Please select Type of Admission (Board).");
+                        return;
+                    }
+                    if (shiftUnitOptions.length > 0 && !document.querySelector('input[name="selectedShiftUnit"]:checked')) {
+                        alert("Please select a Shift and Unit option.");
                         return;
                     }
                     
@@ -714,6 +751,8 @@
                 document.getElementById('rankError').style.display = 'none';
                 document.getElementById('admissionSuccess').style.display = 'none';
                 document.getElementById('admissionError').style.display = 'none';
+                document.getElementById('shiftUnitCard').style.display = 'none';
+                shiftUnitOptions = [];
                 currentStudent = null;
             });
 
@@ -937,6 +976,49 @@
             });
         }
 
+        async function loadShiftUnit(itiCode, tradeCode) {
+            const card = document.getElementById('shiftUnitCard');
+            const body = document.getElementById('shiftUnitBody');
+            const empty = document.getElementById('shiftUnitEmpty');
+            if (!card || !body) return;
+            body.innerHTML = '';
+            shiftUnitOptions = [];
+            empty.textContent = 'No shift/unit is permitted for this ITI and trade.';
+            empty.style.display = 'none';
+            card.style.display = 'block';
+            try {
+                const url = `\${NODE_API_BASE}/api/admission/shift-unit?itiCode=\${encodeURIComponent(itiCode)}&tradeCode=\${encodeURIComponent(tradeCode)}`;
+                const resp = await fetch(url, { headers: apiHeaders(), credentials: 'include' });
+                const res = await resp.json();
+                const list = (res && res.shifts) ? res.shifts : [];
+                shiftUnitOptions = list;
+                if (list.length === 0) {
+                    empty.style.display = 'block';
+                    return;
+                }
+                list.forEach((s) => {
+                    const shift = s.shift_allowed != null ? s.shift_allowed : '';
+                    const unit = s.unit_allowed != null ? s.unit_allowed : '';
+                    const strength = s.strength != null ? s.strength : '';
+                    const vacant = s.strength_vacant != null ? s.strength_vacant : '';
+                    const row = `
+                        <tr>
+                            <td class="text-center"><input type="radio" name="selectedShiftUnit"
+                                value="\${shift}|\${unit}" data-shift="\${shift}" data-unit="\${unit}"></td>
+                            <td class="text-center">\${shift}</td>
+                            <td class="text-center">\${unit}</td>
+                            <td class="text-center">\${strength}</td>
+                            <td class="text-center">\${vacant}</td>
+                        </tr>`;
+                    body.insertAdjacentHTML('beforeend', row);
+                });
+            } catch (e) {
+                console.error("Error loading shift/unit:", e);
+                empty.textContent = "Unable to load shift/unit options.";
+                empty.style.display = 'block';
+            }
+        }
+
         async function processAdmission() {
             const btn = document.getElementById('confirmYes');
             const originalText = btn.innerHTML;
@@ -945,6 +1027,12 @@
                 const selected = document.querySelector('input[name="selectedTrade"]:checked');
                 if (!selected || !currentStudent) {
                     showAdmissionError("Missing selection or student data.");
+                    return;
+                }
+
+                const shiftUnit = document.querySelector('input[name="selectedShiftUnit"]:checked');
+                if (shiftUnitOptions.length > 0 && !shiftUnit) {
+                    showAdmissionError("Please select a Shift and Unit option before taking admission.");
                     return;
                 }
 
@@ -963,7 +1051,9 @@
                     ssc_board: currentStudent.ssc_board,
                     ssc_year: currentStudent.ssc_year,
                     ssc_month: currentStudent.ssc_month,
-                    type_admission: document.getElementById('admissionBoard').value
+                    type_admission: document.getElementById('admissionBoard').value,
+                    shift: shiftUnit ? shiftUnit.dataset.shift : null,
+                    unit: shiftUnit ? shiftUnit.dataset.unit : null
                 };
 
                 console.log("Processing admission with payload:", payload);

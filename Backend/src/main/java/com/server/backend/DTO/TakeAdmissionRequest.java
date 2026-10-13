@@ -21,6 +21,8 @@ public record TakeAdmissionRequest(
         @JsonAlias({"ssc_board", "sscboard"}) String sscBoard,
         @JsonAlias({"ssc_year", "sscyear"}) String sscYear,
         @JsonAlias({"ssc_month", "sscmonth"}) String sscMonth,
-        @JsonAlias({"type_admission", "typeadmission"}) String typeAdmission
+        @JsonAlias({"type_admission", "typeadmission"}) String typeAdmission,
+        @JsonAlias({"shift_allowed"}) String shift,
+        @JsonAlias({"unit_allowed"}) String unit
 ) {
 }

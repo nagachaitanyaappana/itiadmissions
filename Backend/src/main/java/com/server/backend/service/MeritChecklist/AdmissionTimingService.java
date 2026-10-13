@@ -470,4 +470,126 @@ public Map<String,Object> getCurrentStatus(){
 
     return response;
  }
+
+ /**
+  * Whether the caller's district/ITI has a counselling session scheduled for today, in the running
+  * phase/year. Mirrors the legacy {@code StartAdmissionProcess} gate (it redirected to
+  * {@code CouncilDates_notFound} when {@code admission_timings} had no {@code cal_date = today} row
+  * for the district), so the admission process cannot open on a day with no schedule.
+  */
+ public Map<String,Object> hasScheduleToday(CurrentUser user){
+     String year=resolveCurrentYear().toString();
+     String phase=resolveCurrentPhase(year);
+     boolean useDist="3".equals(user.roleId());
+     String code=useDist ? user.distCode() : user.itiCode();
+     long count=(code==null || code.isBlank()) ? 0L
+             : admissionTimingRepository.countSchedulesToday(useDist, code, phase, year);
+
+     Map<String,Object> response=new HashMap<>();
+     response.put("success",true);
+     response.put("hasScheduleToday", count > 0);
+     response.put("count", count);
+     response.put("phase", phase);
+     response.put("year", year);
+     return response;
+ }
+
+ // ---------------------------------------------------------------------------
+ // Delete-Schedule-Entry admin flow. Not scoped to the caller: the page lets an administrator pick
+ // any Government/Private district and ITI, so the filters come from the request.
+ // ---------------------------------------------------------------------------
+
+ /** Districts offering the given govt (blank = all) for the delete page's dropdown. */
+ public List<Map<String,Object>> listDistrictsForDelete(String govt) {
+     List<Object[]> rows = admissionTimingRepository.findDistrictsForDelete(blankToNull(govt));
+     List<Map<String,Object>> out = new ArrayList<>();
+     for (Object[] r : rows) {
+         Map<String,Object> m = new HashMap<>();
+         m.put("distCode", asString(r[0]));
+         m.put("distName", asString(r[1]));
+         out.add(m);
+     }
+     return out;
+ }
+
+ /** ITIs of a district for the given govt (blank = all) for the delete page's dropdown. */
+ public List<Map<String,Object>> listItisForDelete(String distCode, String govt) {
+     List<Map<String,Object>> out = new ArrayList<>();
+     if (distCode == null || distCode.isBlank()) {
+         return out;
+     }
+     List<Object[]> rows = admissionTimingRepository.findItisForDelete(distCode.trim(), blankToNull(govt));
+     for (Object[] r : rows) {
+         Map<String,Object> m = new HashMap<>();
+         m.put("itiCode", asString(r[0]));
+         m.put("itiName", asString(r[1]));
+         out.add(m);
+     }
+     return out;
+ }
+
+ /**
+  * Schedule rows for the running phase/year matching the page's filters. Phase 1 schedules are
+  * district-level (the legacy page shows no ITI column there), so the ITI/govt filters are dropped
+  * in phase 1 and only the district is honoured.
+  */
+ public Map<String,Object> searchScheduleForDelete(String distCode, String itiCode, String govt) {
+     String year = resolveCurrentYear();
+     String phase = resolveCurrentPhase(year);
+     boolean phaseOne = "1".equals(phase);
+     String dist = "all".equalsIgnoreCase(distCode) || distCode == null || distCode.isBlank() ? null : distCode.trim();
+     String iti = phaseOne ? null
+             : ("all".equalsIgnoreCase(itiCode) || itiCode == null || itiCode.isBlank() ? null : itiCode.trim());
+     String govtFilter = phaseOne ? null : blankToNull(govt);
+
+     List<Object[]> rows = admissionTimingRepository.findScheduleRowsForDelete(phase, year, dist, iti, govtFilter);
+     List<Map<String,Object>> data = new ArrayList<>();
+     for (Object[] r : rows) {
+         Map<String,Object> m = new HashMap<>();
+         m.put("sid", r[0] == null ? null : ((Number) r[0]).longValue());
+         m.put("distCode", asString(r[1]));
+         m.put("distName", asString(r[2]));
+         m.put("itiCode", asString(r[3]));
+         m.put("itiName", asString(r[4]));
+         m.put("caste", asString(r[5]));
+         m.put("minqul", asString(r[6]));
+         m.put("meritFrom", r[7]);
+         m.put("meritTo", r[8]);
+         m.put("calDate", r[9] == null ? null : String.valueOf(r[9]));
+         m.put("calTime", r[10] == null ? null : String.valueOf(r[10]));
+         data.add(m);
+     }
+     Map<String,Object> response = new HashMap<>();
+     response.put("success", true);
+     response.put("phase", phase);
+     response.put("year", year);
+     response.put("data", data);
+     return response;
+ }
+
+ /** Deletes a single schedule row by {@code sid}. */
+ @Transactional
+ public Map<String,Object> deleteScheduleById(Long sid) {
+     Map<String,Object> response = new HashMap<>();
+     if (sid == null) {
+         response.put("success", false);
+         response.put("error", "Missing schedule id");
+         return response;
+     }
+     int deleted = admissionTimingRepository.deleteBySid(sid);
+     response.put("success", deleted > 0);
+     response.put("deleted", deleted);
+     if (deleted == 0) {
+         response.put("error", "No schedule entry found for id " + sid);
+     }
+     return response;
+ }
+
+ private static String blankToNull(String value) {
+     return value == null || value.isBlank() ? null : value.trim();
+ }
+
+ private static String asString(Object value) {
+     return value == null ? null : String.valueOf(value);
+ }
 }

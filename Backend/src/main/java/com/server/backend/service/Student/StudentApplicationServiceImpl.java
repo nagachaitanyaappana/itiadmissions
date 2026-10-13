@@ -16,6 +16,7 @@ import com.server.backend.entity.CasteMasterPublic;
 import com.server.backend.entity.SubCasteMasterPublic;
 import com.server.backend.Repository.MeritChecklist.CasteMasterRepository;
 import com.server.backend.Repository.Student.SubCasteMasterPublicRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
@@ -25,13 +26,31 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
     private final StudentApplicationRepository repository;
     private final CasteMasterRepository casteMasterRepository;
     private final SubCasteMasterPublicRepository subCasteMasterRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public StudentApplicationServiceImpl(StudentApplicationRepository repository,
             CasteMasterRepository casteMasterRepository,
-            SubCasteMasterPublicRepository subCasteMasterRepository) {
+            SubCasteMasterPublicRepository subCasteMasterRepository,
+            JdbcTemplate jdbcTemplate) {
         this.repository = repository;
         this.casteMasterRepository = casteMasterRepository;
         this.subCasteMasterRepository = subCasteMasterRepository;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    /**
+     * The phase a candidate applies under is the phase currently in force (the single
+     * admissions.admission_phase row with current='true'), exactly as the legacy
+     * open_Application_InterfaceAction_Student resolved it. It is stored as a scalar code here
+     * because DistrictVerifyService.approve wraps it into an hstore when promoting to
+     * application.phase. Hard-coding "REGISTRATION" left application.phase keyed on
+     * "REGISTRATION" instead of the phase number, so the merit query
+     * (hstore(a.phase)->'1' = 'true') never matched a UI-submitted candidate.
+     */
+    private String resolveCurrentPhase() {
+        List<String> phases = jdbcTemplate.queryForList(
+                "SELECT phase::text FROM admissions.admission_phase WHERE current = 'true'", String.class);
+        return phases.isEmpty() ? null : phases.get(0);
     }
 
     @Override
@@ -49,7 +68,7 @@ entity.setAppStatus("N");     // 1 character only
 entity.setDataFlag("A");      // 1 character only
 entity.setPwdCategory("N");   // 1 character only
 
-entity.setPhase("REGISTRATION");
+entity.setPhase(resolveCurrentPhase());
 entity.setSscPassed(true);
 
         StudentApplication saved = repository.save(entity);
@@ -116,6 +135,12 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
         if (value != null) {
             trg.setPropertyValue(propertyName, value);
         }
+    }
+
+    // Stamp the phase the candidate is applying under, server-side (never the client's).
+    String currentPhase = resolveCurrentPhase();
+    if (currentPhase != null) {
+        entity.setPhase(currentPhase);
     }
 
     StudentApplication updated = repository.save(entity);

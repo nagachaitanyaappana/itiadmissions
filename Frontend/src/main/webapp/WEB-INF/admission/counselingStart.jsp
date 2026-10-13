@@ -49,11 +49,11 @@
       </tr>
       <tr>
         <td class="label">Phase :</td>
-        <td><select name="phase" id="phase"><option value="">-select-</option><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select><span class="err" id="phaseError"></span></td>
+        <td><select name="phase" id="phase"><option value="">-select-</option><option value="1" ${currentPhase == '1' ? 'selected' : ''}>1</option><option value="2" ${currentPhase == '2' ? 'selected' : ''}>2</option><option value="3" ${currentPhase == '3' ? 'selected' : ''}>3</option></select><span class="err" id="phaseError"></span></td>
       </tr>
       <tr>
         <td class="label">Year :</td>
-        <td><input type="text" name="year" id="year" value="2025" maxlength="4" /><span class="err" id="yearError"></span></td>
+        <td><input type="text" name="year" id="year" value="${currentYear}" maxlength="4" /><span class="err" id="yearError"></span></td>
       </tr>
       <tr class="btn-row"><td colspan="2"><input type="submit" class="submit-btn" value="Submit" /></td></tr>
     </table>

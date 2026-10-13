@@ -48,7 +48,7 @@ public class AdmissionProcessService {
 
     private static final Logger logger = LoggerFactory.getLogger(AdmissionProcessService.class);
 
-    /** Merit ranks are 1-based; table names are built from the year/phase, so they are validated. */
+    /** Merit ranks are 1-based and are submitted as text; only digits are accepted. */
     private static final String NUMERIC = "^[0-9]+$";
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -224,10 +224,9 @@ public class AdmissionProcessService {
      * Merit rank → candidate profile, which is what {@code handleRankSubmit()} posts as
      * {@code {"rank": "12"}}.
      *
-     * <p>A rank alone is not a key: {@code ranks2025phase1} holds 22,060 rows for 1,663 distinct
-     * ranks (four copies each, one per stream) and repeats across districts, so the district of the
-     * logged-in ITI is part of the lookup. Without it the page would show another district's
-     * candidate for the same rank.
+     * <p>A rank alone is not a key: the {@code ranks} table holds several rows per rank (one per
+     * stream) and repeats across districts, so the district of the logged-in ITI is part of the
+     * lookup. Without it the page would show another district's candidate for the same rank.
      */
     public Map<String, Object> lookupRank(String rank, UserPrincipal user) {
         if (blank(rank) || !rank.trim().matches(NUMERIC)) {
@@ -250,13 +249,16 @@ public class AdmissionProcessService {
                     "No district code is available for this login; cannot resolve the rank");
         }
 
-        String rankTable = resolveRankTable(year, phase);
+        String rankTable = resolveRankTable();
         List<Map<String, Object>> rankRows = jdbc.queryForList(
                 "SELECT DISTINCT r.regid AS regid, r.rank AS rank, r.qual AS qual FROM public."
-                        + rankTable + " r WHERE r.rank::text = :rank AND r.dist_code = :distCode LIMIT 1",
+                        + rankTable + " r WHERE r.rank::text = :rank AND r.dist_code = :distCode"
+                        + " AND r.year = :year AND r.phase = :phase LIMIT 1",
                 new MapSqlParameterSource()
                         .addValue("rank", wantedRank)
-                        .addValue("distCode", distCode));
+                        .addValue("distCode", distCode)
+                        .addValue("year", year)
+                        .addValue("phase", String.valueOf(phase)));
         if (rankRows.isEmpty()) {
             return notFound("No candidate holds rank " + wantedRank + " in district " + distCode
                     + " for year " + year + " phase " + phase);
@@ -308,17 +310,17 @@ public class AdmissionProcessService {
     }
 
     /**
-     * Ranks live in a per-year, per-phase table ({@code ranks2025phase1}). A missing table is
-     * reported rather than substituted with another year's ranks, which would hand out the wrong
-     * candidate.
+     * Merit ranks are written by the merit-list generation into the single {@code ranks} table,
+     * scoped by {@code year} and {@code phase}. The legacy system keeps a per-phase copy as
+     * {@code ranks_backup_&lt;year&gt;_phase_&lt;phase&gt;} at admission initialisation, which is why
+     * callers must never substitute another phase's ranks. A missing table is reported instead.
      */
-    private String resolveRankTable(String year, int phase) {
-        String table = "ranks" + year + "phase" + phase;
-        if (!tableExists(table)) {
-            throw new IllegalStateException("No rank table " + table + " exists for year " + year
-                    + " phase " + phase + "; generate the merit list for this phase first");
+    private String resolveRankTable() {
+        if (!tableExists("ranks")) {
+            throw new IllegalStateException(
+                    "No rank table ranks exists; generate the merit list for this phase first");
         }
-        return table;
+        return "ranks";
     }
 
     /** Applications are year-scoped when the suffixed table exists ({@code application2025}). */
@@ -394,7 +396,8 @@ public class AdmissionProcessService {
             INSERT INTO admissions.iti_admissions
                 (adm_num, regid, name, fname, addr, mname, phno, gender, caste, dob, phc, exservice,
                  iti_code, dist_code, trade_code, year_of_admission, phase, date_of_admission,
-                 type_admission, idmarks1, idmarks2, ssc_regno, ssc_board, ssc_year, ssc_month, mode_adm)
+                 type_admission, idmarks1, idmarks2, ssc_regno, ssc_board, ssc_year, ssc_month, mode_adm,
+                 shift, unit)
             SELECT :admNum,
                    c.regid::text,
                    c.name, c.fname, c.addr, c.mname, c.phno, c.gender, c.caste, c.dob, c.phc, c.exservice,
@@ -404,7 +407,8 @@ public class AdmissionProcessService {
                    COALESCE(NULLIF(:sscBoard, ''), c.ssc_board),
                    COALESCE(NULLIF(:sscYear,  ''), c.ssc_year),
                    COALESCE(NULLIF(:sscMonth, ''), c.ssc_month),
-                   :modeAdmission
+                   :modeAdmission,
+                   :shift, :unit
             FROM public.%s c
             WHERE c.regid = CAST(:regid AS integer)
             ORDER BY c.regid
@@ -471,6 +475,12 @@ public class AdmissionProcessService {
                     "type_admission (Type of Admission) is required to record an admission");
         }
 
+        // Shift/unit are the permitted shift_unit_permitted option the page offered for this ITI/trade.
+        // They are optional so an admission can still be recorded where no shift/unit was configured,
+        // but when one is chosen it must look like the legacy "shift|unit" picker.
+        String shift = emptyToNull(request.shift());
+        String unit = emptyToNull(request.unit());
+
         Map<String, Object> existing = findAdmission(regid);
         if (existing != null) {
             return failure("Candidate " + regid + " is already admitted (admission number "
@@ -526,7 +536,9 @@ public class AdmissionProcessService {
                 .addValue("sscBoard", emptyToNull(request.sscBoard()))
                 .addValue("sscYear", emptyToNull(request.sscYear()))
                 .addValue("sscMonth", emptyToNull(request.sscMonth()))
-                .addValue("modeAdmission", DEFAULT_MODE_OF_ADMISSION);
+                .addValue("modeAdmission", DEFAULT_MODE_OF_ADMISSION)
+                .addValue("shift", shift)
+                .addValue("unit", unit);
 
         int inserted = jdbc.update(String.format(INSERT_ADMISSION_SQL, candidateTable), params);
         if (inserted != 1) {
@@ -534,6 +546,8 @@ public class AdmissionProcessService {
         }
 
         boolean seatFilled = fillSeat(itiCode, tradeCode, year, seatMatrixPhase, candidate);
+
+        boolean shiftUnitConsumed = consumeShiftUnit(itiCode, String.valueOf(tradeCode), shift, unit);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -545,9 +559,15 @@ public class AdmissionProcessService {
         response.put("year", year);
         response.put("phase", phase);
         response.put("date_of_admission", java.time.LocalDate.now().toString());
+        response.put("shift", shift);
+        response.put("unit", unit);
         if (!seatFilled) {
             response.put("seat_fill_warning", "Admission recorded, but no matching category bucket was "
                     + "found in iti_seatmatrix for year " + year + " phase " + seatMatrixPhase);
+        }
+        if (shift != null && unit != null && !shiftUnitConsumed) {
+            response.put("shift_unit_warning", "Admission recorded, but no permitted shift/unit row "
+                    + "(shift " + shift + ", unit " + unit + ") with available_year=true was decremented");
         }
         return response;
     }
@@ -631,6 +651,42 @@ public class AdmissionProcessService {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Decrements {@code shift_unit_permitted.strength_vacant} for the chosen shift/unit, mirroring
+     * legacy {@code DistrictAdmissionAction}: {@code strength_vacant = COALESCE(strength_vacant, 0) - 1}
+     * for the row flagged {@code available_year = true}. Returns false when no such row existed.
+     */
+    private boolean consumeShiftUnit(String itiCode, String tradeCode, String shift, String unit) {
+        if (blank(shift) || blank(unit)) {
+            return false;
+        }
+        int updated = jdbc.update(
+                "UPDATE public.shift_unit_permitted SET strength_vacant = COALESCE(strength_vacant, 0) - 1 "
+                        + "WHERE iti_code = :itiCode AND trade_code = :tradeCode "
+                        + "  AND shift_allowed = :shift AND unit_allowed = :unit AND available_year = true",
+                new MapSqlParameterSource()
+                        .addValue("itiCode", itiCode)
+                        .addValue("tradeCode", tradeCode)
+                        .addValue("shift", shift)
+                        .addValue("unit", unit));
+        return updated > 0;
+    }
+
+    /**
+     * Shift/unit options the admission page may offer for an ITI/trade — the port of legacy
+     * {@code getShiftUnit.jsp} (available for the year and not already exhausted).
+     */
+    public List<Map<String, Object>> getShiftUnits(String itiCode, String tradeCode) {
+        return jdbc.queryForList(
+                "SELECT shift_allowed, unit_allowed, strength, strength_vacant "
+                        + "FROM public.shift_unit_permitted "
+                        + "WHERE iti_code = :itiCode AND trade_code = :tradeCode "
+                        + "  AND available_year = true "
+                        + "  AND (strength_vacant <> 0 OR strength_vacant IS NULL) "
+                        + "ORDER BY shift_allowed, unit_allowed",
+                new MapSqlParameterSource("itiCode", itiCode).addValue("tradeCode", tradeCode));
     }
 
     /** Buckets that exist in iti_seatmatrix.strength for the current year. */

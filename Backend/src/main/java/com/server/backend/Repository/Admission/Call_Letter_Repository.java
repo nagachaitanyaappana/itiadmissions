@@ -23,7 +23,7 @@ public interface Call_Letter_Repository
             r.trno AS trno,
             r.year AS year,
             s.name AS name
-        FROM public.ranks2025phase1 r
+        FROM public.ranks r
         INNER JOIN public.student_application s
             ON r.regid = s.regid
             AND r.year = s.year

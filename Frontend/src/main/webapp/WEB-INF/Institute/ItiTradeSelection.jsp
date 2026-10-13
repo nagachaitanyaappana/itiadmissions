@@ -72,7 +72,7 @@
 <body>
     <!-- Global Header -->
     <header>
-        <%@ include file="../bannernew.jsp" %>
+        <jsp:include page="/WEB-INF/reports/header.jsp" />
     </header>
 
     <div class="container-fluid px-5 mt-4 mb-5" style="min-height: 50vh;">
@@ -247,11 +247,13 @@
                 showLoading(true);
                 hideMessages();
 
-                // Backend exposes a single trade master list (/api/trades);
-                // there is no per-ITI trades endpoint, so load the master list.
-                const url = itiTradesApiUrl;
+                // Per-ITI trade list (only the trades sanctioned for this ITI).
+                // Served by a same-origin proxy so the page needs no CORS; the
+                // proxy delegates to the backend reservation-entry trade lookup.
+                const url = '${pageContext.request.contextPath}/iti-trade-selection/api/iti/'
+                    + encodeURIComponent(itiCode) + '/trades';
 
-                fetch(url)
+                fetch(url, { credentials: 'include' })
                     .then(response => {
                         if (!response.ok) {
                             throw new Error("HTTP error! status: " + response.status);
@@ -259,7 +261,7 @@
                         return response.json();
                     })
                     .then(data => {
-                        currentTrades = data;
+                        currentTrades = Array.isArray(data) ? data : [];
                         renderTrades(currentTrades);
                         updateSelectedItiDetails(itiCode);
                         showLoading(false);
@@ -297,9 +299,9 @@
     <td class="radio-cell">
         <input type="radio" name="tradeRadio" value="\${index}" class="trade-radio">
     </td>
-    <td>\${escapeHtml(String(trade.tradeCode ?? ''))}</td>
+    <td>\${escapeHtml(trade.tradeCode ?? '')}</td>
     <td><strong>\${escapeHtml(trade.tradeName || trade.tradeShort || '')}</strong></td>
-    <td>\${escapeHtml(trade.unitStrength != null ? String(trade.unitStrength) : '-')}</td>
+    <td>\${escapeHtml(trade.strength != null ? String(trade.strength) : (trade.unitStrength != null ? String(trade.unitStrength) : '-'))}</td>
     <td>\${escapeHtml(trade.durationYrs != null ? String(trade.durationYrs) : '-')}</td>
     <td>\${isAvailable
         ? '<span class="text-success fw-bold">Yes</span>'

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.server.backend.DTO.CurrentUser;
 import com.server.backend.DTO.CreateEntryRequest;
@@ -86,6 +87,18 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
+    @Operation(summary = "Whether a counselling session is scheduled for today")
+    @GetMapping("/today")
+    public ResponseEntity<Map<String, Object>> scheduleToday(
+            @RequestHeader(name = "X-Iti-Code", required = false) String itiCode,
+            @RequestHeader(name = "X-Dist-Code", required = false) String distCode,
+            @RequestHeader(name = "X-Ins-Code", required = false) String insCode,
+            @RequestHeader(name = "X-Role-Id", required = false) String roleId) {
+        CurrentUser user = currentUser(itiCode, distCode, insCode, roleId);
+        Map<String, Object> result = admissionTimingService.hasScheduleToday(user);
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
     @Operation(summary = "View schedule timings")
     @PostMapping("/view")
     public ResponseEntity<Map<String, Object>> viewScheduleTimings(
@@ -97,6 +110,53 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
         CurrentUser user = currentUser(itiCode, distCode, insCode, roleId);
         Map<String, Object> result = admissionTimingService.viewScheduleTimings(req, user);
         return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Delete-Schedule-Entry page. These are not header-scoped: the page is an admin search across
+    // any district/ITI, so the filters arrive in the request. The old page called nonexistent
+    // /itiapi/* URLs, which is why every dropdown and the delete button failed.
+    // ---------------------------------------------------------------------------
+
+    @Operation(summary = "Districts for the delete-schedule page (optional govt filter)")
+    @GetMapping("/districts")
+    public List<Map<String, Object>> deleteDistricts(
+            @RequestParam(name = "govt", required = false) String govt) {
+        return admissionTimingService.listDistrictsForDelete(govt);
+    }
+
+    @Operation(summary = "ITIs of a district for the delete-schedule page (optional govt filter)")
+    @GetMapping("/itis")
+    public List<Map<String, Object>> deleteItis(
+            @RequestParam(name = "distCode") String distCode,
+            @RequestParam(name = "govt", required = false) String govt) {
+        return admissionTimingService.listItisForDelete(distCode, govt);
+    }
+
+    @Operation(summary = "Search schedule entries for the delete-schedule page")
+    @PostMapping("/search")
+    public ResponseEntity<Map<String, Object>> deleteSearch(@RequestBody Map<String, String> req) {
+        Map<String, Object> result = admissionTimingService.searchScheduleForDelete(
+                req.get("distCode"), req.get("itiCode"), req.get("itiType"));
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Delete a schedule entry by its id")
+    @PostMapping("/delete-by-id")
+    public ResponseEntity<Map<String, Object>> deleteById(@RequestBody Map<String, Object> req) {
+        Object raw = req.get("sid");
+        Long sid = null;
+        if (raw != null && !String.valueOf(raw).isBlank()) {
+            try {
+                sid = Long.valueOf(String.valueOf(raw).trim());
+            } catch (NumberFormatException e) {
+                Map<String, Object> bad = new HashMap<>();
+                bad.put("success", false);
+                bad.put("error", "Invalid schedule id: " + raw);
+                return new ResponseEntity<>(bad, HttpStatus.BAD_REQUEST);
+            }
+        }
+        return new ResponseEntity<>(admissionTimingService.deleteScheduleById(sid), HttpStatus.OK);
     }
 
     /**

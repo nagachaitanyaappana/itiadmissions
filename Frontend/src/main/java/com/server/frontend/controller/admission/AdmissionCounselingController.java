@@ -11,8 +11,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,14 +70,63 @@ public class AdmissionCounselingController {
 
     /** Docs screen 2/3 - Start Admission Process form. */
     @GetMapping("/Start")
-    public String start() {
+    public String start(HttpServletRequest request, org.springframework.ui.Model model) {
+        addCurrentPhase(model);
         return "admission/counselingStart";
     }
 
-    /** Docs screens 3/4 - Rank entry, candidate + ITI matrix, Take Admission memo. */
+    /**
+     * Docs screens 3/4 - Rank entry, candidate + ITI matrix, Take Admission memo.
+     *
+     * <p>Gated like the legacy {@code StartAdmissionProcess}: with no counselling schedule for the
+     * district today the process is blocked and the operator sees {@code CouncilDates_notFound}.
+     */
     @GetMapping("/Counseling")
-    public String counseling() {
+    public String counseling(HttpServletRequest request, org.springframework.ui.Model model) {
+        addCurrentPhase(model);
+        if (!hasCouncilToday(request)) {
+            return "admission/councilDatesNotFound";
+        }
         return "admission/counselingRank";
+    }
+
+    /** Publishes the running phase/year (from admissions.admission_phase) to the page defaults. */
+    private void addCurrentPhase(org.springframework.ui.Model model) {
+        Object phase = null;
+        Object year = null;
+        try {
+            ResponseEntity<Map<String, Object>> resp = rest.exchange(
+                    backendBaseUrl + "/api/status",
+                    org.springframework.http.HttpMethod.POST,
+                    null,
+                    new ParameterizedTypeReference<Map<String, Object>>() {
+                    });
+            Map<String, Object> body = resp.getBody();
+            if (body != null) {
+                phase = body.get("phase");
+                year = body.get("year");
+            }
+        } catch (Exception ignored) {
+        }
+        model.addAttribute("currentPhase", phase == null ? "1" : String.valueOf(phase));
+        model.addAttribute("currentYear", year == null ? "" : String.valueOf(year));
+    }
+
+    /** True when the caller's district/ITI has a counselling session scheduled for today. */
+    private boolean hasCouncilToday(HttpServletRequest request) {
+        try {
+            ResponseEntity<Map<String, Object>> resp = rest.exchange(
+                    backendBaseUrl + "/admission-timings/today",
+                    org.springframework.http.HttpMethod.GET,
+                    new HttpEntity<>(scopeHeaders(request)),
+                    new ParameterizedTypeReference<Map<String, Object>>() {
+                    });
+            Map<String, Object> body = resp.getBody();
+            return body == null || !Boolean.FALSE.equals(body.get("hasScheduleToday"));
+        } catch (Exception e) {
+            // If the check itself cannot run, do not hard-block the page.
+            return true;
+        }
     }
 
     // ========== SAME-ORIGIN PROXIES (JS calls these, not the backend directly) ==========
@@ -174,29 +228,20 @@ public class AdmissionCounselingController {
     @ResponseBody
     public ResponseEntity<Object> candidateResolve(@RequestParam("rank") String rank,
                                                    @RequestParam("phase") String phase,
-                                                   @RequestParam("year") String year) {
-        String key = rank + "|" + phase + "|" + year;
+                                                   @RequestParam("year") String year,
+                                                   HttpServletRequest request) {
+        String ins = sessionValue(request, "insCode");
+        String key = ins + "|" + rank + "|" + phase + "|" + year;
         if (RESOLVE_CACHE.containsKey(key)) return ResponseEntity.ok(RESOLVE_CACHE.get(key));
-        // 1) primary API: GET /admission/candidate?rank=&phase=&year=
-        try {
-            String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/admission/candidate")
-                    .queryParam("rank", rank)
-                    .queryParam("phase", phase)
-                    .queryParam("year", year)
-                    .toUriString();
-            ResponseEntity<Object> resp = rest.getForEntity(url, Object.class);
-            List<Object> rows = toList(resp.getBody());
-            if (!rows.isEmpty()) {
-                Map<String, Object> out = new LinkedHashMap<>();
-                out.put("source", "candidate-api");
-                out.put("rank", rank);
-                out.put("phase", phase);
-                out.put("year", year);
-                out.put("candidate", rows.get(0));
-                RESOLVE_CACHE.put(key, out);
-                return ResponseEntity.ok(out);
-            }
-        } catch (Exception ignored) {
+
+        // 1) primary path: the verified rank-lookup, scoped to the caller's district/ITI. The old
+        // primary (GET /admission/candidate) returned a row with every field null -- its entity/DTO
+        // copy dropped all non-matching properties (regid Integer->String, distCode vs dist_code,
+        // rank String->Integer) -- so the page always rendered an empty candidate.
+        Map<String, Object> resolved = resolveFromRankLookup(rank, phase, year, request);
+        if (resolved != null) {
+            RESOLVE_CACHE.put(key, resolved);
+            return ResponseEntity.ok(resolved);
         }
         // 2) fallback scan below (parallel student-details merit match, bounded)
         Map<String, Object> fb = fallbackByMerit(rank, phase, year);
@@ -211,6 +256,87 @@ public class AdmissionCounselingController {
         out.put("year", year);
         out.put("candidate", null);
         return ResponseEntity.ok(out);
+    }
+
+    /**
+     * Calls {@code POST /api/admission/rank-lookup}, forwarding the login scope as headers, and maps
+     * the returned student record onto the field names the counseling JSP reads
+     * (name / fatherName / caste / gender / dist_code / iti_code / ...). Returns null on any failure
+     * so the caller can fall back.
+     */
+    private Map<String, Object> resolveFromRankLookup(String rank, String phase, String year,
+                                                      HttpServletRequest request) {
+        try {
+            HttpHeaders headers = scopeHeaders(request);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<Map<String, Object>> resp = rest.exchange(
+                    backendBaseUrl + "/api/admission/rank-lookup",
+                    org.springframework.http.HttpMethod.POST,
+                    new HttpEntity<>(Map.of("rank", rank), headers),
+                    new ParameterizedTypeReference<Map<String, Object>>() {
+                    });
+            Map<String, Object> body = resp.getBody();
+            if (body == null || !Boolean.TRUE.equals(body.get("success"))) {
+                return null;
+            }
+            Map<String, Object> data = asMap(body.get("data"));
+            if (data == null) {
+                return null;
+            }
+            boolean districtLogin = "3".equals(sessionValue(request, "roleId"));
+            String distCode = districtLogin ? sessionValue(request, "insCode") : null;
+
+            Map<String, Object> cand = new LinkedHashMap<>();
+            cand.put("regid", data.get("regid"));
+            cand.put("rank", data.get("rank"));
+            cand.put("name", data.get("name"));
+            cand.put("fatherName", data.get("fname"));
+            cand.put("caste", data.get("caste"));
+            cand.put("gender", data.get("gender"));
+            cand.put("qual", "");
+            cand.put("dist_code", distCode);
+            cand.put("distName", distCode);
+            cand.put("iti_code", "");
+            cand.put("phase", phase);
+            cand.put("year", year);
+            cand.put("app_status", Boolean.TRUE.equals(data.get("is_admitted")) ? "A" : "N");
+            cand.put("dob", data.get("dob"));
+
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("source", "rank-lookup");
+            out.put("rank", rank);
+            out.put("phase", phase);
+            out.put("year", year);
+            out.put("candidate", cand);
+            return out;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    /** Login-scope headers from the servlet session, matching the page's own apiHeaders(). */
+    private HttpHeaders scopeHeaders(HttpServletRequest request) {
+        HttpHeaders headers = new HttpHeaders();
+        String role = sessionValue(request, "roleId");
+        String ins = sessionValue(request, "insCode");
+        if (role != null) headers.set("X-Role-Id", role);
+        if (ins != null) {
+            headers.set("X-Ins-Code", ins);
+            if ("3".equals(role)) {
+                headers.set("X-Dist-Code", ins);
+            } else {
+                headers.set("X-Iti-Code", ins);
+            }
+        }
+        return headers;
+    }
+
+    private static String sessionValue(HttpServletRequest request, String name) {
+        if (request == null) return null;
+        var session = request.getSession(false);
+        if (session == null) return null;
+        Object value = session.getAttribute(name);
+        return value == null ? null : String.valueOf(value);
     }
 
     /** Paged fallback: parallel meritList[].rank+phase match. Bounded by timeout. */

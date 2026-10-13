@@ -136,8 +136,7 @@
     </style>
 </head>
 <body onload="initPage()">
-    <jsp:include page="/WEB-INF/bannernew.jsp" />
-    <jsp:include page="/WEB-INF/navbars/district_navbar.jsp" />
+    <jsp:include page="/WEB-INF/reports/header.jsp" />
 
     <!-- Search Form -->
     <div id="verifyForm">

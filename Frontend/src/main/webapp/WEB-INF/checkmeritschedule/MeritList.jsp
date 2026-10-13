@@ -115,8 +115,7 @@
 </head>
 <body>
     <!-- Header Content -->
-    <jsp:include page="/WEB-INF/bannernew.jsp" />
-    <jsp:include page="/WEB-INF/navbars/district_navbar.jsp" />
+    <jsp:include page="/WEB-INF/reports/header.jsp" />
 
     <div class="container form-container">
         <div class="outer-border shadow-lg">

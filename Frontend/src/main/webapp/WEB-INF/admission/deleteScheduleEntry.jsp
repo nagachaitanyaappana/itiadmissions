@@ -143,24 +143,53 @@
     <script>
         var BACKEND = window.API_BASE_URL;
         var pendingSid = null;
+        var CURRENT_PHASE = '1';
+
+        document.addEventListener('DOMContentLoaded', function () { initPhase(); });
+
+        // The running phase comes from admissions.admission_phase via the backend /api/status.
+        // Phase 1 schedules are district-level, so the Government/Private and ITI filters are hidden.
+        async function initPhase() {
+            try {
+                var resp = await fetch(BACKEND + '/api/status', { method: 'POST', credentials: 'include' });
+                var st = await resp.json();
+                if (st && st.phase != null) CURRENT_PHASE = String(st.phase);
+            } catch (e) { /* default to phase 1 */ }
+            if (CURRENT_PHASE === '1') {
+                hideFilter('itiTypeSelect');
+                hideFilter('itiSelect');
+                await loadDistricts('');
+            }
+        }
+
+        function hideFilter(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var col = el.closest('.col-md-4');
+            (col || el).style.display = 'none';
+        }
 
         async function onItiTypeChange(itiType) {
+            await loadDistricts(itiType);
+        }
+
+        async function loadDistricts(govt) {
             var distSel = document.getElementById('districtSelect');
             var itiSel  = document.getElementById('itiSelect');
             resetSelect(distSel,'-- ALL DISTRICTS --','all');
             resetSelect(itiSel,'-- ALL ITIs --','all');
             distSel.disabled = true; itiSel.disabled = true;
             hideFilterFeedback();
-            if (!itiType) return;
+            if (CURRENT_PHASE !== '1' && !govt) return;
             try {
-                var resp = await fetch(BACKEND+'/itiapi/masterdata/getAllItisGovtorPvt?itiType='+encodeURIComponent(itiType),{credentials:'include'});
+                var url = BACKEND + '/admission-timings/districts' + (govt ? ('?govt='+encodeURIComponent(govt)) : '');
+                var resp = await fetch(url,{credentials:'include'});
                 var data = await resp.json();
                 if (Array.isArray(data) && data.length > 0) {
-                    var seen = {};
                     data.forEach(function(item){
-                        var code = item.dist_code||item.distCode||item.districtCode;
-                        var name = item.dist_name||item.distName||item.districtName||code;
-                        if (code && !seen[code]) { seen[code]=true; addOption(distSel,code,name); }
+                        var code = item.distCode||item.dist_code;
+                        var name = item.distName||item.dist_name||code;
+                        if (code) addOption(distSel,code,name);
                     });
                     distSel.disabled = false;
                 }
@@ -169,17 +198,18 @@
 
         async function onDistrictChange(distCode) {
             var itiSel  = document.getElementById('itiSelect');
-            var itiType = document.getElementById('itiTypeSelect').value;
+            var itiTypeEl = document.getElementById('itiTypeSelect');
+            var itiType = itiTypeEl ? itiTypeEl.value : '';
             resetSelect(itiSel,'-- ALL ITIs --','all');
             itiSel.disabled = true;
-            if (!distCode || distCode==='all' || !itiType) return;
+            if (!distCode || distCode==='all' || CURRENT_PHASE === '1' || !itiType) return;
             try {
-                var resp = await fetch(BACKEND+'/itiapi/masterdata/getAllItisInDistandGovt?distCode='+encodeURIComponent(distCode)+'&govt='+encodeURIComponent(itiType),{credentials:'include'});
+                var resp = await fetch(BACKEND+'/admission-timings/itis?distCode='+encodeURIComponent(distCode)+'&govt='+encodeURIComponent(itiType),{credentials:'include'});
                 var data = await resp.json();
                 if (Array.isArray(data) && data.length > 0) {
                     data.forEach(function(item){
-                        var code = item.iti_code||item.itiCode||item.code;
-                        var name = item.iti_name||item.itiName||item.name||code;
+                        var code = item.itiCode||item.iti_code;
+                        var name = item.itiName||item.iti_name||code;
                         if (code) addOption(itiSel,code,name);
                     });
                     itiSel.disabled = false;
@@ -190,13 +220,14 @@
         async function searchScheduleEntries() {
             hideFilterFeedback(); hideGlobalFeedback();
             document.getElementById('tableSection').style.display = 'none';
-            var itiType  = document.getElementById('itiTypeSelect').value;
+            var itiTypeEl = document.getElementById('itiTypeSelect');
+            var itiType  = itiTypeEl ? itiTypeEl.value : '';
             var distCode = document.getElementById('districtSelect').value || 'all';
             var itiCode  = document.getElementById('itiSelect').value      || 'all';
-            if (!itiType) { showFilterFeedback('Please select Government / Private Type.','warning'); return; }
+            if (CURRENT_PHASE !== '1' && !itiType) { showFilterFeedback('Please select Government / Private Type.','warning'); return; }
             showSpinner(true);
             try {
-                var resp = await fetch(BACKEND+'/itiapi/admissions/getScheduleEntryByDistCodeAndItiCode',{
+                var resp = await fetch(BACKEND+'/admission-timings/search',{
                     method:'POST', credentials:'include',
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({distCode:distCode,itiCode:itiCode,itiType:itiType})
@@ -213,9 +244,9 @@
             var tbody = document.getElementById('entryList');
             tbody.innerHTML = '';
             rows.forEach(function(row,idx){
-                var sid       = row.tempPk    || row.sid       || row.id       || row.scheduleId || '';
-                var distName  = row.distCode  || row.dist_code || row.distName || row.districtName || '-';
-                var itiName   = row.itiCode   || row.iti_code  || row.itiName  || '-';
+                var sid       = row.sid != null ? row.sid : (row.id || row.scheduleId || row.tempPk || '');
+                var distName  = row.distName  || row.dist_name || row.distCode || row.dist_code || '-';
+                var itiName   = row.itiName   || row.iti_name  || row.itiCode  || row.iti_code  || '-';
                 var reserv    = row.caste     || row.reservation || '-';
                 var qual      = row.minqul    || row.qualification || '-';
                 var meritFrom = row.meritFrom || row.merit_from || '-';
@@ -256,7 +287,7 @@
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
             bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
             try {
-                var resp = await fetch(BACKEND+'/itiapi/admissions/deleteScheduleEntryById',{
+                var resp = await fetch(BACKEND+'/admission-timings/delete-by-id',{
                     method:'POST', credentials:'include',
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({sid:pendingSid})
