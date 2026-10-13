@@ -3,6 +3,7 @@ package com.server.backend.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,15 +17,19 @@ public class StudentApplication {
     public StudentApplication() {
     }
 
+    // public.student_application.regid is character varying in the reference schema,
+    // so the id maps as String (the sequence value is stored as text). Hibernate's
+    // built-in generators reject non-integral ids, so StudentApplicationRegidGenerator
+    // reads the sequence and returns the value as a string. The JSON API keeps exposing
+    // it as a number; StudentApplicationServiceImpl converts.
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "student_application_regid_seq")
-    @SequenceGenerator(
-            name = "student_application_regid_seq",
-            sequenceName = "student_application_regid_seq",
-            allocationSize = 1
+    @GeneratedValue(generator = "student-application-regid")
+    @GenericGenerator(
+            name = "student-application-regid",
+            type = StudentApplicationRegidGenerator.class
     )
     @Column(name = "regid")
-    private Long regid;
+    private String regid;
 
     @Column(name = "ssc_regno", nullable = false)
     private String sscRegNo;

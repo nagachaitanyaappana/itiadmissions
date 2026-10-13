@@ -128,11 +128,7 @@
                     </div>
                     <div class="col-md-5">
                         <select id="phaseSelect" class="form-select custom-select-box">
-                            <option value="1">Phase 1</option>
-                            <option value="2">Phase 2</option>
-                            <option value="3">Phase 3</option>
-                            <option value="4">Phase 4</option>
-                            <option value="5">Phase 5</option>
+                            <option value="">-select-</option>
                         </select>
                     </div>
                 </div>
@@ -203,18 +199,30 @@
         // Ensure we point to the Node backend correctly
         const NODE_API_BASE = "${backendBaseUrl}";
         const SESSION_ENTITY_NAME = '<%= jsEntityName %>';
+        let DEFAULT_YEAR = '2026';
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // 0. Load current admission year/phase defaults from the DB-backed master
+            try {
+                const statusResp = await fetch(NODE_API_BASE + '/api/status', {
+                    method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }
+                });
+                const status = await statusResp.json();
+                if (status && status.year) DEFAULT_YEAR = String(status.year);
+            } catch (err) {
+                console.error('Failed to load current admission phase:', err);
+            }
+
             // 1. Setup District Display
             document.getElementById('districtDisplay').value = SESSION_ENTITY_NAME || "N/A";
 
             // 2. Setup Year selection
             const yearSelect = document.getElementById('yearSelect');
-            for (let y = 2026; y >= 2000; y--) {
+            for (let y = parseInt(DEFAULT_YEAR, 10); y >= 2000; y--) {
                 const opt = document.createElement('option');
                 opt.value = y;
                 opt.textContent = y;
-                if(y === 2024) opt.selected = true; 
+                if (y === parseInt(DEFAULT_YEAR, 10)) opt.selected = true;
                 yearSelect.appendChild(opt);
             }
 
@@ -223,12 +231,14 @@
                 const distCode = localStorage.getItem('insCode');
                 const itiUrl = "http://" + window.location.hostname + ":5051/getItisByDistrictCodes" + (distCode ? '?dist_code=' + distCode : '');
                 const tradeUrl = NODE_API_BASE + '/api/dsc/trade-list';
+                const phasesUrl = NODE_API_BASE + '/api/admission-phase/all';
 
                 console.log("Loading DSC Filters:", itiUrl);
 
-                const [itiResp, tradeResp] = await Promise.all([
+                const [itiResp, tradeResp, phasesResp] = await Promise.all([
                     fetch(itiUrl, { credentials: 'include', credentials: 'include' }),
-                    fetch(tradeUrl, { credentials: 'include', credentials: 'include' })
+                    fetch(tradeUrl, { credentials: 'include', credentials: 'include' }),
+                    fetch(phasesUrl, { credentials: 'include', credentials: 'include' })
                 ]);
 
                 if (!itiResp.ok || !tradeResp.ok) throw new Error("Backend response error");
@@ -257,6 +267,22 @@
                         tradeSelect.appendChild(opt);
                     });
                 }
+
+                const phaseData = await phasesResp.json();
+                if (Array.isArray(phaseData) && phaseData.length > 0) {
+                    const phaseSelect = document.getElementById('phaseSelect');
+                    const years = new Set(phaseData.map(p => p.year).filter(Boolean));
+                    const withYear = years.size > 1;
+                    phaseData.forEach(p => {
+                        if (p && p.phase !== undefined && p.phase !== null) {
+                            const opt = document.createElement('option');
+                            opt.value = String(p.phase);
+                            opt.textContent = 'Phase ' + p.phase + (withYear && p.year ? ' (' + p.year + ')' : '');
+                            opt.selected = p.current === true;
+                            phaseSelect.appendChild(opt);
+                        }
+                    });
+                }
             } catch (err) {
                 console.error("Fetch failure:", err);
                 // Optionally show a user-friendly message
@@ -267,7 +293,7 @@
             document.getElementById('itiSelect').selectedIndex = 0;
             document.getElementById('tradeSelect').selectedIndex = 0;
             document.getElementById('phaseSelect').selectedIndex = 0;
-            document.getElementById('yearSelect').value = "2024";
+            document.getElementById('yearSelect').value = DEFAULT_YEAR;
             document.getElementById('levelSelect').selectedIndex = 0;
         }
 

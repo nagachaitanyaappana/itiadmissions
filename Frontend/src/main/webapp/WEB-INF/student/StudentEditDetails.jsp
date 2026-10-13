@@ -275,9 +275,38 @@
                     document.getElementById("ewsChk").checked = s.economicWeakerSection === true;
                     document.getElementById("phcChk").checked = s.phc === true;
                     document.getElementById("exsChk").checked = s.exservice === true;
+                    // Show any previously uploaded photograph (mirrors Editviewpage.jsp).
+                    $.get('${backendBaseUrl}/api/student/photo/' + s.regid, function (r) {
+                        var img = document.getElementById("existingPhoto");
+                        if (r && r.photo) {
+                            img.src = 'data:image/jpeg;base64,' + r.photo;
+                            img.style.display = '';
+                        } else {
+                            img.style.display = 'none';
+                        }
+                    });
                 }
 
                 function val(id) { var v = document.getElementById(id).value.trim(); return v === "" ? null : v; }
+
+                // Local preview of a newly selected photograph; uploading happens on Save.
+                function previewPhoto(input) {
+                    var box = document.getElementById("photoPrev");
+                    box.innerHTML = "";
+                    if (!input || !input.files || input.files.length === 0) { return; }
+                    var file = input.files[0];
+                    if (file.type !== "image/png" && file.type !== "image/jpeg") {
+                        input.value = "";
+                        alert("Please select a PNG or JPEG image.");
+                        return;
+                    }
+                    var img = document.createElement("img");
+                    img.src = URL.createObjectURL(file);
+                    img.style.width = "90px";
+                    img.style.height = "110px";
+                    img.style.border = "1px solid #666";
+                    box.appendChild(img);
+                }
             </script>
             <script type="text/javascript">
                 function loadCastes() {
@@ -324,9 +353,32 @@
                     return true;
                 }
 
-                // Submit: PUT /api/student/update/{regid}
+                // Submit: optionally replace the photograph, then PUT /api/student/update/{regid}.
+                // Mirrors Editviewpage.jsp, which posts the photo in the same multipart form.
                 function submitEdit() {
                     if (!validateEdit()) return false;
+                    var fileInput = document.getElementById("photo");
+                    var hasPhoto = fileInput && fileInput.files && fileInput.files.length > 0;
+                    if (hasPhoto) {
+                        var fd = new FormData();
+                        fd.append("photo", fileInput.files[0]);
+                        $.ajax({
+                            url: '${backendBaseUrl}/api/student/photo/' + CURRENT_REGID,
+                            type: 'POST', data: fd, processData: false, contentType: false,
+                            success: function () { updateDetails(); },
+                            error: function (xhr) {
+                                var msg = "Failed to upload the photograph.";
+                                if (xhr.responseJSON && xhr.responseJSON.error) { msg = xhr.responseJSON.error; }
+                                alert(msg);
+                            }
+                        });
+                    } else {
+                        updateDetails();
+                    }
+                    return false;
+                }
+
+                function updateDetails() {
                     var payload = {
                         name: document.getElementById("name").value.trim(),
                         fname: document.getElementById("fname").value.trim(),
@@ -366,7 +418,15 @@
                     return false;
                 }
 
-                $(document).ready(function () { loadCastes(); });
+                $(document).ready(function () {
+                    loadCastes();
+                    // Current session year/phase come from admissions.admission_phase (current = true).
+                    $.get('${backendBaseUrl}/api/reports/current-admission-phase', function (data) {
+                        if (data && data.year) {
+                            $('.sessionYearPhase').text(String(data.year) + '(Phase-' + data.phase + ')');
+                        }
+                    });
+                });
             </script>
 
         <style>
@@ -413,7 +473,7 @@
 <!-- ============ GATE: LOOK UP THE REGISTRATION ============ -->
 <div id="gateDiv">
         <form name="EditForm" method="post" action="#" onsubmit="return fetchForEdit()">
-            <h2 style="background-color: lightgreen" align="center">Edit Registration Form for Admission into the Industrial Training Institute for the session 2026(Phase-6) </h2>
+            <h2 style="background-color: lightgreen" align="center">Edit Registration Form for Admission into the Industrial Training Institute for the session <span class="sessionYearPhase"></span> </h2>
             <table width="50%"  align="center" bgcolor="#cbd6b2">
                 <tr id="heading">
                     <td></td>
@@ -453,7 +513,7 @@
 <div id="editDiv" style="display:none;">
         <form name="EditDetailsForm" method="post" action="#" onsubmit="return submitEdit()">
             <h2 style="background-color: lightgreen" align="center" class="style4">
-                Edit Registration Form for Admission into the Industrial Training Institute for the session 2026(Phase-6)</h2>
+                Edit Registration Form for Admission into the Industrial Training Institute for the session <span class="sessionYearPhase"></span></h2>
 
             <p id="prefillInfo" style="text-align:center;background-color:#e4eeb9;padding:8px;border:1px solid #999;"></p>
 
@@ -477,6 +537,12 @@
                 <tr><td>Ex-Service Man</td><td><input type="checkbox" id="exsChk"></td></tr>
                 <tr><td>Passed Intermediate?</td><td><select id="interPassed"><option value="">--Select--</option><option value="true">Yes</option><option value="false">No</option></select></td></tr>
                 <tr><td>Inter Marks (if passed)</td><td><input type="text" id="interMarks" maxlength="4" onkeypress="return NumericsOnly(event);"></td></tr>
+                <tr><td>Photograph</td><td>
+                        <div>Current photo: <img id="existingPhoto" alt="No photo uploaded yet"
+                            style="width:90px;height:110px;border:1px solid #666;display:none;"></div>
+                        <input type="file" id="photo" accept="image/png,image/jpeg" onchange="previewPhoto(this);">
+                        <div id="photoPrev"></div>
+                    </td></tr>
                 <tr>
                     <td style="text-align: center;" colspan="2"> 
                         <a href="${pageContext.request.contextPath}/"> <input type="button" name="back" id="submit" Style="width:100px;" value="Back to Home"/></a>

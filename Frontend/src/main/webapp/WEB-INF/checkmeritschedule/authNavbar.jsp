@@ -80,7 +80,7 @@
                                     Entry</a></li>
                             <li><a class="dropdown-item" href="#">Call Letter</a></li>
                             <li><a class="dropdown-item" href="#">DISCHARGE ADMISSION</a></li>
-                            <li><a class="dropdown-item" href="#">Verification For Online Application</a></li>
+                            <li><a class="dropdown-item" href="${pageContext.request.contextPath}/VerifyApplication" onclick="validateReportAccess(event, '3', '${pageContext.request.contextPath}/VerifyApplication')">Verification For Online Application</a></li>
                             <li><a class="dropdown-item" href="${pageContext.request.contextPath}/DgtPermittedShift">DGT Permitted Shift Units</a></li>
 
 

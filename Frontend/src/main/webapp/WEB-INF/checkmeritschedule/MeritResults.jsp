@@ -44,7 +44,7 @@
 <body>
     <!-- Header Content -->
     <jsp:include page="/WEB-INF/bannernew.jsp" />
-    <jsp:include page="/WEB-INF/navbars/iti_navbar.jsp" />
+    <jsp:include page="/WEB-INF/navbars/district_navbar.jsp" />
 
     <div class="results-container">
         <div class="outer-border shadow-lg">

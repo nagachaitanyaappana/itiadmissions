@@ -196,6 +196,12 @@
                         if (ev.keyCode === 13)
                             $('#mysubmit').click();
                     });
+                    // Current session year/phase come from admissions.admission_phase (current = true).
+                    $.get('${backendBaseUrl}/api/reports/current-admission-phase', function (data) {
+                        if (data && data.year) {
+                            $('.sessionYearPhase').text(String(data.year) + '(Phase-' + data.phase + ')');
+                        }
+                    });
                 });
             
         </script>
@@ -294,7 +300,7 @@
             
             <h2 style="background-color: lightgreen" align="center"  class="style4" >
                 Application Form for Admission into the Industrial Training Institute for the session 
-                2026 </h2>
+                <span class="sessionYearPhase"></span> </h2>
             <table align="center" bgcolor="#cbd6b2">
                 <tr id="heading">
                 <td></td>

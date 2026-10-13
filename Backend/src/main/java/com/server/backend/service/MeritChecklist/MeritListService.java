@@ -244,7 +244,7 @@ public class MeritListService {
             "    CASE WHEN b.phc = 't' THEN 'Yes' ELSE 'No' END as phc,\n" +
             "    CASE WHEN b.exservice = 't' THEN 'Yes' ELSE 'No' END as exservice\n" +
             "FROM final_set r\n" +
-            "JOIN application b ON r.regid = b.regid\n" +
+            "JOIN application b ON r.regid::text = b.regid::text\n" +
             "ORDER BY r.rank::integer;",
             dbTablename, codeColumn, codeColumn, dbTablename, insertColumns, selectValues, dbTablename, codeColumn
         );

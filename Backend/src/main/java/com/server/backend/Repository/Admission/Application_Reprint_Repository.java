@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.server.backend.entity.StudentApplication;
 
 public interface Application_Reprint_Repository
-        extends JpaRepository<StudentApplication, Integer> {
+        extends JpaRepository<StudentApplication, String> {
 
-    Optional<StudentApplication> findByRegid(Long regid);
+    Optional<StudentApplication> findByRegid(String regid);
 }

@@ -41,7 +41,7 @@
                         <div class="col-md-5"><label for="phase" class="form-label-official mb-md-0">Phase *</label></div>
                         <div class="col-md-7">
                             <select name="phase" id="phase" class="form-select-official w-100" required>
-                                <option value="1">Phase 1</option><option value="2">Phase 2</option><option value="3">Phase 3</option><option value="4">Phase 4</option><option value="5">Phase 5</option>
+                                <option value="">Loading phases...</option>
                             </select>
                         </div>
                     </div>
@@ -49,7 +49,7 @@
                         <div class="col-md-5"><label for="year" class="form-label-official mb-md-0">Year</label></div>
                         <div class="col-md-7">
                             <select name="year" id="year" class="form-select-official w-100">
-                                <option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option>
+                                <option value="">Select Year</option>
                             </select>
                         </div>
                     </div>
@@ -115,6 +115,46 @@
             })
             .catch(error => { document.getElementById('loader').style.display = 'none'; document.getElementById('selectionView').style.display = 'block'; alert('Error loading data: ' + error.message); console.error('Error:', error); });
         }
+
+        function loadPhasesFromMaster() {
+            fetch('${backendApiUrl}/api/admission-phase/all')
+                .then(r => r.json())
+                .then(phases => {
+                    if (!Array.isArray(phases)) return;
+                    const yearSel = document.getElementById('year');
+                    const phaseSel = document.getElementById('phase');
+                    let currentYear = String(new Date().getFullYear());
+                    const years = [...new Set(phases.map(p => p.year).filter(Boolean))].sort().reverse();
+                    phases.forEach(p => { if (p.current) currentYear = String(p.year); });
+                    if (yearSel) {
+                        yearSel.innerHTML = '<option value="">Select Year</option>';
+                        years.forEach(y => {
+                            const opt = document.createElement('option');
+                            opt.value = y;
+                            opt.textContent = y;
+                            if (y === currentYear) opt.selected = true;
+                            yearSel.appendChild(opt);
+                        });
+                    }
+                    if (phaseSel) phaseSel.innerHTML = '';
+                    if (!phaseSel) return;
+                    const withYear = years.length > 1;
+                    phases.forEach(p => {
+                        if (p && p.phase !== undefined && p.phase !== null) {
+                            const opt = document.createElement('option');
+                            opt.value = String(p.phase);
+                            opt.textContent = 'Phase ' + p.phase + (withYear && p.year ? ' (' + p.year + ')' : '');
+                            opt.selected = p.current === true;
+                            phaseSel.appendChild(opt);
+                        }
+                    });
+                })
+                .catch(() => {
+                    const sel = document.getElementById('phase');
+                    if (sel) sel.innerHTML = '<option value="">-select-</option>';
+                });
+        }
+        document.addEventListener('DOMContentLoaded', loadPhasesFromMaster);
     
 
 

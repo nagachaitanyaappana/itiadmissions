@@ -74,7 +74,15 @@ public class HomeController {
     }
 
     @GetMapping("/MeritList")
-    public String meritList() {
+    public String meritList(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("sessionUser") == null) {
+            return "redirect:/?error=session";
+        }
+        Object roleId = session.getAttribute("roleId");
+        if (roleId == null || (!"3".equals(String.valueOf(roleId)) && !"4".equals(String.valueOf(roleId)))) {
+            return "redirect:/?error=session";
+        }
         return "checkmeritschedule/MeritList";
     }
 
@@ -96,6 +104,19 @@ public class HomeController {
     @GetMapping("/VerificationReport")
     public String verificationReport() {
         return "checkmeritschedule/distVerification";
+    }
+
+    @GetMapping("/VerifyApplication")
+    public String verifyApplication(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("sessionUser") == null) {
+            return "redirect:/?error=session";
+        }
+        Object roleId = session.getAttribute("roleId");
+        if (roleId == null || !"3".equals(String.valueOf(roleId))) {
+            return "redirect:/?error=session";
+        }
+        return "checkmeritschedule/verifyApplication";
     }
 
     @GetMapping("/PrintAdmissionSlip")

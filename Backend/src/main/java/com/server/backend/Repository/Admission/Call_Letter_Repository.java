@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 import com.server.backend.entity.StudentApplication;
 
 public interface Call_Letter_Repository
-        extends JpaRepository<StudentApplication, Integer> {
+        extends JpaRepository<StudentApplication, String> {
 
     @Query(value = """
         SELECT

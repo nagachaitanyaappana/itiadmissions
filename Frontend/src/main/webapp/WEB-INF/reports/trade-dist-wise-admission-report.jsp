@@ -42,7 +42,7 @@
                         <div class="col-md-5"><label for="year" class="form-label-official mb-md-0">Admission Year *</label></div>
                         <div class="col-md-7">
                             <select name="year" id="year" class="form-select-official w-100" required>
-                                <option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option>
+                                <option value="">Select Year</option>
                             </select>
                         </div>
                     </div>
@@ -50,7 +50,7 @@
                         <div class="col-md-5"><label for="caste" class="form-label-official mb-md-0">Caste Category</label></div>
                         <div class="col-md-7">
                             <select name="caste" id="caste" class="form-select-official w-100">
-                                <option value="All">All Categories</option><option value="BC-A">BC-A</option><option value="BC-B">BC-B</option><option value="BC-C">BC-C</option><option value="BC-D">BC-D</option><option value="BC-E">BC-E</option><option value="OC">OC</option><option value="SC">SC</option><option value="ST">ST</option><option value="EWS">EWS</option>
+                                <option value="All">All Categories</option>
                             </select>
                         </div>
                     </div>
@@ -126,22 +126,50 @@
         }
     
 
-        document.addEventListener('DOMContentLoaded', function() {
-            fetch('${backendApiUrl}/current-admission-phase')
+        function loadCastes(fallback) {
+            return fetch('${backendApiUrl}/api/dsc/caste-list')
                 .then(r => r.json())
-                .then(config => {
-                    const year = config.year || String(new Date().getFullYear());
-                    const phase = config.phase || '';
-                    const yearSelect = document.getElementById('year');
-                    const phaseSelect = document.getElementById('phase');
-                    if (yearSelect) yearSelect.value = year;
-                    if (phaseSelect && phase) phaseSelect.value = String(phase);
-                    const form = document.getElementById('reportForm');
-                    if (form) {
-                        form.dispatchEvent(new Event('submit'));
+                .then(res => {
+                    const sel = document.getElementById('caste');
+                    if (res && res.data && sel) {
+                        res.data.forEach(c => {
+                            const opt = document.createElement('option');
+                            opt.value = c.casteCode;
+                            opt.textContent = c.casteName;
+                            sel.appendChild(opt);
+                        });
+                        return true;
                     }
+                    return false;
                 })
-                .catch(err => console.error('Failed to load current phase:', err));
+                .catch(() => false)
+                .then(ok => { if (!ok) fallback && fallback(); });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCastes();
+            fetch('${backendApiUrl}/api/admission-phase/all')
+                .then(r => r.json())
+                .then(phases => {
+                    const yearSelect = document.getElementById('year');
+                    if (!Array.isArray(phases) || !yearSelect) {
+                        throw new Error('No admission phases available from master');
+                    }
+                    const years = [...new Set(phases.map(p => p.year).filter(Boolean))].sort().reverse();
+                    let currentYear = String(new Date().getFullYear());
+                    phases.forEach(p => { if (p.current) currentYear = String(p.year); });
+                    yearSelect.innerHTML = '<option value="">Select Year</option>';
+                    years.forEach(y => {
+                        const opt = document.createElement('option');
+                        opt.value = y;
+                        opt.textContent = y;
+                        if (y === currentYear) opt.selected = true;
+                        yearSelect.appendChild(opt);
+                    });
+                    const form = document.getElementById('reportForm');
+                    if (form) form.dispatchEvent(new Event('submit'));
+                })
+                .catch(err => console.error('Failed to load current admission year:', err));
         });
     </script>
 <%@ include file="../footer.jsp" %>

@@ -53,10 +53,6 @@
                         <div class="col-md-8">
                             <select name="year" id="year" class="form-select-official w-100" required>
                                 <option value="">Select Year</option>
-                                <option value='2019'>2019</option><option value='2020'>2020</option>
-                                <option value='2021'>2021</option><option value='2022'>2022</option>
-                                <option value='2023'>2023</option><option value='2024'>2024</option>
-                                <option value='2025'>2025</option><option value='2026'>2026</option>
                             </select>
                         </div>
                     </div>
@@ -75,11 +71,6 @@
                         <div class="col-md-8">
                             <select name="phase" id="phase" class="form-select-official w-100">
                                 <option value="All">All</option>
-                                <option value="1">Phase 1</option>
-                                <option value="2">Phase 2</option>
-                                <option value="3">Phase 3</option>
-                                <option value="4">Phase 4</option>
-                                <option value="5">Phase 5</option>
                             </select>
                         </div>
                     </div>
@@ -243,31 +234,70 @@
             });
         }
 
+        function loadPhasesFromMaster() {
+            return fetch('${backendApiUrl}/api/admission-phase/all')
+                .then(r => r.json())
+                .then(phases => {
+                    if (!Array.isArray(phases)) return;
+                    const yearSel = document.getElementById('year');
+                    const phaseSel = document.getElementById('phase');
+                    let currentYear = String(new Date().getFullYear());
+                    const years = [...new Set(phases.map(p => p.year).filter(Boolean))].sort().reverse();
+                    phases.forEach(p => { if (p.current) currentYear = String(p.year); });
+                    if (yearSel) {
+                        yearSel.innerHTML = '<option value="">Select Year</option>';
+                        years.forEach(y => {
+                            const opt = document.createElement('option');
+                            opt.value = y;
+                            opt.textContent = y;
+                            if (y === currentYear) opt.selected = true;
+                            yearSel.appendChild(opt);
+                        });
+                    }
+                    const withYear = years.length > 1;
+                    if (phaseSel) {
+                        phaseSel.innerHTML = '<option value="All">All</option>';
+                        phases.forEach(p => {
+                            if (p && p.phase !== undefined && p.phase !== null) {
+                                const opt = document.createElement('option');
+                                opt.value = String(p.phase);
+                                opt.textContent = 'Phase ' + p.phase + (withYear && p.year ? ' (' + p.year + ')' : '');
+                                opt.selected = p.current === true;
+                                phaseSel.appendChild(opt);
+                            }
+                        });
+                    }
+                })
+                .catch(err => console.error('Failed to load phases from master:', err));
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const year = urlParams.get('year');
-            const distCode = urlParams.get('distCode');
-            const govt = urlParams.get('govt');
-            const phase = urlParams.get('phase');
-            const gender = urlParams.get('gender');
-            if (year) {
-                document.getElementById('year').value = year;
-            }
-            if (distCode) {
-                document.getElementById('distCode').value = distCode;
-            }
-            if (govt) {
-                document.getElementById('govt').value = govt;
-            }
-            if (phase) {
-                document.getElementById('phase').value = phase;
-            }
-            if (gender) {
-                document.getElementById('gender').value = gender;
-            }
-            if (year) {
-                fetchReport(new Event('submit'));
-            }
+            loadPhasesFromMaster().then(function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const year = urlParams.get('year');
+                const distCode = urlParams.get('distCode');
+                const govt = urlParams.get('govt');
+                const phase = urlParams.get('phase');
+                const gender = urlParams.get('gender');
+                if (year) {
+                    document.getElementById('year').value = year;
+                }
+                if (distCode) {
+                    document.getElementById('distCode').value = distCode;
+                }
+                if (govt) {
+                    document.getElementById('govt').value = govt;
+                }
+                if (phase) {
+                    document.getElementById('phase').value = phase;
+                }
+                if (gender) {
+                    document.getElementById('gender').value = gender;
+                }
+                if (year) {
+                    fetchReport(new Event('submit'));
+                }
+            });
         });
     </script>
 <%@ include file="../footer.jsp" %>

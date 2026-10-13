@@ -54,10 +54,26 @@ entity.setSscPassed(true);
 
         StudentApplication saved = repository.save(entity);
 
-        StudentApplicationDto response = new StudentApplicationDto();
-        BeanUtils.copyProperties(saved, response);
+        return toDto(saved);
+    }
 
-        return response;
+    /** regid is stored as character varying; the JSON API exposes it as a number. */
+    private static Integer toIntegerId(String regid) {
+        if (regid == null || regid.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(regid.trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private static StudentApplicationDto toDto(StudentApplication entity) {
+        StudentApplicationDto dto = new StudentApplicationDto();
+        BeanUtils.copyProperties(entity, dto);
+        dto.setRegid(toIntegerId(entity.getRegid()));
+        return dto;
     }
 
 
@@ -74,7 +90,7 @@ entity.setSscPassed(true);
     @Override
 public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto dto) {
 
-    StudentApplication entity = repository.findById(regid)
+    StudentApplication entity = repository.findById(String.valueOf(regid))
             .orElseThrow(() -> new RuntimeException("Student Not Found"));
 
     BeanWrapper src = new BeanWrapperImpl(dto);
@@ -104,22 +120,16 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
 
     StudentApplication updated = repository.save(entity);
 
-    StudentApplicationDto response = new StudentApplicationDto();
-    BeanUtils.copyProperties(updated, response);
-
-    return response;
+    return toDto(updated);
 }
 
     @Override
     public StudentApplicationDto getStudentById(Integer regid) {
 
-        StudentApplication entity = repository.findById(regid)
+        StudentApplication entity = repository.findById(String.valueOf(regid))
                 .orElseThrow(() -> new RuntimeException("Student Not Found"));
 
-        StudentApplicationDto dto = new StudentApplicationDto();
-        BeanUtils.copyProperties(entity, dto);
-
-        return dto;
+        return toDto(entity);
     }
 
     @Override
@@ -128,26 +138,21 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
         StudentApplication entity = repository.findBySscRegNo(sscRegNo)
                 .orElseThrow(() -> new RuntimeException("Student Not Found"));
 
-        StudentApplicationDto dto = new StudentApplicationDto();
-        BeanUtils.copyProperties(entity, dto);
-
-        return dto;
+        return toDto(entity);
     }
 
     @Override
     public List<StudentApplicationDto> getAllStudents() {
 
-        return repository.findAll().stream().map(entity -> {
-            StudentApplicationDto dto = new StudentApplicationDto();
-            BeanUtils.copyProperties(entity, dto);
-            return dto;
-        }).collect(Collectors.toList());
+        return repository.findAll().stream()
+                .map(StudentApplicationServiceImpl::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public void deleteStudent(Integer regid) {
 
-        repository.deleteById(regid);
+        repository.deleteById(String.valueOf(regid));
 
     }
     @Override

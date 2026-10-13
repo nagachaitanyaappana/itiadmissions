@@ -173,6 +173,8 @@
             <script type="text/javascript">
                 var CURRENT_REGID = null;
                 var CURRENT_SSC_TYPE = null;
+                var CURRENT_YEAR = '';
+                var CURRENT_PHASE = '';
 
                 // Gate submit: fetch the registration record and open the application form
                 function fetchApplication() {
@@ -250,7 +252,37 @@
 
                 function val(id) { var v = document.getElementById(id).value.trim(); return v === "" ? null : v; }
 
-                $(document).ready(function () { loadCastes(); });
+                // Local preview of the selected passport photo (the upload itself happens on submit).
+                function previewPhoto(input) {
+                    var box = document.getElementById("photoPrev");
+                    box.innerHTML = "";
+                    if (!input || !input.files || input.files.length === 0) { return; }
+                    var file = input.files[0];
+                    if (file.type !== "image/png" && file.type !== "image/jpeg") {
+                        input.value = "";
+                        alert("Please select a PNG or JPEG image.");
+                        return;
+                    }
+                    var img = document.createElement("img");
+                    img.src = URL.createObjectURL(file);
+                    img.style.width = "90px";
+                    img.style.height = "110px";
+                    img.style.border = "1px solid #666";
+                    box.appendChild(img);
+                }
+
+                $(document).ready(function () {
+                    loadCastes();
+                    // Current session year/phase come from admissions.admission_phase (current = true),
+                    // mirroring itiap_new's open_Application_Interface_Student.jsp lookup.
+                    $.get('${backendBaseUrl}/api/reports/current-admission-phase', function (data) {
+                        if (data && data.year) {
+                            CURRENT_YEAR = String(data.year);
+                            CURRENT_PHASE = data.phase;
+                            $('.sessionYearPhase').text(CURRENT_YEAR + '(Phase-' + CURRENT_PHASE + ')');
+                        }
+                    });
+                });
             </script>
             <script type="text/javascript">
                 function loadCastes() {
@@ -294,6 +326,8 @@
                     if (ad !== "" && !/^\d{12}$/.test(ad)) { alert("Aadhaar must be 12 digits."); return false; }
                     var pin = document.getElementById("pincode").value.trim();
                     if (pin !== "" && !/^\d{6}$/.test(pin)) { alert("Pincode must be 6 digits."); return false; }
+                    var p = document.getElementById("photo");
+                    if (!p || !p.files || p.files.length === 0) { alert("Please upload your photograph (PNG or JPEG)."); return false; }
                     return true;
                 }
             </script>
@@ -314,6 +348,32 @@
                     if (__applySubmitting) return false;
                     if (!validateApplication()) return false;
                     setApplySubmitting(true);
+                    // Step 2a: upload the photograph (required; PNG/JPEG) to /api/student/photo/{regid},
+                    // then Step 2b saves details and marks. Mirrors open_Application_Interface_Student.jsp,
+                    // which uploaded the photo in the same multipart post as the details.
+                    var fd = new FormData();
+                    var fileInput = document.getElementById("photo");
+                    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                        fd.append("photo", fileInput.files[0]);
+                    }
+                    $.ajax({
+                        url: '${backendBaseUrl}/api/student/photo/' + CURRENT_REGID,
+                        type: 'POST',
+                        data: fd,
+                        processData: false,
+                        contentType: false,
+                        success: function () { submitDetailsAndMarks(); },
+                        error: function (xhr) {
+                            setApplySubmitting(false);
+                            var msg = "Failed to upload the photograph. Please try again.";
+                            if (xhr.responseJSON && xhr.responseJSON.error) { msg = xhr.responseJSON.error; }
+                            alert(msg);
+                        }
+                    });
+                    return false;
+                }
+
+                function submitDetailsAndMarks() {
                     var payload = {
                         name: document.getElementById("name").value.trim(),
                         fname: document.getElementById("fname").value.trim(),
@@ -340,7 +400,7 @@
                         data: JSON.stringify(payload),
                         success: function () {
                             // marks payload: only fields relevant to this registration's result type
-                            var m = { regid: CURRENT_REGID, year: '2026' };
+                            var m = { regid: CURRENT_REGID, year: CURRENT_YEAR };
                             if (CURRENT_SSC_TYPE === 'sscm') {
                                 m.sscFirstLangMarks = val("m_firstlang"); m.sscSecondLangMarks = val("m_secondlang");
                                 m.sscEngMarks = val("m_english"); m.sscMathMarks = val("m_math");
@@ -373,7 +433,6 @@
                             alert("Failed to save application details. Please check the values and try again.");
                         }
                     });
-                    return false;
                 }
             </script>
 
@@ -573,7 +632,7 @@
 <!-- ============ GATE: LOOK UP THE REGISTRATION ============ -->
 <div id="gateDiv">
         <form name="EditForm_phase2" method="post" action="#" onsubmit="return fetchApplication()">
-            <h2 style="background-color: lightgreen" align="center"  class="style4" >Application Form for Admission into the Industrial Training Institute for the session 2026(Phase-6) </h2>
+            <h2 style="background-color: lightgreen" align="center"  class="style4" >Application Form for Admission into the Industrial Training Institute for the session <span class="sessionYearPhase"></span> </h2>
 
             <div align="center"><b><font color="blue">Note:: Applicant has to register his/her details first by clicking <a href="${pageContext.request.contextPath}/student-registration">Student Registration</a> note your registration number, then click &quot;Apply for ITI&quot;<br><br></br> </font></b>
             </div> <br>
@@ -611,7 +670,7 @@
 <div id="applyDiv" style="display:none;">
         <form name="ApplicationForm" method="post" action="#" onsubmit="return submitApplication()">
             <h2 style="background-color: lightgreen" align="center" class="style4">
-                Application Form for Admission into the Industrial Training Institute for the session 2026(Phase-6)</h2>
+                Application Form for Admission into the Industrial Training Institute for the session <span class="sessionYearPhase"></span></h2>
 
             <p id="prefillInfo" style="text-align:center;background-color:#e4eeb9;padding:8px;border:1px solid #999;"></p>
 
@@ -627,6 +686,9 @@
                 <tr><td>Email</td><td><input type="text" id="email" maxlength="80"></td></tr>
                 <tr><td>Address<font color="red">*</font></td><td><textarea id="addr" rows="3" cols="40"></textarea></td></tr>
                 <tr><td>Pincode</td><td><input type="text" id="pincode" maxlength="6" onkeypress="return NumericsOnly(event);"></td></tr>
+                <tr><td>Photograph (Passport size)<font color="red">*</font></td>
+                    <td><input type="file" id="photo" accept="image/png,image/jpeg" onchange="previewPhoto(this);">
+                        <div id="photoPrev"></div></td></tr>
                 <tr><td>Caste<font color="red">*</font></td><td><select id="casteSelect" onchange="loadSubCastes();"><option value="">--Select Caste--</option></select></td></tr>
                 <tr><td>Sub Caste</td><td><select id="subCasteSelect"><option value="">--Select Sub Caste--</option></select></td></tr>
                 <tr><td>Local / Non-Local<font color="red">*</font></td><td><select id="local"><option value="">--Select--</option><option value="Local">Local</option><option value="NonLocal">Non-Local</option></select></td></tr>

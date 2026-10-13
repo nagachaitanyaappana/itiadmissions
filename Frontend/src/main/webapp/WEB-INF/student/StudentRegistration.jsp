@@ -252,7 +252,18 @@
             
         </script>
         <script type="text/javascript">
-            var SESSION_YEAR = '2026';
+            var SESSION_YEAR = '';
+
+            // Current session year/phase come from admissions.admission_phase (current = true) via
+            // the reports endpoint, mirroring itiap_new's open_application_entry.jsp lookup.
+            $(document).ready(function () {
+                $.get('${backendBaseUrl}/api/reports/current-admission-phase', function (data) {
+                    if (data && data.year) {
+                        SESSION_YEAR = String(data.year);
+                        $('#sessionYearPhase').text(SESSION_YEAR + '(Phase-' + data.phase + ')');
+                    }
+                });
+            });
 
             // Proceed: validate -> check captcha -> POST /api/student/save -> show RegId
             function submitRegistration() {
@@ -352,7 +363,7 @@
         <form name="open_Application_Step1_form" method="post" action="#" onsubmit="return submitRegistration()">
             <h2 style="background-color: lightgreen" align="center"  class="style4">
                 Registration Form for Admission into the Industrial Training Institute for the session 
-                2026(Phase-6)</h2>
+                <span id="sessionYearPhase"></span></h2>
             
             <table align="center">
                 <tr bgcolor="#3399ff">

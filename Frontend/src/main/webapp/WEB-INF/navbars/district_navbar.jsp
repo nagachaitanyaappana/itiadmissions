@@ -37,7 +37,8 @@
                 <li><a href="${pageContext.request.contextPath}/admissions/discharge">Discharge Admission</a></li>
                 <li><a href="${pageContext.request.contextPath}/ScheduleEntry">Schedule Entry</a></li>
                 <li><a href="${pageContext.request.contextPath}/DeleteScheduleEntry">Delete Schedule Entry</a></li>
-
+                <li><a href="${pageContext.request.contextPath}/VerifyApplication">Verification For Online Application</a></li>
+                <li><a href="${pageContext.request.contextPath}/MeritList">Generate Merit List</a></li>
             </ul>
         </li>
         <li><a href="#">SCVT Exams</a>
