@@ -180,7 +180,6 @@
 
             const itiApiUrl = "${itiApiUrl}";
             const backendBaseUrl = "${backendApiBaseUrl}";
-            const itiTradesApiUrl = "${itiTradesApiUrl}";
 
             let allItis = [];
             let currentTrades = [];

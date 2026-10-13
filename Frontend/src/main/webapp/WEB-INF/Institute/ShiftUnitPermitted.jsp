@@ -261,6 +261,7 @@
 
             let entries = [];
             let isSaving = false;
+            let hadExistingConfig = false;
 
             // Initialize page
             initializePage();
@@ -316,6 +317,7 @@
                         if (data && data.entries) {
                             // Populate existing configuration
                             availableYearSelect.value = String(data.availableYear);
+                            hadExistingConfig = data.entries.length > 0;
                             entries = data.entries.map(entry => ({
                                 strength: entry.strength,
                                 shiftAllowed: entry.shiftAllowed,
@@ -511,6 +513,15 @@
                 if (errors.length > 0) {
                     entriesValidationError.textContent = errors.join(" ");
                     entriesValidationError.style.display = "block";
+                    return;
+                }
+
+                // Saving replaces ALL existing rows for this ITI + trade, which
+                // resets the per-entry strength and vacant counts. Warn before
+                // wiping already-consumed seat data.
+                if (hadExistingConfig && !window.confirm(
+                        "This will wipe the existing seat data (strength, filled, vacant). " +
+                        "Are you sure you want to resave the shift unit?")) {
                     return;
                 }
 
