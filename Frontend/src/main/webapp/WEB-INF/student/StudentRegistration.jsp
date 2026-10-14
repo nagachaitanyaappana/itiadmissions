@@ -342,8 +342,9 @@
             }
 
             function regPreviewPhoto(input) {
-                var box = document.getElementById("photoPrev");
-                box.innerHTML = "";
+                var img = document.getElementById("uploadPreview");
+                if (!img) { return; }
+                img.src = "";
                 if (!input || !input.files || input.files.length === 0) { return; }
                 var file = input.files[0];
                 if (file.type !== "image/png" && file.type !== "image/jpeg") {
@@ -351,12 +352,7 @@
                     alert("Please select a PNG or JPEG image.");
                     return;
                 }
-                var img = document.createElement("img");
                 img.src = URL.createObjectURL(file);
-                img.style.width = "90px";
-                img.style.height = "110px";
-                img.style.border = "1px solid #666";
-                box.appendChild(img);
             }
 
             function loadCastes() {
@@ -595,11 +591,9 @@
             td{ padding-bottom: 10px; padding-left: 10px; font-weight: bolder; }
 
             /* Stage 2 - legacy registration form look (open_Application_Interface_Student.jsp) */
-            #step2Table{ width:60%; background-color:#b7e2f3; border:1px solid #000; }
-            #step2Table td{ font-weight:normal; color:#000; padding:6px 8px; border:1px solid #7ba7c9; }
-            #step2Table td:first-child{ background-color:#b7e2f3; color:#1e43cc; font-weight:bold; }
-            #step2Table td.sec, #step2Table tr.sec td{ background-color:#1e43cc; color:#fff; font-weight:bold; text-align:center; }
-            #step2Table td.sec a, #step2Table tr.sec td a{ color:#fff; }
+            #step2Table{ width:auto; height:auto; margin:0 auto; background-color:#b7e2f3; border:1px solid #000; }
+            #step2Table td{ font-weight:normal; color:#000; padding:6px 8px; vertical-align:top; border:1px solid #7ba7c9; }
+            #step2Table table{ width:auto; height:auto; margin:0 auto; background-color:#b7e2f3; border:1px solid #000; }
             #step2Table input[type=text], #step2Table input[type=date],
             #step2Table select, #step2Table textarea{ background-color:#fff; }
         </style>
@@ -693,53 +687,123 @@
         <h2 style="background-color: lightcyan" align="center" class="style4">
             Registration Form for Admission into the industrial training Institute for the session
             <span id="sessionYearPhase2"></span></h2>
+        <b>Attention: Enter data carefully, If any information found wrong&nbsp; in Marks/GPA, Caste, etc. , the authority has the right to disqualify for admissions.</b>
 
-        <table align="center" bgcolor="#b7e2f3" border="1" id="step2Table" style="width:70%;">
-            <tr bgcolor="#1e43cc"><td colspan="2" class="sec" style="color:#fff;text-align:center;font-size:larger;"><u>Registration Form-Step2</u></td></tr>
-            <tr><td><font color="#d42424"><b>Hall Ticket Number*</b></font></td><td><input type="text" id="sscRegDisp" readonly="readonly"></td></tr>
-            <tr><td><font color="#d42424"><b>Board</b></font></td><td><input type="text" id="boardDisp" readonly="readonly"></td></tr>
-            <tr><td><font color="#d42424"><b>Year of Pass*</b></font></td><td><input type="text" id="sscYearDisp" readonly="readonly"></td></tr>
-            <tr><td><font color="#d42424"><b>Month of Pass*</b></font></td><td><select id="ssc_month"><option value="">---Select --</option><option value="03">March</option><option value="04">Supplymentary</option></select></td></tr>
-            <tr><td><font color="#d42424"><b>Applicants Name*</b></font></td><td><input type="text" id="name" maxlength="50"></td></tr>
-            <tr><td><font color="#d42424"><b>Father Name*</b></font></td><td><input type="text" id="fname" maxlength="50"></td></tr>
-            <tr><td><font color="#d42424"><b>mothers Name*</b></font></td><td><input type="text" id="mname" maxlength="50"></td></tr>
-            <tr><td><font color="#d42424"><b>Gender*</b></font></td><td>Male <input type="radio" name="gender" value="male"> Female <input type="radio" name="gender" value="female"></td></tr>
-            <tr><td><font color="#d42424"><b>Date of Birth(dd-mm-yyyy):*</b></font></td><td><input type="date" id="appdob"></td></tr>
-            <tr><td><font color="#d42424"><b>Aadhar Card Number*</b></font></td><td><input type="text" id="adarno" maxlength="12" onkeypress="return NumericsOnly(event);"></td></tr>
-            <tr><td><font color="#d42424"><b>Mobile Number*</b></font></td><td><input type="text" id="phno" maxlength="10" onkeypress="return NumericsOnly(event);"></td></tr>
-            <tr><td><font color="#d42424"><b>Email</b></font></td><td><input type="text" id="email" maxlength="80"></td></tr>
-            <tr><td><font color="#d42424"><b>Address*</b></font></td><td><textarea id="addr" rows="3" cols="40"></textarea></td></tr>
-            <tr><td><font color="#d42424"><b>Pincode</b></font></td><td><input type="text" id="pincode" maxlength="6" onkeypress="return NumericsOnly(event);"></td></tr>
-            <tr><td><font color="#d42424"><b>Photograph (Passport size)*</b></font></td>
-                <td><input type="file" id="photo" accept="image/png,image/jpeg" onchange="regPreviewPhoto(this);">
-                    <div id="photoPrev"></div></td></tr>
-            <tr><td><font color="#d42424"><b>Caste*</b></font></td><td><select id="casteSelect"><option value="">--Select Caste--</option></select></td></tr>
-            <tr><td><font color="#d42424"><b>Sub Caste</b></font></td><td><select id="subCasteSelect"><option value="">-- Select Sub Category --</option></select></td></tr>
-            <tr><td><font color="#d42424"><b>Local/Non Local*</b></font></td><td><select id="local"><option value="">---Select --</option><option value="Local">Local</option><option value="NonLocal">Non Local</option></select></td></tr>
-            <tr><td><font color="#d42424"><b>Physically Challenged*</b></font></td><td>Yes <input type="radio" name="phc" value="yes"> No <input type="radio" name="phc" value="no"></td></tr>
-            <tr><td><font color="#d42424"><b>PWD Category</b></font></td><td><select id="pwdCategory"><option value="">---Select --</option><option value="1">Blind</option><option value="2">Deaf</option><option value="3">Motor Disability</option><option value="4">Mental Disability</option></select></td></tr>
-            <tr><td><font color="#d42424"><b>Ex-Servicemen*</b></font></td><td>Yes <input type="radio" name="exs" value="yes"> No <input type="radio" name="exs" value="no"></td></tr>
-            <tr><td><font color="#d42424"><b> Qualification:*</b></font></td><td><select id="ssc"><option value="">---Select --</option><option value="yes">SSC Passed</option><option value="no">8th Passed</option></select></td></tr>
-            <tr><td><font color="#d42424"><b>Economic Weaker Section*</b></font></td><td>Yes <input type="radio" name="ews" value="yes"> No <input type="radio" name="ews" value="no"></td></tr>
-            <tr id="gpaRow"><td colspan="2" class="sec"><b>Number of Languages*</b>&nbsp;&nbsp;<input type="radio" name="subjects" value="sub1"> two&nbsp;&nbsp;<input type="radio" name="subjects" value="sub2" checked="checked"> three</td></tr>
-            <tr class="gpaRow2"><td>First Language GPA</td><td><input type="text" id="g_firstlang" maxlength="3"></td></tr>
-            <tr class="gpaRow2"><td>Second Language GPA</td><td><input type="text" id="g_secondlang" maxlength="3"></td></tr>
-            <tr class="gpaRow2"><td>English GPA</td><td><input type="text" id="g_english" maxlength="3"></td></tr>
-            <tr class="gpaRow2"><td>Mathematics GPA</td><td><input type="text" id="g_math" maxlength="3"></td></tr>
-            <tr class="gpaRow2"><td>Science GPA</td><td><input type="text" id="g_science" maxlength="3"></td></tr>
-            <tr class="gpaRow2"><td>Social GPA</td><td><input type="text" id="g_social" maxlength="3"></td></tr>
-            <tr class="gpaRow2"><td>Total GPA</td><td><input type="text" id="g_total" maxlength="4"></td></tr>
-            <tr id="marksRow" style="display:none;"><td colspan="2" class="sec"><b>SSC Marks - Marks system (as per your registration)</b></td></tr>
-            <tr class="marksRow2" style="display:none;"><td>First Language Marks</td><td><input type="text" id="m_firstlang" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-            <tr class="marksRow2" style="display:none;"><td>Second Language Marks</td><td><input type="text" id="m_secondlang" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-            <tr class="marksRow2" style="display:none;"><td>English Marks</td><td><input type="text" id="m_english" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-            <tr class="marksRow2" style="display:none;"><td>Mathematics Marks</td><td><input type="text" id="m_math" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-            <tr class="marksRow2" style="display:none;"><td>Science Marks</td><td><input type="text" id="m_science" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-            <tr class="marksRow2" style="display:none;"><td>Social Marks</td><td><input type="text" id="m_social" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-            <tr class="marksRow2" style="display:none;"><td>Total Marks</td><td><input type="text" id="m_total" maxlength="4" onkeypress="return NumericsOnly(event);"></td></tr>
+        <table align="center" bgcolor="#b7e2f3" border="1" id="step2Table">
+            <tr bgcolor="#1e43cc"><td colspan="4">&nbsp;</td></tr>
+
             <tr>
-                <td colspan="2" style="text-align:center;">
-                    <input type="button" value="Back to Home" onclick="window.location='${pageContext.request.contextPath}/';">
+                <td><font color="#d42424"><b>Hall Ticket Number* :</b></font></td>
+                <td><input type="text" id="sscRegDisp" readonly="readonly"></td>
+                <td><font color="#d42424"><b>Board :</b></font></td>
+                <td><input type="text" id="boardDisp" readonly="readonly"></td>
+            </tr>
+            <tr>
+                <td><font color="#d42424"><b>Year of Pass* :</b></font></td>
+                <td><input type="text" id="sscYearDisp" readonly="readonly"></td>
+                <td><font color="#d42424"><b>Month of Pass* :</b></font></td>
+                <td><select id="ssc_month"><option value="">---Select --</option><option value="03">March</option><option value="04">Supplymentary</option></select></td>
+            </tr>
+            <tr>
+                <td><font color="#d42424"><b>Applicants Name:*</b></font></td>
+                <td><input type="text" id="name" maxlength="50"></td>
+                <td><font color="#d42424"><b>Mobile Number*:</b></font></td>
+                <td><input type="text" id="phno" maxlength="10" onkeypress="return NumericsOnly(event);"></td>
+            </tr>
+            <tr>
+                <td><font color="#d42424"><b>Date of Birth(dd-mm-yyyy):*</b></font></td>
+                <td><input type="date" id="appdob"></td>
+                <td><font color="#d42424"><b>Aadhar Card Number:*</b></font></td>
+                <td><input type="text" id="adarno" maxlength="12" onkeypress="return NumericsOnly(event);"></td>
+            </tr>
+            <tr>
+                <td><font color="#d42424"><b>Gender:*</b></font></td>
+                <td>Male:<input type="radio" name="gender" value="male"> Female:<input type="radio" name="gender" value="female"></td>
+                <td><font color="#d42424"><b>Category:*</b></font></td>
+                <td>
+                    <select id="casteSelect"><option value="">--Select Caste--</option></select>
+                    <font color="#d42424"><b>Sub Category:*</b></font>
+                    <select id="subCasteSelect"><option value="">-- Select Sub Category --</option></select>
+                </td>
+            </tr>
+            <tr>
+                <td><font color="#d42424"><b>Father Name*:</b></font></td>
+                <td><input type="text" id="fname" maxlength="50"></td>
+                <td><font color="#d42424"><b>Physically Challenged:*</b></font></td>
+                <td>Yes: <input type="radio" name="phc" value="yes"> No: <input type="radio" name="phc" value="no"></td>
+            </tr>
+            <tr>
+                <td><font color="#d42424"><b>mothers Name*:</b></font></td>
+                <td><input type="text" id="mname" maxlength="50"></td>
+                <td><font color="#d42424"><b>PWD Category:*</b></font></td>
+                <td><select id="pwdCategory"><option value="">--- Select ---</option><option value="">None</option><option value="1">Blind</option><option value="2">Deaf</option><option value="3">Motor Disability</option><option value="4">Mental Disability</option></select></td>
+            </tr>
+            <tr>
+                <td><font color="#d42424"><b>Ex-Servicemen:*</b></font></td>
+                <td>Yes: <input type="radio" name="exs" value="yes"> No: <input type="radio" name="exs" value="no"></td>
+                <td><font color="#d42424"><b>Qualification:*</b></font></td>
+                <td><select id="ssc"><option value="">--- Select ---</option><option value="yes">SSC Passed</option><option value="no">8th Passed</option></select></td>
+            </tr>
+            <tr>
+                <td><font color="#d42424"><b>Address:*</b></font></td>
+                <td><textarea id="addr" rows="3" cols="30"></textarea></td>
+                <td><font color="#d42424"><b>Local/Non Local:*</b></font></td>
+                <td><select id="local"><option value="">--- Select ---</option><option value="Local">Local</option><option value="NonLocal">Non Local</option></select></td>
+            </tr>
+            <tr>
+                <td><font color="#d42424"><b>Pincode:</b></font></td>
+                <td><input type="text" id="pincode" maxlength="6" onkeypress="return NumericsOnly(event);"></td>
+                <td><font color="#d42424"><b>Email:</b></font></td>
+                <td><input type="text" id="email" maxlength="80"></td>
+            </tr>
+            <tr>
+                <td><font color="#d42424"><b>Economic Weaker Section:*</b></font></td>
+                <td colspan="3">Yes: <input type="radio" name="ews" value="yes"> No: <input type="radio" name="ews" value="no"></td>
+            </tr>
+            <tr>
+                <td colspan="4" align="center">
+                    <font><b>Number of Languages*</b></font>
+                    <input type="radio" id="sub1" name="subjects" value="sub1"> <label for="sub1">two</label>
+                    <input type="radio" id="sub2" name="subjects" value="sub2" checked="checked"> <label for="sub2">three</label><br>
+
+                    <table align="center" bgcolor="#b7e2f3" id="gpaRow">
+                        <tr><td colspan="3"></td></tr>
+                        <tr><td width="34" height="21">SNO</td><td width="252">Subject</td><td width="92">GPA</td></tr>
+                        <tr class="gpaRow2"><td>1</td><td>First language</td><td><input type="text" id="g_firstlang" maxlength="3" style="width:60px;"></td></tr>
+                        <tr class="gpaRow2"><td>2</td><td>Second Language</td><td><input type="text" id="g_secondlang" maxlength="3" style="width:60px;"></td></tr>
+                        <tr class="gpaRow2"><td>3</td><td>Third Language- English</td><td><input type="text" id="g_english" maxlength="3" style="width:60px;"></td></tr>
+                        <tr class="gpaRow2"><td>4</td><td>Mathematics</td><td><input type="text" id="g_math" maxlength="3" style="width:60px;"></td></tr>
+                        <tr class="gpaRow2"><td>5</td><td>General Science</td><td><input type="text" id="g_science" maxlength="3" style="width:60px;"></td></tr>
+                        <tr class="gpaRow2"><td>6</td><td>Social Studies</td><td><input type="text" id="g_social" maxlength="3" style="width:60px;"></td></tr>
+                        <tr class="gpaRow2"><td colspan="2" align="right">Total :</td><td><input type="text" id="g_total" maxlength="4" style="width:60px;"></td></tr>
+                    </table>
+
+                    <table align="center" bgcolor="#b7e2f3" id="marksRow" style="display:none;">
+                        <tr><td colspan="3"></td></tr>
+                        <tr><td width="34" height="21">SNO</td><td width="252"></td><td width="92">Marks</td></tr>
+                        <tr class="marksRow2"><td>1</td><td>First language</td><td><input type="text" id="m_firstlang" maxlength="3" onkeypress="return NumericsOnly(event);" style="width:60px;"></td></tr>
+                        <tr class="marksRow2"><td>2</td><td>Second Language</td><td><input type="text" id="m_secondlang" maxlength="3" onkeypress="return NumericsOnly(event);" style="width:60px;"></td></tr>
+                        <tr class="marksRow2"><td>3</td><td>Third Language- English</td><td><input type="text" id="m_english" maxlength="3" onkeypress="return NumericsOnly(event);" style="width:60px;"></td></tr>
+                        <tr class="marksRow2"><td>4</td><td>Mathematics</td><td><input type="text" id="m_math" maxlength="3" onkeypress="return NumericsOnly(event);" style="width:60px;"></td></tr>
+                        <tr class="marksRow2"><td>5</td><td>General Science</td><td><input type="text" id="m_science" maxlength="3" onkeypress="return NumericsOnly(event);" style="width:60px;"></td></tr>
+                        <tr class="marksRow2"><td>6</td><td>Social Studies</td><td><input type="text" id="m_social" maxlength="3" onkeypress="return NumericsOnly(event);" style="width:60px;"></td></tr>
+                        <tr class="marksRow2"><td colspan="2" align="right">Total :</td><td><input type="text" id="m_total" maxlength="4" onkeypress="return NumericsOnly(event);" style="width:60px;"></td></tr>
+                    </table>
+                </td>
+            </tr>
+
+            <tr><td colspan="4"><font color="#d42424">&nbsp;</font></td></tr>
+
+            <tr align="center" bgcolor="#b7e2f3">
+                <td colspan="2">Upload Photo : <input type="file" id="photo" name="photo" accept="image/png,image/jpeg" onchange="regPreviewPhoto(this);">&nbsp;&nbsp;&nbsp;<img id="uploadPreview" width="100" height="100"><br>
+                    <font color="red">File less than 200kb and Must be jpg,png,jpeg images</font></td>
+                <td colspan="2" align="left">
+                    <input type="checkbox" id="consent" name="aadhar">
+                    <label for="consent"> Above information is correct to the best of my knowledge and I hereby give my consent to the use of Aadhaar Number provided in the application to carryout identity verification for admission process.  If any information found wrong, the authority may cancel my admission at any time without any prior notice.</label>
+                </td>
+            </tr>
+            <tr>
+                <td align="center" colspan="4">
                     <input type="submit" id="regSaveBtn" value="APPLY NOW">
                 </td>
             </tr>

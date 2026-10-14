@@ -28,9 +28,11 @@
   /* ---- admission memo ---- */
   .memo-wrap { width:96%; max-width:980px; margin:0 auto 60px; font-family:Verdana,Arial,sans-serif; color:#000; }
   .memo-title { text-align:center; font-size:20px; font-weight:bold; margin:14px 0; }
-  .memo-table { width:100%; border-collapse:collapse; font-size:14px; }
+  .memo-table { clear:both; width:100%; border-collapse:collapse; font-size:14px; }
   .memo-table th { text-align:left; padding:8px 10px; vertical-align:top; width:38%; }
   .memo-table td { padding:8px 10px; vertical-align:top; }
+  .photo-cell { float:right; width:130px; text-align:center; margin:0 0 8px 12px; }
+  .photo-cell img { max-width:120px; max-height:150px; border:1px solid #7a7a7a; }
   .fee-head { font-weight:bold; padding:10px 10px 4px; }
   .fee-line td { padding:3px 10px 3px 30px; }
   .sign-row td { text-align:left; padding:26px 12px 8px; }
@@ -75,6 +77,7 @@
 <div id="footer">2013 @ All Rights Reserved&nbsp;&nbsp; Designed by&nbsp;&nbsp; National Informatics Center <a href="http://www.ap.nic.in">National Informatics Center</a>&nbsp;&nbsp;&nbsp;&nbsp; <a href="#">Disclaimer</a></div>
 <script>
 var CTX = '${pageContext.request.contextPath}';
+var API_BASE = "${backendBaseUrl}";
 function esc(v){ if(v===null||v===undefined) return ""; return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function val(id){ return document.getElementById(id).value.trim(); }
 function setErr(id,msg){ document.getElementById(id).innerHTML = msg ? esc(msg) : ""; }
@@ -130,6 +133,7 @@ function renderSlip(x, a){
   var commCat = esc(txt(d.caste)) + "/" + esc(txt(d.reservationCategory));
 
   var h = "<div class='memo-title'>ITI Admission Memo For Phase " + esc(d.phase===null||d.phase===undefined?"":d.phase) + ", " + esc(txt(d.year)) + "</div>";
+  h += "<div class='photo-cell'><img id='candPhoto' alt='No photo' /></div>";
   h += "<table class='memo-table'>";
   h += row("1. Name", txt(d.name));
   h += row("2. Father Name", txt(d.fname));
@@ -151,7 +155,18 @@ function renderSlip(x, a){
   h += "</table>";
 
   area.innerHTML = h;
+  loadCandidatePhoto(d.registrationNumber || d.registrationId);
   document.getElementById("printBtn").style.display = "";
+}
+
+function loadCandidatePhoto(regid){
+  if(!regid || !API_BASE) return;
+  var img = document.getElementById("candPhoto");
+  if(!img) return;
+  fetch(API_BASE + "/api/student/photo/" + encodeURIComponent(regid), { credentials:"include" })
+    .then(function(r){ return r.json(); })
+    .then(function(res){ if(res && res.photo){ img.src = "data:image/jpeg;base64," + res.photo; } })
+    .catch(function(){});
 }
 document.getElementById("admissionNumber").addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); getAdmissionSlip(); } });
 (function(){

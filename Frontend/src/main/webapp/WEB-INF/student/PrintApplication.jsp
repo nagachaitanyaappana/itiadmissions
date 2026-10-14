@@ -83,6 +83,7 @@
                 <tbody>
                     <tr><td class="data">Gender</td><td id="paGender">&nbsp;</td></tr>
                     <tr><td class="data">Caste</td><td id="paCaste">&nbsp;</td></tr>
+                    <tr><td class="data">Sub Caste</td><td id="paSubCaste">&nbsp;</td></tr>
                     <tr><td class="data">Ex-Service</td><td id="paExService">&nbsp;</td></tr>
                     <tr><td class="data">Physically Handicapped</td><td id="paPh">&nbsp;</td></tr>
                     <tr><td class="data">Local Status</td><td id="paLocal">&nbsp;</td></tr>
@@ -115,6 +116,28 @@
     <table class="pa-table" id="paListTable">
         <tbody id="paListBody"></tbody>
     </table>
+
+    <div class="pa-section-title" style="text-align:left;text-decoration:none;">Fee Structure:</div>
+    <p style="margin:4px 0;">a. Tuition Fees for Private ITIs per annum</p>
+    <table class="pa-fee">
+        <tr><th></th><th>Urban</th><th>Rural</th></tr>
+        <tr><td>Engineering Trades</td><td>16,500</td><td>15,000</td></tr>
+        <tr><td>Non-Engineering Trades</td><td>13,200</td><td>12,000</td></tr>
+    </table>
+    <p style="margin:4px 0;">b. Tuition fee for Government ITIs is <b>NIL</b> (Free education)</p>
+
+    <div class="pa-note">
+        <strong>Note:</strong>
+        <p style="margin:4px 0;">1) For Certificate Verification, Candidate can visit any nearest Government I.T.I</p>
+        <p style="margin:4px 0;">2) During Certificate Verification, Candidate should bring all his/her original certificate i.e., SSC or Equivalent Certificate, Caste, Physically Challenged (PH), Ex-Servicemen, Nativity, Study, Transfer Certificate(TC), Aadhar Card and any other Certificates.</p>
+        <p style="margin:4px 0;">3) At the time of certificate verification, furnish two sets of Xerox copies and bring this registration card to the verification center.</p>
+    </div>
+
+    <div class="pa-sign">Signature of the applicant.</div>
+
+    <div class="pa-toolbar no-print">
+        <input type="button" value="Print Application" onclick="window.print();">
+    </div>
 
 </div>
 
@@ -162,6 +185,7 @@
             var gender = s.gender ? (s.gender.charAt(0).toUpperCase() + s.gender.slice(1)) : '';
             setText('paGender', gender);
             setText('paCaste', s.caste);
+            setText('paSubCaste', s.subCaste);
             setText('paExService', s.exservice ? 'YES' : 'NO');
             setText('paPh', s.phc ? 'YES' : 'NO');
             setText('paLocal', s.local === 'NonLocal' ? 'Non-Local' : (s.local || ''));
