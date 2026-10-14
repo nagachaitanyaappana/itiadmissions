@@ -109,10 +109,22 @@ public class TradeSelectionService {
         String phase = resolvePhase(year);
         String regid = String.valueOf(dto.getRegid());
         String itiCode = scopeItiCode.trim();
-        // trade_sel.dist_code is nullable, but filling it lets a district-scoped merit run
-        // (role 3) find the same rows.
+        // trade_sel.dist_code is part of the primary key (regid, dist_code, iti_code) and is
+        // NOT NULL, and it lets a district-scoped merit run (role 3) find the same rows. When
+        // the caller does not supply it, resolve it from the ITI so the row stays valid.
         String distCode = (scopeDistCode == null || scopeDistCode.isBlank())
                 ? null : scopeDistCode.trim();
+        if (distCode == null) {
+            List<String> resolved = jdbcTemplate.getJdbcTemplate().queryForList(
+                    "SELECT dist_code FROM iti WHERE iti_code = ?", String.class, itiCode);
+            if (!resolved.isEmpty() && resolved.get(0) != null && !resolved.get(0).isBlank()) {
+                distCode = resolved.get(0).trim();
+            }
+        }
+        if (distCode == null) {
+            throw new IllegalArgumentException(
+                    "Could not resolve a district for ITI " + itiCode);
+        }
         Integer freeze = (freezee == null) ? 0 : freezee;
 
         MapSqlParameterSource params = new MapSqlParameterSource()
@@ -123,8 +135,8 @@ public class TradeSelectionService {
                 .addValue("phase", phase)
                 .addValue("year", year);
 
-        // Primary key is (iti_code, regid), so this is an upsert. An existing row keeps its
-        // history: the phase key is appended, matching legacy "update ... phase || hstore(...)".
+        // Primary key is (regid, dist_code, iti_code), so this is an upsert. An existing row keeps
+        // its history: the phase key is appended, matching legacy "update ... phase || hstore(...)".
         // `temp` is NOT NULL with no column default on this schema and the legacy inserts never
         // supplied it either (they relied on a production-side default that is absent here), so
         // it is taken explicitly from the existing public.trade_sel_temp_seq.
@@ -133,8 +145,7 @@ public class TradeSelectionService {
                 VALUES (:regid, :itiCode, :distCode, :freezee, :itiCode,
                         nextval('public.trade_sel_temp_seq'),
                         hstore(array[:phase], array['true']), :year)
-                ON CONFLICT (iti_code, regid) DO UPDATE SET
-                    dist_code = COALESCE(EXCLUDED.dist_code, trade_sel.dist_code),
+                ON CONFLICT (regid, dist_code, iti_code) DO UPDATE SET
                     freezee  = EXCLUDED.freezee,
                     year     = EXCLUDED.year,
                     phase    = COALESCE(trade_sel.phase, ''::hstore) || EXCLUDED.phase

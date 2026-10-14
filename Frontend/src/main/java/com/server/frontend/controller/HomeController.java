@@ -25,6 +25,13 @@ public class HomeController {
         return "student/StudentEditDetails";
     }
 
+    // Printable acknowledgement of the submitted application (mirrors itiap_new's
+    // Application_printdist.jsp). Data is fetched client-side by registration id.
+    @GetMapping("/print-application")
+    public String printApplication() {
+        return "student/PrintApplication";
+    }
+
     @GetMapping("/forgot-regid")
     public String forgotRegId() {
         return "student/ForgotRegId";

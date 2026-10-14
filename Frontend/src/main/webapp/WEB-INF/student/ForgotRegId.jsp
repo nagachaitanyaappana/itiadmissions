@@ -196,10 +196,10 @@
                         if (ev.keyCode === 13)
                             $('#mysubmit').click();
                     });
-                    // Current session year/phase come from admissions.admission_phase (current = true).
+                    // Current session year comes from admissions.admission_phase (current = true).
                     $.get('${backendBaseUrl}/api/reports/current-admission-phase', function (data) {
                         if (data && data.year) {
-                            $('.sessionYearPhase').text(String(data.year) + '(Phase-' + data.phase + ')');
+                            $('#sessionYear').text(String(data.year));
                         }
                     });
                 });
@@ -286,6 +286,8 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
+    <%@ include file="_windowGate.jsp" %>
     </head>
     <body>
         
@@ -300,7 +302,7 @@
             
             <h2 style="background-color: lightgreen" align="center"  class="style4" >
                 Application Form for Admission into the Industrial Training Institute for the session 
-                <span class="sessionYearPhase"></span> </h2>
+                <span id="sessionYear"></span> </h2>
             <table align="center" bgcolor="#cbd6b2">
                 <tr id="heading">
                 <td></td>

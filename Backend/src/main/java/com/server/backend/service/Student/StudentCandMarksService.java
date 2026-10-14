@@ -6,4 +6,6 @@ public interface StudentCandMarksService {
 
     String saveMarks(StudentCandMarksDto dto);
 
+    StudentCandMarksDto getMarks(String regid);
+
 }

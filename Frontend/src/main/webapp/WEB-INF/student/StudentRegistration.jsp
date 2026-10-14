@@ -261,6 +261,7 @@
                     if (data && data.year) {
                         SESSION_YEAR = String(data.year);
                         $('#sessionYearPhase').text(SESSION_YEAR + '(Phase-' + data.phase + ')');
+                        $('#sessionYearPhase2').text(SESSION_YEAR + '(Phase-' + data.phase + ')');
                     }
                 });
             });
@@ -300,15 +301,17 @@
                                 ? '<p style="font-size:18px;color:#155724;">An application already exists for this SSC Hall Ticket Number and the details match. '
                                   + 'Your existing Registration ID is: <b>' + student.regid + '</b></p>'
                                 : '<p style="font-size:18px;color:#155724;">Your Registration ID is: <b>' + student.regid + '</b></p>';
+                            var note = resumed
+                                ? '<p style="color:#155724;">Your registration details are already on record.</p>'
+                                  + '<p><a href="${pageContext.request.contextPath}/student-apply">Click here to continue to Apply for ITI (select your districts)</a></p>'
+                                : '<p style="color:#155724;">Please note down your Registration ID. Now complete your application details below.</p>';
                             $('#regResult').html(
                                 '<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:60%;">'
                                 + '<h3 style="color:#155724;">' + heading + '</h3>'
-                                + regLine
-                                + '<p style="color:#155724;">Please note down your Registration ID. '
-                                + 'You will need it for the application, edit and all further steps.</p>'
-                                + '<p><a href="${pageContext.request.contextPath}/student-apply">Click here to proceed to Step 2 - Application to apply for ITI</a></p>'
+                                + regLine + note
                                 + '</div>');
                             document.getElementById("regFormDiv").style.display = "none";
+                            if (!resumed) { showStep2(student.regid, document.getElementById("ssc_type").value); }
                             window.scrollTo(0, 0);
                         },
                         error: function (xhr) {
@@ -320,6 +323,242 @@
                 });
                 return false;
             }
+        </script>
+
+        <script type="text/javascript">
+            // ================= Stage 2: personal details + SSC marks =================
+            // Option A split: registration now collects everything except the ITI/district
+            // selection, which lives on /student-apply. Mirrors open_Application_Interface_Student.jsp.
+            var CURRENT_REGID = null;
+            var CURRENT_SSC_TYPE = null;
+            var __castesLoaded = false;
+
+            function regVal(id) { var v = document.getElementById(id).value.trim(); return v === "" ? null : v; }
+
+            function radioVal(name) {
+                var els = document.getElementsByName(name);
+                for (var i = 0; i < els.length; i++) { if (els[i].checked) { return els[i].value; } }
+                return "";
+            }
+
+            function regPreviewPhoto(input) {
+                var box = document.getElementById("photoPrev");
+                box.innerHTML = "";
+                if (!input || !input.files || input.files.length === 0) { return; }
+                var file = input.files[0];
+                if (file.type !== "image/png" && file.type !== "image/jpeg") {
+                    input.value = "";
+                    alert("Please select a PNG or JPEG image.");
+                    return;
+                }
+                var img = document.createElement("img");
+                img.src = URL.createObjectURL(file);
+                img.style.width = "90px";
+                img.style.height = "110px";
+                img.style.border = "1px solid #666";
+                box.appendChild(img);
+            }
+
+            function loadCastes() {
+                if (__castesLoaded) { return; }
+                __castesLoaded = true;
+                $.get('${backendBaseUrl}/api/student/castes', function (list) {
+                    $.each(list, function (i, c) {
+                        $('#casteSelect').append('<option value="' + c.casteCode + '">' + c.casteName + '</option>');
+                    });
+                });
+            }
+
+            function loadSubCastes() {
+                var code = document.getElementById("casteSelect").value;
+                var sel = document.getElementById("subCasteSelect");
+                sel.innerHTML = '<option value="">--Select Sub Caste--</option>';
+                if (!code) { return; }
+                $.get('${backendBaseUrl}/api/student/subcastes/' + encodeURIComponent(code))
+                    .done(function (list) {
+                        (list || []).forEach(function (r) {
+                            var label = (r.subCasteName && r.subCasteName !== '') ? r.subCasteName : ('Sub-caste ' + r.subCasteId);
+                            var opt = document.createElement('option');
+                            opt.value = r.subCasteId; opt.textContent = label + ' (' + r.subCasteId + ')';
+                            sel.appendChild(opt);
+                        });
+                    });
+            }
+
+            function showStep2(regid, sscType) {
+                CURRENT_REGID = regid;
+                CURRENT_SSC_TYPE = sscType;
+                loadCastes();
+                document.getElementById("sscRegDisp").value = document.getElementById("ssc_regno").value;
+                document.getElementById("boardDisp").value = boardName();
+                document.getElementById("sscYearDisp").value = document.getElementById("passed_year").value;
+                document.getElementById("regFormDiv").style.display = "none";
+                if (sscType === 'sscm') {
+                    document.getElementById("gpaRow").style.display = "none";
+                    document.querySelectorAll('.gpaRow2').forEach(function (r) { r.style.display = "none"; });
+                    document.getElementById("marksRow").style.display = "";
+                    document.querySelectorAll('.marksRow2').forEach(function (r) { r.style.display = ""; });
+                } else {
+                    document.getElementById("marksRow").style.display = "none";
+                    document.querySelectorAll('.marksRow2').forEach(function (r) { r.style.display = "none"; });
+                    document.getElementById("gpaRow").style.display = "";
+                    document.querySelectorAll('.gpaRow2').forEach(function (r) { r.style.display = ""; });
+                }
+                document.getElementById("step2Div").style.display = "";
+            }
+
+            function validateDetails() {
+                var req = [["name","Name"],["fname","Father's Name"],["appdob","Date of Birth"],["phno","Mobile Number"],["addr","Address"],["local","Local/Non-Local"],["casteSelect","Caste"]];
+                for (var i = 0; i < req.length; i++) {
+                    var el = document.getElementById(req[i][0]);
+                    if (!el.value || !el.value.trim()) { alert("Please enter " + req[i][1] + "."); el.focus(); return false; }
+                }
+                if (!radioVal("gender")) { alert("Please select Gender."); return false; }
+                if (!/^\d{10}$/.test(document.getElementById("phno").value.trim())) { alert("Mobile Number must be 10 digits."); return false; }
+                var ad = document.getElementById("adarno").value.trim();
+                if (ad !== "" && !/^\d{12}$/.test(ad)) { alert("Aadhaar must be 12 digits."); return false; }
+                var pin = document.getElementById("pincode").value.trim();
+                if (pin !== "" && !/^\d{6}$/.test(pin)) { alert("Pincode must be 6 digits."); return false; }
+                var p = document.getElementById("photo");
+                if (!p || !p.files || p.files.length === 0) { alert("Please upload your photograph (PNG or JPEG)."); return false; }
+                return true;
+            }
+
+            function doSubmitDetailsAndMarks() {
+                if (!CURRENT_REGID) { alert("Registration Id missing. Please restart registration."); return false; }
+                if (!validateDetails()) return false;
+                var btn = document.getElementById("regSaveBtn");
+                btn.disabled = true; btn.value = "Saving...";
+
+                var fd = new FormData();
+                var fileInput = document.getElementById("photo");
+                if (fileInput && fileInput.files && fileInput.files.length > 0) { fd.append("photo", fileInput.files[0]); }
+                $.ajax({
+                    url: '${backendBaseUrl}/api/student/photo/' + CURRENT_REGID,
+                    type: 'POST', data: fd, processData: false, contentType: false,
+                    success: function () {
+                        var payload = {
+                            name: document.getElementById("name").value.trim(),
+                            fname: document.getElementById("fname").value.trim(),
+                            mname: document.getElementById("mname").value.trim(),
+                            gender: radioVal("gender"),
+                            dob: document.getElementById("appdob").value,
+                            adarno: document.getElementById("adarno").value.trim(),
+                            phno: document.getElementById("phno").value.trim(),
+                            email: document.getElementById("email").value.trim(),
+                            addr: document.getElementById("addr").value.trim(),
+                            pincode: document.getElementById("pincode").value.trim(),
+                            caste: document.getElementById("casteSelect").value,
+                            subCaste: document.getElementById("subCasteSelect").value,
+                            local: document.getElementById("local").value,
+                            sscMonth: document.getElementById("ssc_month").value,
+                            pwdCategory: document.getElementById("pwdCategory").value,
+                            sscPassed: document.getElementById("ssc").value === "" ? null : document.getElementById("ssc").value === 'yes',
+                            economicWeakerSection: radioVal("ews") === "yes",
+                            phc: radioVal("phc") === "yes",
+                            exservice: radioVal("exs") === "yes"
+                        };
+                        $.ajax({
+                            url: '${backendBaseUrl}/api/student/update/' + CURRENT_REGID,
+                            type: 'PUT', contentType: 'application/json',
+                            data: JSON.stringify(payload),
+                            success: function () {
+                                var m = { regid: CURRENT_REGID, year: SESSION_YEAR };
+                                if (CURRENT_SSC_TYPE === 'sscm') {
+                                    m.sscFirstLangMarks = regVal("m_firstlang"); m.sscSecondLangMarks = regVal("m_secondlang");
+                                    m.sscEngMarks = regVal("m_english"); m.sscMathMarks = regVal("m_math");
+                                    m.sscSciMarks = regVal("m_science"); m.sscSocialMarks = regVal("m_social");
+                                    m.sscTotMarks = regVal("m_total");
+                                } else {
+                                    m.sscFirstLangGpa = regVal("g_firstlang"); m.sscSecondLangGpa = regVal("g_secondlang");
+                                    m.sscEngGpa = regVal("g_english"); m.sscMathGpa = regVal("g_math");
+                                    m.sscSciGpa = regVal("g_science"); m.sscSocialGpa = regVal("g_social");
+                                    m.sscTotGpa = regVal("g_total");
+                                }
+                                $.ajax({
+                                    url: '${backendBaseUrl}/api/student/marks/save',
+                                    type: 'POST', contentType: 'application/json',
+                                    data: JSON.stringify(m),
+                                    success: function () {
+                                        document.getElementById("step2Div").style.display = "none";
+                                        $('#step2Result').html(
+                                            '<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:70%;">'
+                                            + '<h3 style="color:#155724;">Details and Marks Saved!</h3>'
+                                            + '<p style="color:#155724;">Your application details and SSC marks are saved for Registration Id <b>'
+                                            + CURRENT_REGID + '</b>.</p>'
+                                            + '<p><a href="${pageContext.request.contextPath}/student-apply">Click here to continue to Step 2 - Apply for ITI (select your districts)</a></p></div>');
+                                        window.scrollTo(0, 0);
+                                    },
+                                    error: function () { btn.disabled = false; btn.value = "APPLY NOW"; alert("Details saved but marks could not be saved. Please retry from Edit Registration."); }
+                                });
+                            },
+                            error: function (xhr) {
+                                btn.disabled = false; btn.value = "APPLY NOW";
+                                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message
+                                    : "Failed to save application details. Please check the values and try again.";
+                                alert(msg);
+                            }
+                        });
+                    },
+                    error: function (xhr) {
+                        btn.disabled = false; btn.value = "APPLY NOW";
+                        var msg = "Failed to upload the photograph. Please try again.";
+                        if (xhr.responseJSON && xhr.responseJSON.error) { msg = xhr.responseJSON.error; }
+                        alert(msg);
+                    }
+                });
+                return false;
+            }
+
+            // ================= Confirmation modal (registration3) =================
+            // Review the entered details before the real save (photo -> update -> marks).
+            function confirmSubmit() {
+                if (!validateDetails()) return false;
+                var gpa = (CURRENT_SSC_TYPE !== 'sscm');
+                var name = document.getElementById("name").value.trim();
+                var fname = document.getElementById("fname").value.trim();
+                document.getElementById("c_sscregno").textContent = document.getElementById("ssc_regno") ? document.getElementById("ssc_regno").value : '';
+                document.getElementById("c_board").textContent = boardName();
+                document.getElementById("c_year").textContent = document.getElementById("passed_year") ? document.getElementById("passed_year").value : '';
+                document.getElementById("c_name").textContent = name + (fname ? ' ' + fname : '');
+                document.getElementById("c_dob").textContent = document.getElementById("appdob").value;
+                var casteSel = document.getElementById("casteSelect");
+                document.getElementById("c_caste").textContent = casteSel.options[casteSel.selectedIndex] ? casteSel.options[casteSel.selectedIndex].text : '';
+                var monthSel = document.getElementById("ssc_month");
+                document.getElementById("c_sscmonth").textContent = monthSel.options[monthSel.selectedIndex] ? monthSel.options[monthSel.selectedIndex].text : '';
+                var qualSel = document.getElementById("ssc");
+                document.getElementById("c_qual").textContent = qualSel.options[qualSel.selectedIndex] ? qualSel.options[qualSel.selectedIndex].text : '';
+                document.getElementById("c_ssctype").textContent = gpa ? 'GPA' : 'Marks';
+                document.getElementById("c_mogpa").textContent = gpa ? 'GPA' : 'Marks';
+                var p = gpa
+                    ? ['g_firstlang','g_secondlang','g_english','g_math','g_science','g_social','g_total']
+                    : ['m_firstlang','m_secondlang','m_english','m_math','m_science','m_social','m_total'];
+                var t = ['c_firstlang','c_secondlang','c_english','c_math','c_science','c_social','c_total'];
+                for (var i = 0; i < p.length; i++) {
+                    var el = document.getElementById(p[i]);
+                    document.getElementById(t[i]).textContent = el ? el.value : '';
+                }
+                document.getElementById("confirmModal").style.display = "block";
+                return false;
+            }
+
+            function boardName() {
+                var sel = document.getElementById("ssc_board");
+                return (sel && sel.options[sel.selectedIndex]) ? sel.options[sel.selectedIndex].text : '';
+            }
+
+            function proceedSubmit() {
+                document.getElementById("confirmModal").style.display = "none";
+                doSubmitDetailsAndMarks();
+                return false;
+            }
+
+            function closeConfirm() {
+                document.getElementById("confirmModal").style.display = "none";
+                return false;
+            }
+
+            $(document).on('change', '#casteSelect', loadSubCastes);
         </script>
 
         <style>
@@ -353,13 +592,24 @@
                  
             }
             .container{ background-color: #00c6fb;}
-            td{ padding-bottom: 10px; padding-left: 10px; font-weight: bolder; }  
+            td{ padding-bottom: 10px; padding-left: 10px; font-weight: bolder; }
+
+            /* Stage 2 - legacy registration form look (open_Application_Interface_Student.jsp) */
+            #step2Table{ width:60%; background-color:#b7e2f3; border:1px solid #000; }
+            #step2Table td{ font-weight:normal; color:#000; padding:6px 8px; border:1px solid #7ba7c9; }
+            #step2Table td:first-child{ background-color:#b7e2f3; color:#1e43cc; font-weight:bold; }
+            #step2Table td.sec, #step2Table tr.sec td{ background-color:#1e43cc; color:#fff; font-weight:bold; text-align:center; }
+            #step2Table td.sec a, #step2Table tr.sec td a{ color:#fff; }
+            #step2Table input[type=text], #step2Table input[type=date],
+            #step2Table select, #step2Table textarea{ background-color:#fff; }
         </style>
         
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
-    <body>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
+    <%@ include file="_windowGate.jsp" %>
+    <body class="lg-page">
         
 <center>
     <img src="${pageContext.request.contextPath}/images/gen.jpg" id="banner-id" width="100%">
@@ -433,6 +683,103 @@
                 
   
         </form><br> 
+</div>
+
+<div id="step2Result"></div>
+
+<!-- ============ STAGE 2: PERSONAL DETAILS + SSC MARKS ============ -->
+<div id="step2Div" style="display:none;">
+    <form name="RegistrationDetailsForm" method="post" action="#" onsubmit="return confirmSubmit()">
+        <h2 style="background-color: lightcyan" align="center" class="style4">
+            Registration Form for Admission into the industrial training Institute for the session
+            <span id="sessionYearPhase2"></span></h2>
+
+        <table align="center" bgcolor="#b7e2f3" border="1" id="step2Table" style="width:70%;">
+            <tr bgcolor="#1e43cc"><td colspan="2" class="sec" style="color:#fff;text-align:center;font-size:larger;"><u>Registration Form-Step2</u></td></tr>
+            <tr><td><font color="#d42424"><b>Hall Ticket Number*</b></font></td><td><input type="text" id="sscRegDisp" readonly="readonly"></td></tr>
+            <tr><td><font color="#d42424"><b>Board</b></font></td><td><input type="text" id="boardDisp" readonly="readonly"></td></tr>
+            <tr><td><font color="#d42424"><b>Year of Pass*</b></font></td><td><input type="text" id="sscYearDisp" readonly="readonly"></td></tr>
+            <tr><td><font color="#d42424"><b>Month of Pass*</b></font></td><td><select id="ssc_month"><option value="">---Select --</option><option value="03">March</option><option value="04">Supplymentary</option></select></td></tr>
+            <tr><td><font color="#d42424"><b>Applicants Name*</b></font></td><td><input type="text" id="name" maxlength="50"></td></tr>
+            <tr><td><font color="#d42424"><b>Father Name*</b></font></td><td><input type="text" id="fname" maxlength="50"></td></tr>
+            <tr><td><font color="#d42424"><b>mothers Name*</b></font></td><td><input type="text" id="mname" maxlength="50"></td></tr>
+            <tr><td><font color="#d42424"><b>Gender*</b></font></td><td>Male <input type="radio" name="gender" value="male"> Female <input type="radio" name="gender" value="female"></td></tr>
+            <tr><td><font color="#d42424"><b>Date of Birth(dd-mm-yyyy):*</b></font></td><td><input type="date" id="appdob"></td></tr>
+            <tr><td><font color="#d42424"><b>Aadhar Card Number*</b></font></td><td><input type="text" id="adarno" maxlength="12" onkeypress="return NumericsOnly(event);"></td></tr>
+            <tr><td><font color="#d42424"><b>Mobile Number*</b></font></td><td><input type="text" id="phno" maxlength="10" onkeypress="return NumericsOnly(event);"></td></tr>
+            <tr><td><font color="#d42424"><b>Email</b></font></td><td><input type="text" id="email" maxlength="80"></td></tr>
+            <tr><td><font color="#d42424"><b>Address*</b></font></td><td><textarea id="addr" rows="3" cols="40"></textarea></td></tr>
+            <tr><td><font color="#d42424"><b>Pincode</b></font></td><td><input type="text" id="pincode" maxlength="6" onkeypress="return NumericsOnly(event);"></td></tr>
+            <tr><td><font color="#d42424"><b>Photograph (Passport size)*</b></font></td>
+                <td><input type="file" id="photo" accept="image/png,image/jpeg" onchange="regPreviewPhoto(this);">
+                    <div id="photoPrev"></div></td></tr>
+            <tr><td><font color="#d42424"><b>Caste*</b></font></td><td><select id="casteSelect"><option value="">--Select Caste--</option></select></td></tr>
+            <tr><td><font color="#d42424"><b>Sub Caste</b></font></td><td><select id="subCasteSelect"><option value="">-- Select Sub Category --</option></select></td></tr>
+            <tr><td><font color="#d42424"><b>Local/Non Local*</b></font></td><td><select id="local"><option value="">---Select --</option><option value="Local">Local</option><option value="NonLocal">Non Local</option></select></td></tr>
+            <tr><td><font color="#d42424"><b>Physically Challenged*</b></font></td><td>Yes <input type="radio" name="phc" value="yes"> No <input type="radio" name="phc" value="no"></td></tr>
+            <tr><td><font color="#d42424"><b>PWD Category</b></font></td><td><select id="pwdCategory"><option value="">---Select --</option><option value="1">Blind</option><option value="2">Deaf</option><option value="3">Motor Disability</option><option value="4">Mental Disability</option></select></td></tr>
+            <tr><td><font color="#d42424"><b>Ex-Servicemen*</b></font></td><td>Yes <input type="radio" name="exs" value="yes"> No <input type="radio" name="exs" value="no"></td></tr>
+            <tr><td><font color="#d42424"><b> Qualification:*</b></font></td><td><select id="ssc"><option value="">---Select --</option><option value="yes">SSC Passed</option><option value="no">8th Passed</option></select></td></tr>
+            <tr><td><font color="#d42424"><b>Economic Weaker Section*</b></font></td><td>Yes <input type="radio" name="ews" value="yes"> No <input type="radio" name="ews" value="no"></td></tr>
+            <tr id="gpaRow"><td colspan="2" class="sec"><b>Number of Languages*</b>&nbsp;&nbsp;<input type="radio" name="subjects" value="sub1"> two&nbsp;&nbsp;<input type="radio" name="subjects" value="sub2" checked="checked"> three</td></tr>
+            <tr class="gpaRow2"><td>First Language GPA</td><td><input type="text" id="g_firstlang" maxlength="3"></td></tr>
+            <tr class="gpaRow2"><td>Second Language GPA</td><td><input type="text" id="g_secondlang" maxlength="3"></td></tr>
+            <tr class="gpaRow2"><td>English GPA</td><td><input type="text" id="g_english" maxlength="3"></td></tr>
+            <tr class="gpaRow2"><td>Mathematics GPA</td><td><input type="text" id="g_math" maxlength="3"></td></tr>
+            <tr class="gpaRow2"><td>Science GPA</td><td><input type="text" id="g_science" maxlength="3"></td></tr>
+            <tr class="gpaRow2"><td>Social GPA</td><td><input type="text" id="g_social" maxlength="3"></td></tr>
+            <tr class="gpaRow2"><td>Total GPA</td><td><input type="text" id="g_total" maxlength="4"></td></tr>
+            <tr id="marksRow" style="display:none;"><td colspan="2" class="sec"><b>SSC Marks - Marks system (as per your registration)</b></td></tr>
+            <tr class="marksRow2" style="display:none;"><td>First Language Marks</td><td><input type="text" id="m_firstlang" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
+            <tr class="marksRow2" style="display:none;"><td>Second Language Marks</td><td><input type="text" id="m_secondlang" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
+            <tr class="marksRow2" style="display:none;"><td>English Marks</td><td><input type="text" id="m_english" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
+            <tr class="marksRow2" style="display:none;"><td>Mathematics Marks</td><td><input type="text" id="m_math" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
+            <tr class="marksRow2" style="display:none;"><td>Science Marks</td><td><input type="text" id="m_science" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
+            <tr class="marksRow2" style="display:none;"><td>Social Marks</td><td><input type="text" id="m_social" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
+            <tr class="marksRow2" style="display:none;"><td>Total Marks</td><td><input type="text" id="m_total" maxlength="4" onkeypress="return NumericsOnly(event);"></td></tr>
+            <tr>
+                <td colspan="2" style="text-align:center;">
+                    <input type="button" value="Back to Home" onclick="window.location='${pageContext.request.contextPath}/';">
+                    <input type="submit" id="regSaveBtn" value="APPLY NOW">
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
+
+<!-- ============ CONFIRMATION MODAL (review before saving) ============ -->
+<div id="confirmModal" class="lg-modal-overlay">
+    <div class="lg-modal">
+        <h3>YOUR APPLICATION WITH FOLLOWING DETAILS, YOU WANT SUBMIT</h3>
+        <center>
+            <table>
+                <tr><td>Hall Ticket Number</td><td>: <span id="c_sscregno"></span></td></tr>
+                <tr><td>Board</td><td>: <span id="c_board"></span></td></tr>
+                <tr><td>Year of Pass</td><td>: <span id="c_year"></span></td></tr>
+                <tr><td>Applicant's Name</td><td>: <span id="c_name"></span></td></tr>
+                <tr><td>Date of Birth</td><td>: <span id="c_dob"></span></td></tr>
+                <tr><td>Category</td><td>: <span id="c_caste"></span></td></tr>
+                <tr><td>Month of Pass</td><td>: <span id="c_sscmonth"></span></td></tr>
+                <tr><td>Qualification</td><td>: <span id="c_qual"></span></td></tr>
+                <tr><td>SSC Type</td><td>: <span id="c_ssctype"></span></td></tr>
+            </table>
+            <br>
+            <table border="1">
+                <tr><th>SNO</th><th>Subject Name</th><th id="c_mogpa">GPA</th></tr>
+                <tr><td>1</td><td>First Language</td><td id="c_firstlang"></td></tr>
+                <tr><td>2</td><td>Second Language</td><td id="c_secondlang"></td></tr>
+                <tr><td>3</td><td>Third Language - English</td><td id="c_english"></td></tr>
+                <tr><td>4</td><td>Mathematics</td><td id="c_math"></td></tr>
+                <tr><td>5</td><td>General Science</td><td id="c_science"></td></tr>
+                <tr><td>6</td><td>Social Studies</td><td id="c_social"></td></tr>
+                <tr><td></td><td>Total</td><td id="c_total"></td></tr>
+            </table>
+        </center>
+        <div class="lg-modal-btns">
+            <button type="button" class="lg-btn lg-btn-blue" style="padding:12px 30px;font-size:16px;" onclick="return proceedSubmit();">YES</button>
+            <button type="button" class="lg-btn lg-btn-blue" style="padding:12px 30px;font-size:16px;" onclick="return closeConfirm();">NO</button>
+        </div>
+    </div>
 </div>
         
 <style>

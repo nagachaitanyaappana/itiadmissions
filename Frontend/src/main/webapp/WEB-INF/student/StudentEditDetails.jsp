@@ -253,14 +253,20 @@
                 }
 
                 function prefill(s) {
+                    var boardMap = { '28': 'Andhra Pradesh State Board (SSC)', '51': 'CBSE', '52': 'ICSE', '36': 'Telangana' };
+                    var board = boardMap[String(s.sscBoard)] || (s.sscBoard || '');
                     document.getElementById("prefillInfo").innerHTML =
                         '<b>Registration Id:</b> ' + s.regid + ' &nbsp;|&nbsp; <b>Hall Ticket:</b> ' + s.sscRegNo
-                        + ' &nbsp;|&nbsp; <b>Board:</b> ' + s.sscBoard + ' &nbsp;|&nbsp; <b>Year:</b> ' + s.sscYear
+                        + ' &nbsp;|&nbsp; <b>Board:</b> ' + board + ' &nbsp;|&nbsp; <b>Year:</b> ' + s.sscYear
                         + ' &nbsp;|&nbsp; <b>Result Type:</b> ' + (s.sscType === 'sscm' ? 'Marks' : 'GPA');
+                    document.getElementById("sscRegDisp").value = s.sscRegNo || '';
+                    document.getElementById("boardDisp").value = board;
+                    document.getElementById("sscYearDisp").value = s.sscYear || '';
+                    document.getElementById("ssc_month").value = s.sscMonth || '';
                     document.getElementById("name").value = s.name || '';
                     document.getElementById("fname").value = s.fname || '';
                     document.getElementById("mname").value = s.mname || '';
-                    document.getElementById("gender").value = s.gender || '';
+                    setRadio("gender", s.gender || '');
                     document.getElementById("appdob").value = s.dob ? String(s.dob).substring(0, 10) : '';
                     document.getElementById("adarno").value = s.adarno || '';
                     document.getElementById("phno").value = s.phno || '';
@@ -268,13 +274,13 @@
                     document.getElementById("addr").value = s.addr || '';
                     document.getElementById("pincode").value = s.pincode || '';
                     document.getElementById("local").value = s.local || '';
-                    document.getElementById("interPassed").value = s.interPassed === true ? 'true' : (s.interPassed === false ? 'false' : '');
-                    document.getElementById("interMarks").value = s.interMarks != null ? s.interMarks : '';
+                    document.getElementById("pwdCategory").value = (s.pwdCategory && s.pwdCategory !== 'N') ? s.pwdCategory : '';
+                    document.getElementById("ssc").value = s.sscPassed === true ? 'yes' : (s.sscPassed === false ? 'no' : '');
                     if (s.caste) $('#casteSelect').append('<option value="' + s.caste + '" selected>' + s.caste + '</option>');
                     if (s.subCaste) $('#subCasteSelect').append('<option value="' + s.subCaste + '" selected>' + s.subCaste + '</option>');
-                    document.getElementById("ewsChk").checked = s.economicWeakerSection === true;
-                    document.getElementById("phcChk").checked = s.phc === true;
-                    document.getElementById("exsChk").checked = s.exservice === true;
+                    setRadio("phc", s.phc === true ? 'yes' : (s.phc === false ? 'no' : ''));
+                    setRadio("exs", s.exservice === true ? 'yes' : (s.exservice === false ? 'no' : ''));
+                    setRadio("ews", s.economicWeakerSection === true ? 'yes' : (s.economicWeakerSection === false ? 'no' : ''));
                     // Show any previously uploaded photograph (mirrors Editviewpage.jsp).
                     $.get('${backendBaseUrl}/api/student/photo/' + s.regid, function (r) {
                         var img = document.getElementById("existingPhoto");
@@ -285,6 +291,17 @@
                             img.style.display = 'none';
                         }
                     });
+                }
+
+                function radioVal(name) {
+                    var els = document.getElementsByName(name);
+                    for (var i = 0; i < els.length; i++) { if (els[i].checked) { return els[i].value; } }
+                    return "";
+                }
+
+                function setRadio(name, value) {
+                    var els = document.getElementsByName(name);
+                    for (var i = 0; i < els.length; i++) { els[i].checked = (els[i].value === value); }
                 }
 
                 function val(id) { var v = document.getElementById(id).value.trim(); return v === "" ? null : v; }
@@ -340,11 +357,12 @@
                 $(document).on('change', '#casteSelect', loadSubCastes);
 
                 function validateEdit() {
-                    var req = [["name","Name"],["fname","Father's Name"],["gender","Gender"],["appdob","Date of Birth"],["phno","Mobile Number"],["addr","Address"],["local","Local/Non-Local"],["casteSelect","Caste"]];
+                    var req = [["name","Name"],["fname","Father's Name"],["appdob","Date of Birth"],["phno","Mobile Number"],["addr","Address"],["local","Local/Non-Local"],["casteSelect","Caste"]];
                     for (var i = 0; i < req.length; i++) {
                         var el = document.getElementById(req[i][0]);
                         if (!el.value || !el.value.trim()) { alert("Please enter " + req[i][1] + "."); el.focus(); return false; }
                     }
+                    if (!radioVal("gender")) { alert("Please select Gender."); return false; }
                     if (!/^\d{10}$/.test(document.getElementById("phno").value.trim())) { alert("Mobile Number must be 10 digits."); return false; }
                     var ad = document.getElementById("adarno").value.trim();
                     if (ad !== "" && !/^\d{12}$/.test(ad)) { alert("Aadhaar must be 12 digits."); return false; }
@@ -383,7 +401,7 @@
                         name: document.getElementById("name").value.trim(),
                         fname: document.getElementById("fname").value.trim(),
                         mname: document.getElementById("mname").value.trim(),
-                        gender: document.getElementById("gender").value,
+                        gender: radioVal("gender"),
                         dob: document.getElementById("appdob").value,
                         adarno: document.getElementById("adarno").value.trim(),
                         phno: document.getElementById("phno").value.trim(),
@@ -393,11 +411,12 @@
                         caste: document.getElementById("casteSelect").value,
                         subCaste: document.getElementById("subCasteSelect").value,
                         local: document.getElementById("local").value,
-                        economicWeakerSection: document.getElementById("ewsChk").checked,
-                        phc: document.getElementById("phcChk").checked,
-                        exservice: document.getElementById("exsChk").checked,
-                        interPassed: document.getElementById("interPassed").value === "" ? null : document.getElementById("interPassed").value === 'true',
-                        interMarks: document.getElementById("interMarks").value === "" ? null : parseInt(document.getElementById("interMarks").value, 10)
+                        sscMonth: document.getElementById("ssc_month").value,
+                        pwdCategory: document.getElementById("pwdCategory").value,
+                        sscPassed: document.getElementById("ssc").value === "" ? null : document.getElementById("ssc").value === 'yes',
+                        economicWeakerSection: radioVal("ews") === "yes",
+                        phc: radioVal("phc") === "yes",
+                        exservice: radioVal("exs") === "yes"
                     };
                     $.ajax({
                         url: '${backendBaseUrl}/api/student/update/' + CURRENT_REGID,
@@ -463,6 +482,8 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
+    <%@ include file="_windowGate.jsp" %>
     </head>
     <body>
         
@@ -519,27 +540,32 @@
 
             <p id="prefillInfo" style="text-align:center;background-color:#e4eeb9;padding:8px;border:1px solid #999;"></p>
 
-            <table width="70%" align="center" bgcolor="#cbd6b2" style="border:2px solid black;">
-                <tr bgcolor="#3399ff"><td colspan="2"><u>Personal Details</u></td></tr>
-                <tr><td>Name<font color="red">*</font></td><td><input type="text" id="name" maxlength="60"></td></tr>
-                <tr><td>Father's Name<font color="red">*</font></td><td><input type="text" id="fname" maxlength="60"></td></tr>
-                <tr><td>Mother's Name</td><td><input type="text" id="mname" maxlength="60"></td></tr>
-                <tr><td>Gender<font color="red">*</font></td><td><select id="gender"><option value="">--Select--</option><option value="male">Male</option><option value="female">Female</option></select></td></tr>
-                <tr><td>Date of Birth<font color="red">*</font></td><td><input type="date" id="appdob"></td></tr>
-                <tr><td>Aadhaar Number</td><td><input type="text" id="adarno" maxlength="12" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr><td>Mobile Number<font color="red">*</font></td><td><input type="text" id="phno" maxlength="10" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr><td>Email</td><td><input type="text" id="email" maxlength="80"></td></tr>
-                <tr><td>Address<font color="red">*</font></td><td><textarea id="addr" rows="3" cols="40"></textarea></td></tr>
-                <tr><td>Pincode</td><td><input type="text" id="pincode" maxlength="6" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr><td>Caste<font color="red">*</font></td><td><select id="casteSelect" onchange="loadSubCastes();"><option value="">--Select Caste--</option></select></td></tr>
-                <tr><td>Sub Caste</td><td><select id="subCasteSelect"><option value="">--Select Sub Caste--</option></select></td></tr>
-                <tr><td>Local / Non-Local<font color="red">*</font></td><td><select id="local"><option value="">--Select--</option><option value="Local">Local</option><option value="NonLocal">Non-Local</option></select></td></tr>
-                <tr><td>Economic Weaker Section</td><td><input type="checkbox" id="ewsChk"></td></tr>
-                <tr><td>Physically Challenged</td><td><input type="checkbox" id="phcChk"></td></tr>
-                <tr><td>Ex-Service Man</td><td><input type="checkbox" id="exsChk"></td></tr>
-                <tr><td>Passed Intermediate?</td><td><select id="interPassed"><option value="">--Select--</option><option value="true">Yes</option><option value="false">No</option></select></td></tr>
-                <tr><td>Inter Marks (if passed)</td><td><input type="text" id="interMarks" maxlength="4" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr><td>Photograph</td><td>
+            <table width="70%" align="center" bgcolor="#b7e2f3" border="1">
+                <tr bgcolor="#1e43cc"><td colspan="2" style="color:#fff;text-align:center;font-size:larger;"><u>Student Edit Form</u></td></tr>
+                <tr><td><font color="#d42424"><b>Hall Ticket Number*</b></font></td><td><input type="text" id="sscRegDisp" readonly="readonly"></td></tr>
+                <tr><td><font color="#d42424"><b>Board</b></font></td><td><input type="text" id="boardDisp" readonly="readonly"></td></tr>
+                <tr><td><font color="#d42424"><b>Year of Pass*</b></font></td><td><input type="text" id="sscYearDisp" readonly="readonly"></td></tr>
+                <tr><td><font color="#d42424"><b>Month of Pass*</b></font></td><td><select id="ssc_month"><option value="">---Select --</option><option value="03">March</option><option value="04">Supplymentary</option></select></td></tr>
+                <tr><td><font color="#d42424"><b>Applicants Name*</b></font></td><td><input type="text" id="name" maxlength="50"></td></tr>
+                <tr><td><font color="#d42424"><b>Father Name*</b></font></td><td><input type="text" id="fname" maxlength="50"></td></tr>
+                <tr><td><font color="#d42424"><b>mothers Name*</b></font></td><td><input type="text" id="mname" maxlength="50"></td></tr>
+                <tr><td><font color="#d42424"><b>Gender*</b></font></td><td>Male <input type="radio" name="gender" value="male"> Female <input type="radio" name="gender" value="female"></td></tr>
+                <tr><td><font color="#d42424"><b>Date of Birth(dd-mm-yyyy):*</b></font></td><td><input type="date" id="appdob"></td></tr>
+                <tr><td><font color="#d42424"><b>Aadhar Card Number*</b></font></td><td><input type="text" id="adarno" maxlength="12" onkeypress="return NumericsOnly(event);"></td></tr>
+                <tr><td><font color="#d42424"><b>Mobile Number*</b></font></td><td><input type="text" id="phno" maxlength="10" onkeypress="return NumericsOnly(event);"></td></tr>
+                <tr><td><font color="#d42424"><b>Email</b></font></td><td><input type="text" id="email" maxlength="80"></td></tr>
+                <tr><td><font color="#d42424"><b>Address*</b></font></td><td><textarea id="addr" rows="3" cols="40"></textarea></td></tr>
+                <tr><td><font color="#d42424"><b>Pincode</b></font></td><td><input type="text" id="pincode" maxlength="6" onkeypress="return NumericsOnly(event);"></td></tr>
+                <tr><td><font color="#d42424"><b>Caste*</b></font></td><td><select id="casteSelect" onchange="loadSubCastes();"><option value="">--Select Caste--</option></select></td></tr>
+                <tr><td><font color="#d42424"><b>Sub Caste</b></font></td><td><select id="subCasteSelect"><option value="">-- Select Sub Category --</option></select></td></tr>
+                <tr><td><font color="#d42424"><b>Local/Non Local*</b></font></td><td><select id="local"><option value="">---Select --</option><option value="Local">Local</option><option value="NonLocal">Non Local</option></select></td></tr>
+                <tr><td><font color="#d42424"><b>Physically Challenged*</b></font></td><td>Yes <input type="radio" name="phc" value="yes"> No <input type="radio" name="phc" value="no"></td></tr>
+                <tr><td><font color="#d42424"><b>PWD Category</b></font></td><td><select id="pwdCategory"><option value="">---Select --</option><option value="1">Blind</option><option value="2">Deaf</option><option value="3">Motor Disability</option><option value="4">Mental Disability</option></select></td></tr>
+                <tr><td><font color="#d42424"><b>Ex-Servicemen*</b></font></td><td>Yes <input type="radio" name="exs" value="yes"> No <input type="radio" name="exs" value="no"></td></tr>
+                <tr><td><font color="#d42424"><b> Qualification:*</b></font></td><td><select id="ssc"><option value="">---Select --</option><option value="yes">SSC Passed</option><option value="no">8th Passed</option></select></td></tr>
+                <tr><td><font color="#d42424"><b>Economic Weaker Section*</b></font></td><td>Yes <input type="radio" name="ews" value="yes"> No <input type="radio" name="ews" value="no"></td></tr>
+                <tr><td colspan="2"><b>Number of Languages*</b>&nbsp;&nbsp;<input type="radio" name="subjects" value="sub1"> two&nbsp;&nbsp;<input type="radio" name="subjects" value="sub2" checked="checked"> three</td></tr>
+                <tr><td><font color="#d42424"><b>Photograph</b></font></td><td>
                         <div>Current photo: <img id="existingPhoto" alt="No photo uploaded yet"
                             style="width:90px;height:110px;border:1px solid #666;display:none;"></div>
                         <input type="file" id="photo" accept="image/png,image/jpeg" onchange="previewPhoto(this);">

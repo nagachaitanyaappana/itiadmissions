@@ -7,32 +7,38 @@
 <title>:: ITI :: Reservation Entry</title>
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css" />
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css" />
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css" />
 <script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
 <style>
-  .page-title { font-family:Verdana,Arial,sans-serif; font-size:20px; margin:16px 0 2px 12px; color:#000; }
+  .page-title { font-family:Verdana,Arial,sans-serif; font-size:24px; margin:16px 0 2px; text-align:center; color:#000099; }
   .req-note { font-family:Verdana,Arial,sans-serif; font-size:12px; color:#c0392b; text-align:center; margin:0 0 6px; }
-  .seat-box { width:62%; min-width:560px; margin:0 auto 18px 12px; border:1px solid #7a7a7a; background:#fff; }
+  .seat-box { width:50%; min-width:560px; margin:0 auto 18px; border:2px solid #000; background:#e4eeb9; }
   .seat-box table { width:100%; border-collapse:collapse; font-family:Verdana,Arial,sans-serif; font-size:13px; }
-  .seat-box td { border-top:1px solid #ddd; border-bottom:1px solid #ddd; padding:8px; }
+  .seat-box td { border-top:1px solid #b9c99a; border-bottom:1px solid #b9c99a; padding:8px; font-weight:bold; }
   .seat-box td.label { width:24%; font-weight:bold; }
   .seat-box select { width:96%; padding:4px; font-size:13px; }
-  .submit-btn { background-color:#4CAF50; border:none; color:#fff; padding:6px 42px; font-size:15px; font-weight:bold; cursor:pointer; }
+  .submit-btn { background-color:green; border:none; color:#fff; padding:6px 42px; font-size:15px; font-weight:bold; cursor:pointer; }
   .submit-btn:disabled { opacity:.55; cursor:default; }
   .err { color:red; font-size:12px; display:block; }
   .ok { color:green; font-size:12px; display:block; }
   .result-wrap { width:96%; margin:10px auto 60px; font-family:Verdana,Arial,sans-serif; }
-  .vac-head { text-align:center; color:blue; font-size:18px; font-weight:bold; margin:14px 0 2px; }
-  .vac-sub { text-align:center; font-size:14px; font-weight:bold; margin:0 0 10px; }
-  .vac-sub span { color:blue; }
-  .res-table { border-collapse:collapse; margin:0 auto; font-size:13px; background:#fff; }
-  .res-table th, .res-table td { border:1px solid #7a7a7a; padding:5px 10px; text-align:center; }
-  .res-table th { background:#E8F3FF; }
+  .vac-head { text-align:center; color:#000099; font-size:24px; font-weight:normal; margin:14px 0 2px; }
+  .vac-sub { text-align:center; font-size:18px; color:#660066; margin:0 0 10px; }
+  .res-table { border-collapse:collapse; margin:0 auto; font-size:13px; background:#E8F3FF; border:1px solid #000; }
+  .res-table th, .res-table td { border:1px solid #000; padding:5px 10px; text-align:center; }
+  .res-table th { font-weight:bold; background:#E8F3FF; }
   .res-table td.name { text-align:left; }
   .res-table input.strength { width:70px; text-align:right; padding:3px; }
-  .total-box { text-align:right; margin:10px 20% 0 auto; font-size:13px; font-weight:bold; }
+  .total-box { text-align:right; margin:10px 20% 0 auto; font-size:13px; font-weight:bold; color:#663399; }
   .total-box input { width:80px; text-align:right; font-weight:bold; }
   .act-row { text-align:center; margin:14px 0; }
+  .save-purple { background:none; border:none; color:#663399; font-weight:bold; font-size:15px; cursor:pointer; }
+  .save-purple:disabled { opacity:.55; cursor:default; }
   .note { width:70%; margin:12px auto; font-size:12px; color:#333; background:#fef9e7; border:1px solid #d4ac0d; padding:8px 10px; }
+  .gate-banner { display:none; width:62%; min-width:560px; margin:0 auto 12px; font-family:Verdana,Arial,sans-serif; font-size:13px; padding:10px 12px; border:1px solid; }
+  .gate-banner.block { display:block; background:#fdecea; border-color:#c0392b; color:#922b21; }
+  .gate-banner.ok { display:block; background:#eafaf1; border-color:#27ae60; color:#1e8449; }
+  .gate-banner a { color:#922b21; font-weight:bold; }
   #footer { position:fixed; bottom:0; width:100%; padding:8px; text-align:center; background:#0E4878; font-size:12px; color:#fff; }
   #footer a { color:#fff; }
 </style>
@@ -43,8 +49,10 @@
   <c:when test="${not empty sessionScope.roleId}"><%@ include file="/WEB-INF/reports/header.jsp" %></c:when>
   <c:otherwise><%@ include file="/WEB-INF/bannernew.jsp" %><%@ include file="/WEB-INF/navbars/openNavbar.jsp" %></c:otherwise>
 </c:choose>
+<div class="lg-page">
 <div class="page-title">Reservation Breakup of Seats</div>
 <div class="req-note">* Denotes Required Field</div>
+<div class="gate-banner" id="gateArea"></div>
 <div class="seat-box">
   <table>
     <tr>
@@ -61,6 +69,7 @@
   </table>
 </div>
 <div class="result-wrap" id="resultArea"></div>
+</div>
 <div id="footer">National Informatics Centre</div>
 <script>
 var CTX = '${pageContext.request.contextPath}';
@@ -88,17 +97,51 @@ function loadItis(){
 function loadTrades(){
   var iti = document.getElementById('itiSel').value;
   var sel = document.getElementById('tradeSel');
+  var gate = document.getElementById('gateArea');
+  var goBtn = document.getElementById('goBtn');
   sel.innerHTML = '<option value="">--select--</option>';
   document.getElementById('resultArea').innerHTML = '';
+  gate.className = 'gate-banner';
+  gate.innerHTML = '';
+  goBtn.disabled = false;
   if(!iti) return;
-  fetch(CTX + '/ReservationEntry/api/iti/' + encodeURIComponent(iti) + '/trades')
+  // Reservation Entry opens only after Add Trade (Approve All) AND DGT Permitted Shifts Units.
+  fetch(CTX + '/ReservationEntry/api/iti/' + encodeURIComponent(iti) + '/readiness')
+    .then(function(r){ return r.json(); })
+    .then(function(rd){
+      if(!rd || !rd.ready){
+        gate.className = 'gate-banner block';
+        gate.innerHTML = esc((rd && rd.message) ? rd.message : 'Reservation Entry is not open for this ITI.')
+          + ' <a href="' + CTX + '/AddTrade">Go to Add Trade</a>';
+        sel.innerHTML = '<option value="">--select--</option>';
+        goBtn.disabled = true;
+        return;
+      }
+      gate.className = 'gate-banner ok';
+      gate.innerHTML = esc(rd.message || 'Reservation Entry is open.');
+      loadTradesList(iti);
+    })
+    .catch(function(){ setErr('tradeError', 'Unable to check Reservation Entry readiness.'); });
+}
+
+function loadTradesList(iti){
+  var sel = document.getElementById('tradeSel');
+  fetch(CTX + '/ReservationEntry/api/iti/' + encodeURIComponent(iti) + '/approved-trades')
     .then(function(r){ return r.json(); })
     .then(function(list){
       var h = '<option value="">--select--</option>';
+      var n = 0;
       (Array.isArray(list)?list:[]).forEach(function(t){
+        n++;
         h += '<option value="' + esc(t.tradeCode) + '">' + esc(t.tradeShort) + ' - ' + esc(t.tradeName) + '</option>';
       });
       sel.innerHTML = h;
+      if(n === 0){
+        var gate = document.getElementById('gateArea');
+        gate.className = 'gate-banner block';
+        gate.innerHTML = 'No approved trade for this ITI. Approve a trade in Add Trade first.';
+        document.getElementById('goBtn').disabled = true;
+      }
     }).catch(function(){ setErr('tradeError', 'Unable to load trades.'); });
 }
 
@@ -142,7 +185,7 @@ function render(d){
     + '</tr></thead><tbody>' + rows + '</tbody></table>'
     + '<div class="total-box">Sanctioned Strength : <input type="text" id="sanctioned" value="' + num(d.totalStrength) + '" readonly="readonly"/></div>'
     + '<div class="total-box">Cumulative Total : <input type="text" id="total" value="0" readonly="readonly"/></div>'
-    + '<div class="act-row"><input type="button" class="submit-btn" id="saveBtn" value="Update/Insert Details" onclick="saveReservation();"/></div>'
+    + '<div class="act-row"><input type="button" class="save-purple" id="saveBtn" value="Update/Insert Details" onclick="saveReservation();"/></div>'
     + '<div class="act-row"><span class="err" id="saveError"></span><span class="ok" id="saveOk"></span></div>'
     + '<div class="note">Sum of the category strengths must not exceed the sanctioned strength (ititrade). '
     + 'Already filled seats are preserved automatically.</div>';

@@ -172,6 +172,12 @@ public class ReportsController {
         return "reports/shift-unit-report";
     }
 
+    @GetMapping({"/shift-unit-verify", "/shift_unit_verify"})
+    public String shiftUnitVerify(HttpServletRequest request) {
+        if (!hasRole(request)) return "redirect:/?error=session";
+        return "reports/shift-unit-verify";
+    }
+
     @GetMapping("/admitted-seats-abstract")
     public String govtPvtAdmittedSeatsAbstract(HttpServletRequest request) {
         if (!hasRole(request)) return "redirect:/?error=session";

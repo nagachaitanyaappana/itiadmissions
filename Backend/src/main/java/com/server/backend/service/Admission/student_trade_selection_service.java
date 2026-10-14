@@ -156,40 +156,51 @@ public class student_trade_selection_service {
 
         List<student_trade_selection_request_dto.Choice> choices = request.getChoices();
         if (choices == null || choices.isEmpty()) {
-            throw new IllegalArgumentException("Select at least one ITI");
+            throw new IllegalArgumentException("Select at least one option");
         }
         if (choices.size() > MAX_CHOICES) {
             throw new IllegalArgumentException("A maximum of " + MAX_CHOICES
-                    + " ITIs can be selected (received " + choices.size() + ")");
+                    + " selections can be made (received " + choices.size() + ")");
         }
 
         requireCandidateExists(regid);
-        Set<String> itiCodes = collectItiCodes(choices);
-        Map<String, String> districtByIti = resolveDistricts(choices);
 
         String year = request.getYear() == null || request.getYear().isBlank()
                 ? tradeSelectionService.resolveYear() : request.getYear().trim();
         String phase = request.getPhase() == null || request.getPhase().isBlank()
                 ? tradeSelectionService.resolvePhase(year) : request.getPhase().trim();
 
+        // Phase 1 is district-only (legacy student_trade_sel2025phase1 rows carry iti_code='' with
+        // dist_code set); phase 2+ selects district + ITI.
+        boolean districtOnly = "1".equals(phase);
+        List<Row> rows = districtOnly
+                ? resolveDistrictChoices(choices)
+                : resolveItiChoices(choices);
+
         // Replace, so a re-submission is idempotent (see the class javadoc).
         int cleared = jdbcTemplate.update("DELETE FROM student_trade_sel WHERE regid = :regid",
                 new MapSqlParameterSource("regid", String.valueOf(regid)));
 
-        insertChoices(regid, year, phase, districtByIti, request.getFreezee());
+        insertRows(regid, year, phase, rows, request.getFreezee());
 
-        logger.info("Saved {} ITI selection(s) for regid {} (year {}, phase {}, {} replaced)",
-                districtByIti.size(), regid, year, phase, cleared);
+        logger.info("Saved {} {}selection(s) for regid {} (year {}, phase {}, {} replaced)",
+                rows.size(), districtOnly ? "district " : "ITI ", regid, year, phase, cleared);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
         result.put("regid", regid);
         result.put("year", year);
         result.put("phase", phase);
+        result.put("districtOnly", districtOnly);
         result.put("cleared", cleared);
-        result.put("saved", districtByIti.size());
-        result.put("itiCodes", new ArrayList<>(itiCodes));
+        result.put("saved", rows.size());
+        result.put("codes", rows.stream()
+                .map(row -> districtOnly ? row.distCode() : row.itiCode()).toList());
         return result;
+    }
+
+    /** A single {@code student_trade_sel} row: district-only rows carry an empty ITI code. */
+    private record Row(String distCode, String itiCode) {
     }
 
     /** The candidate must exist: {@code student_application} is what the student flow writes. */
@@ -203,7 +214,55 @@ public class student_trade_selection_service {
         }
     }
 
-    /** Trims the codes and rejects blanks and duplicates — the PK is {@code (iti_code, regid)}. */
+    /**
+     * Phase-1 path: the candidate picks districts only. Each district becomes one
+     * {@code student_trade_sel} row with an empty {@code iti_code}, matching the legacy
+     * {@code student_trade_sel2025phase1} rows.
+     */
+    private List<Row> resolveDistrictChoices(
+            List<student_trade_selection_request_dto.Choice> choices) {
+
+        Set<String> districtCodes = new LinkedHashSet<>();
+        for (student_trade_selection_request_dto.Choice choice : choices) {
+            if (choice == null || choice.getDistCode() == null || choice.getDistCode().isBlank()) {
+                throw new IllegalArgumentException("Every row must have a district selected");
+            }
+            String distCode = choice.getDistCode().trim();
+            if (!districtCodes.add(distCode)) {
+                throw new IllegalArgumentException("District " + distCode + " is selected more than once");
+            }
+        }
+
+        Set<String> knownDistricts = new LinkedHashSet<>(jdbcTemplate.getJdbcTemplate()
+                .queryForList("SELECT dist_code FROM dist_mst", String.class));
+
+        List<Row> rows = new ArrayList<>(districtCodes.size());
+        for (String distCode : districtCodes) {
+            if (!knownDistricts.contains(distCode)) {
+                throw new IllegalArgumentException("Unknown district code " + distCode);
+            }
+            rows.add(new Row(distCode, ""));
+        }
+        return rows;
+    }
+
+    /**
+     * Phase-2+ path: each choice is a district + ITI. The district is resolved from {@code iti}.
+     */
+    private List<Row> resolveItiChoices(
+            List<student_trade_selection_request_dto.Choice> choices) {
+
+        Set<String> itiCodes = collectItiCodes(choices);
+        Map<String, String> districtByIti = resolveDistricts(choices);
+
+        List<Row> rows = new ArrayList<>(itiCodes.size());
+        for (String itiCode : itiCodes) {
+            rows.add(new Row(districtByIti.get(itiCode), itiCode));
+        }
+        return rows;
+    }
+
+    /** Trims the codes and rejects blanks and duplicates — the PK includes {@code iti_code}. */
     private static Set<String> collectItiCodes(
             List<student_trade_selection_request_dto.Choice> choices) {
 
@@ -261,23 +320,23 @@ public class student_trade_selection_service {
     }
 
     /**
-     * Writes one row per choice. {@code temp_code} repeats the district and {@code temp} takes the
-     * next {@code temp_seq} value, matching how the archived rows were produced.
+     * Writes one row per selection. {@code temp_code} repeats the district and {@code temp} takes
+     * the next {@code temp_seq} value, matching how the archived rows were produced.
      */
-    private void insertChoices(Integer regid, String year, String phase,
-            Map<String, String> districtByIti, Integer freezee) {
+    private void insertRows(Integer regid, String year, String phase,
+            List<Row> rows, Integer freezee) {
 
         Long trno = jdbcTemplate.getJdbcTemplate()
                 .queryForObject("SELECT nextval('trno_seq')", Long.class);
 
-        List<SqlParameterSource> batch = new ArrayList<>(districtByIti.size());
-        for (Map.Entry<String, String> entry : districtByIti.entrySet()) {
+        List<SqlParameterSource> batch = new ArrayList<>(rows.size());
+        for (Row row : rows) {
             batch.add(new MapSqlParameterSource("regid", String.valueOf(regid))
-                    .addValue("distCode", entry.getValue())
+                    .addValue("distCode", row.distCode())
                     .addValue("trno", trno)
                     .addValue("phase", phase)
                     .addValue("year", year)
-                    .addValue("itiCode", entry.getKey())
+                    .addValue("itiCode", row.itiCode())
                     .addValue("freezee", freezee));
         }
         jdbcTemplate.batchUpdate(INSERT_SQL, batch.toArray(new SqlParameterSource[0]));

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -108,6 +109,71 @@ public class CallLetterViewController {
             return ResponseEntity.status(502).body(err);
         }
         return ResponseEntity.ok(merged);
+    }
+
+    /**
+     * Same-origin proxy for the printable call letter.
+     * Single mode: {@code regid}. Bulk mode: {@code fromRank}/{@code toRank}/{@code caste}.
+     * Always requires {@code distCode} (the logged-in district from the page session).
+     */
+    @GetMapping("/api/call-letter/print")
+    @ResponseBody
+    public ResponseEntity<Object> callLetterPrint(@RequestParam("distCode") String distCode,
+            @RequestParam(value = "regid", required = false) String regid,
+            @RequestParam(value = "fromRank", required = false) String fromRank,
+            @RequestParam(value = "toRank", required = false) String toRank,
+            @RequestParam(value = "caste", required = false) String caste) {
+        String dist = distCode == null ? "" : distCode.trim();
+        if (dist.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "District is required."));
+        }
+        String reg = regid == null ? "" : regid.trim();
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .fromUriString(backendBaseUrl + "/admission/call-letter/print")
+                .queryParam("distCode", dist);
+        if (!reg.isEmpty()) {
+            if (!reg.matches("\\d+")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Register Number must be numeric."));
+            }
+            builder.queryParam("regid", reg);
+        } else {
+            int from;
+            int to;
+            try {
+                from = Integer.parseInt(fromRank == null ? "" : fromRank.trim());
+                to = Integer.parseInt(toRank == null ? "" : toRank.trim());
+            } catch (NumberFormatException nfe) {
+                return ResponseEntity.badRequest().body(Map.of("error", "From Rank and To Rank must be numeric."));
+            }
+            if (from <= 0 || to <= 0) {
+                return ResponseEntity.badRequest().body(Map.of("error", "From Rank and To Rank must be positive numbers."));
+            }
+            if (from > to) {
+                return ResponseEntity.badRequest().body(Map.of("error", "From Rank must not be greater than To Rank."));
+            }
+            if (to - from > MAX_RANGE) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Ranks difference should be less than " + MAX_RANGE + "."));
+            }
+            builder.queryParam("fromRank", from).queryParam("toRank", to)
+                    .queryParam("caste", caste == null ? "all" : caste.trim());
+        }
+        try {
+            ResponseEntity<Object> resp = rest.exchange(builder.toUriString(), HttpMethod.GET, null,
+                    new ParameterizedTypeReference<Object>() {
+                    });
+            return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
+        } catch (HttpStatusCodeException e) {
+            int code = e.getStatusCode().value();
+            if (code == 400) {
+                return ResponseEntity.badRequest().body(e.getResponseBodyAs(Map.class));
+            }
+            return ResponseEntity.status(502)
+                    .body(Map.of("error", "Unable to generate call letter. Please try again."));
+        } catch (Exception e) {
+            return ResponseEntity.status(502)
+                    .body(Map.of("error", "Unable to generate call letter. Please try again."));
+        }
     }
 
     private static List<Object> toList(Object body) {

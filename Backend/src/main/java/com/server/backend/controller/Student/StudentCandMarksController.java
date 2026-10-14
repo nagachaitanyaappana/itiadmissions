@@ -24,4 +24,15 @@ public class StudentCandMarksController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/{regid}")
+    public ResponseEntity<StudentCandMarksDto> getMarks(@PathVariable String regid) {
+
+        StudentCandMarksDto dto = service.getMarks(regid);
+
+        if (dto == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(dto);
+    }
 }

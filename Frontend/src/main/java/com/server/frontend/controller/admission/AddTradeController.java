@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestTemplate;
 
@@ -80,6 +81,34 @@ public class AddTradeController {
     @ResponseBody
     public ResponseEntity<Object> approve(@PathVariable("itiCode") String c) {
         return proxyWrite(HttpMethod.PUT, backendBaseUrl + "/admission/add-trade/" + c.trim() + "/approve-all", null);
+    }
+
+    /** Edit Trade page payload for one trade of the ITI. */
+    @GetMapping("/api/iti/{itiCode}/trade/{tradeCode}")
+    @ResponseBody
+    public ResponseEntity<Object> getTrade(@PathVariable("itiCode") String c,
+            @PathVariable("tradeCode") String t) {
+        return proxyGet(backendBaseUrl + "/admission/add-trade/" + c.trim() + "/trade/" + t.trim());
+    }
+
+    /** Save edited strength / availability (+ optional shift/unit toggles). */
+    @PutMapping("/api/iti/{itiCode}/trade/{tradeCode}")
+    @ResponseBody
+    public ResponseEntity<Object> updateTrade(@PathVariable("itiCode") String c,
+            @PathVariable("tradeCode") String t,
+            @RequestBody(required = false) Map<String, Object> b) {
+        return proxyWrite(HttpMethod.PUT,
+                backendBaseUrl + "/admission/add-trade/" + c.trim() + "/trade/" + t.trim(), b);
+    }
+
+    /** Freeze ({@code freeze=true}) or unfreeze every trade of the ITI. */
+    @PostMapping("/api/iti/{itiCode}/freeze-trades")
+    @ResponseBody
+    public ResponseEntity<Object> freezeTrades(@PathVariable("itiCode") String c,
+            @RequestParam(name = "freeze", defaultValue = "true") String freeze) {
+        String url = backendBaseUrl + "/admission/add-trade/" + c.trim()
+                + "/freeze-trades?freeze=" + ("false".equalsIgnoreCase(freeze) ? "false" : "true");
+        return proxyWrite(HttpMethod.POST, url, null);
     }
 
     private ResponseEntity<Object> proxyGet(String url) {

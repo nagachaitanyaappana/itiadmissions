@@ -44,4 +44,18 @@ public class StudentCandMarksServiceImpl implements StudentCandMarksService {
 
         return "Marks Saved Successfully";
     }
+
+    @Override
+    public StudentCandMarksDto getMarks(String regid) {
+
+        StudentCandMarks entity = marksRepository.findById(regid).orElse(null);
+        if (entity == null) {
+            return null;
+        }
+
+        StudentCandMarksDto dto = new StudentCandMarksDto();
+        BeanUtils.copyProperties(entity, dto);
+        dto.setRegid(Integer.valueOf(entity.getRegid()));
+        return dto;
+    }
 }

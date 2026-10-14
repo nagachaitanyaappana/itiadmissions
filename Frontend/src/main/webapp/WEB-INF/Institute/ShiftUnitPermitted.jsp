@@ -11,7 +11,7 @@
     <title>Shift & Unit Permitted Configuration</title>
     <style>
         .page-title {
-            color: #333;
+            color: #330033;
             font-size: 28px;
             font-weight: 600;
         }
@@ -20,13 +20,13 @@
             font-size: 14px;
         }
         .details-card {
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
+            border: 2px solid #000;
+            border-radius: 0;
             margin-bottom: 25px;
-            background-color: #fff;
+            background-color: #cbd6b2;
         }
         .details-card-header {
-            background-color: #212529;
+            background-color: #4ab131;
             color: white;
             padding: 12px 18px;
             font-size: 18px;
@@ -37,11 +37,11 @@
         }
         .detail-label {
             font-weight: 600;
-            color: #555;
+            color: #165500;
             font-size: 14px;
         }
         .table th {
-            background-color: #212529 !important;
+            background-color: #4ab131 !important;
             color: white !important;
             padding: 12px;
             font-weight: bold;
@@ -52,6 +52,9 @@
             vertical-align: middle;
             font-size: 13px;
         }
+        .table, .table th, .table td { border: 1px solid #000 !important; }
+        .table-striped > tbody > tr:nth-child(odd) > td,
+        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #ffffff !important; }
         .loading-message {
             text-align: center;
             padding: 40px;
@@ -82,12 +85,18 @@
         }
         .btn-save {
             min-width: 180px;
+            background-color: blue;
+            border-color: blue;
         }
+        .btn-save:hover { background-color: #0000b3; border-color: #0000b3; }
         .btn-back {
             min-width: 180px;
         }
+        #addEntryBtn { background-color: green; border-color: green; }
+        #addEntryBtn:hover { background-color: #056b05; border-color: #056b05; }
     </style>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
 </head>
 
 <body>
@@ -96,7 +105,7 @@
         <jsp:include page="/WEB-INF/reports/header.jsp" />
     </header>
 
-    <div class="container-fluid px-5 mt-4 mb-5" style="min-height: 50vh;">
+    <div class="container-fluid px-5 mt-4 mb-5 lg-page" style="min-height: 50vh;">
         <!-- Page Header & Breadcrumbs -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="page-title text-uppercase">Shift & Unit Permitted Configuration</h2>

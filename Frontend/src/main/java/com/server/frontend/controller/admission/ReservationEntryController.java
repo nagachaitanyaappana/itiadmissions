@@ -50,6 +50,22 @@ public class ReservationEntryController {
         return proxyGet(backendBaseUrl + "/admission/reservation-entry/trades?itiCode=" + itiCode.trim());
     }
 
+    /** Only approved trades — feeds the trade dropdown once reservation entry is open. */
+    @GetMapping("/api/iti/{itiCode}/approved-trades")
+    @ResponseBody
+    public ResponseEntity<Object> approvedTradesByIti(@PathVariable("itiCode") String itiCode) {
+        return proxyGet(backendBaseUrl + "/admission/reservation-entry/approved-trades?itiCode="
+                + itiCode.trim());
+    }
+
+    /** Gate: approved trade + shift units must both exist before Reservation Entry is usable. */
+    @GetMapping("/api/iti/{itiCode}/readiness")
+    @ResponseBody
+    public ResponseEntity<Object> readiness(@PathVariable("itiCode") String itiCode) {
+        return proxyGet(backendBaseUrl + "/admission/reservation-entry/readiness?itiCode="
+                + itiCode.trim());
+    }
+
     @GetMapping("/api/reservation-entry")
     @ResponseBody
     public ResponseEntity<Object> getReservation(@RequestParam("itiCode") String itiCode,

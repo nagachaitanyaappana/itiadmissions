@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<title>:: ITI :: Print Admission Slip</title>
+<title>:: ITI :: Admission Memo</title>
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css" />
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css" />
 <style>
@@ -20,23 +20,28 @@
   .reset-btn { background-color:#c0392b; border:none; color:#fff; padding:6px 42px; font-size:15px; font-weight:bold; cursor:pointer; margin-left:8px; }
   .print-btn { background-color:#0E4878; border:none; color:#fff; padding:6px 42px; font-size:15px; font-weight:bold; cursor:pointer; margin-left:8px; }
   .err { color:red; font-size:12px; display:block; }
-  .res-wrap { width:92%; margin:0 auto 60px; font-family:Verdana,Arial,sans-serif; font-size:13px; }
-  .res-head { text-align:center; color:blue; font-size:18px; font-weight:bold; margin:14px 0 8px; }
-  .adm-strip { text-align:center; font-size:14px; font-weight:bold; margin:6px 0 12px; }
-  .sec-title { background:#e4eeb9; border:1px solid #7a7a7a; border-bottom:none; font-weight:bold; padding:6px 10px; font-size:13px; }
-  .slip-table { border-collapse:collapse; margin:0 auto 14px; font-size:13px; background:#fff; width:100%; max-width:760px; }
-  .slip-table th, .slip-table td { border:1px solid #7a7a7a; padding:6px 10px; text-align:left; vertical-align:top; }
-  .slip-table th { background:#e4eeb9; width:44%; }
   .act-row { text-align:center; margin:12px 0; }
   .msg-err { color:red; text-align:center; }
-  .note-box { width:92%; max-width:760px; margin:12px auto; font-size:12px; color:#333; background:#fef9e7; border:1px solid #d4ac0d; padding:8px 10px; }
+  #footer { position:fixed; bottom:0; width:100%; padding:8px; text-align:center; background:#0E4878; font-size:12px; color:#fff; font-family:arial,verdana; }
+  #footer a { color:#fff; }
+
+  /* ---- admission memo ---- */
+  .memo-wrap { width:96%; max-width:980px; margin:0 auto 60px; font-family:Verdana,Arial,sans-serif; color:#000; }
+  .memo-title { text-align:center; font-size:20px; font-weight:bold; margin:14px 0; }
+  .memo-table { width:100%; border-collapse:collapse; font-size:14px; }
+  .memo-table th { text-align:left; padding:8px 10px; vertical-align:top; width:38%; }
+  .memo-table td { padding:8px 10px; vertical-align:top; }
+  .fee-head { font-weight:bold; padding:10px 10px 4px; }
+  .fee-line td { padding:3px 10px 3px 30px; }
+  .sign-row td { text-align:left; padding:26px 12px 8px; }
+  .sign-row .pr { text-align:right; font-weight:bold; }
+  .convener { text-align:right; font-weight:bold; padding:8px 12px 18px; }
   @media print {
     #screen1, #footer, .act-row, .no-print { display:none !important; }
     #screen2 { display:block !important; }
-    .res-wrap { width:100%; margin:0; }
+    body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .memo-wrap { width:100%; max-width:none; }
   }
-  #footer { position:fixed; bottom:0; width:100%; padding:8px; text-align:center; background:#0E4878; font-size:12px; color:#fff; font-family:arial,verdana; }
-  #footer a { color:#fff; }
 </style>
 </head>
 <body>
@@ -46,7 +51,7 @@
   <c:otherwise><%@ include file="/WEB-INF/bannernew.jsp" %><%@ include file="/WEB-INF/navbars/openNavbar.jsp" %></c:otherwise>
 </c:choose>
 <div id="screen1">
-  <div class="page-title">ITI Admissions Report Interface</div>
+  <div class="page-title">ITI Admissions Memo Interface</div>
   <div class="call-box">
     <table>
       <tr>
@@ -61,12 +66,11 @@
   </div>
 </div>
 <div id="screen2" style="display:none;">
-  <div class="res-head">ITI ADMISSION RECEIPT</div>
-  <div class="res-wrap"><div id="resultArea"></div>
+  <div class="memo-wrap" id="resultArea"></div>
   <div class="act-row no-print">
     <input type="button" class="print-btn" id="printBtn" value="Print" onclick="window.print();" style="display:none;" />
     <input type="button" class="reset-btn" value="Back to Search" onclick="backToSearch();" />
-  </div></div>
+  </div>
 </div>
 <div id="footer">2013 @ All Rights Reserved&nbsp;&nbsp; Designed by&nbsp;&nbsp; National Informatics Center <a href="http://www.ap.nic.in">National Informatics Center</a>&nbsp;&nbsp;&nbsp;&nbsp; <a href="#">Disclaimer</a></div>
 <script>
@@ -77,7 +81,7 @@ function setErr(id,msg){ document.getElementById(id).innerHTML = msg ? esc(msg) 
 function txt(v){ if(v===null||v===undefined) return "N/A"; var s=String(v).trim(); return s==="" ? "N/A" : s; }
 function fmtDate(v){ if(!v) return "N/A"; try { var d=new Date(v); if(isNaN(d.getTime())) return String(v); var dd=("0"+d.getDate()).slice(-2),mm=("0"+(d.getMonth()+1)).slice(-2); return dd+"/"+mm+"/"+d.getFullYear(); } catch(e){ return String(v); } }
 function pick(o){ if(!o) return null; if(o.data && typeof o.data==="object" && !Array.isArray(o.data)) return o.data; return o; }
-function row(n,v){ return "<tr><th>"+n+"</th><td>"+esc(v||"")+"</td></tr>"; }
+function row(n,v){ return "<tr><th>"+n+"</th><td>: "+esc(v||"")+"</td></tr>"; }
 
 function resetForm(){
   document.getElementById("admissionNumber").value = "";
@@ -99,7 +103,7 @@ function getAdmissionSlip(){
   document.getElementById("printBtn").style.display = "none";
   document.getElementById("screen1").style.display = "none";
   document.getElementById("screen2").style.display = "block";
-  document.getElementById("resultArea").innerHTML = "<p>Loading admission slip details...</p>";
+  document.getElementById("resultArea").innerHTML = "<p style='text-align:center;'>Loading admission memo...</p>";
   var url = CTX + "/admissions/print-admission-slip/api/admission-slip?admissionNumber=" + encodeURIComponent(a);
   fetch(url)
     .then(function(resp){ return resp.json().then(function(b){ return {s: resp.status, b: b}; }); })
@@ -114,26 +118,46 @@ function renderSlip(x, a){
   if(x.s === 404){ area.innerHTML = '<p class="msg-err">Admission number not found.</p>'; return; }
   if(x.s >= 400){
     var em = (x.b && (x.b.error || x.b.message)) ? (x.b.error || x.b.message) : ("HTTP " + x.s);
-    if(x.s === 502 && !em) em = "Unable to fetch admission slip. Please try again.";
     area.innerHTML = '<p class="msg-err">' + esc(em) + '</p>';
     return;
   }
   var d = pick(x.b);
   if(!d || (d.admissionNumber===null && d.admissionNumber===undefined)){ area.innerHTML = '<p class="msg-err">Admission number not found.</p>'; return; }
-  var h = "<div class='adm-strip'>Admission Number: " + esc(d.admissionNumber || a) + "</div>";
-  h += "<div class='sec-title'>Candidate Details</div><table class='slip-table'>";
-  h += row("Name", txt(d.name)) + row("Father Name", txt(d.fatherName)) + row("Date of Birth", fmtDate(d.dob));
-  h += row("Registration Number", txt(d.registrationNumber)) + row("Caste", txt(d.caste)) + row("Reservation Category", txt(d.reservationCategory));
+
+  var merit = txt(d.rank) === "N/A" ? ("" + esc(txt(d.registrationNumber))) : (esc(d.rank) + "/" + esc(txt(d.registrationNumber)));
+  var itiText = esc(txt(d.itiCode)) + "/" + esc(txt(d.itiName));
+  var tradeText = esc(txt(d.tradeName));
+  var commCat = esc(txt(d.caste)) + "/" + esc(txt(d.reservationCategory));
+
+  var h = "<div class='memo-title'>ITI Admission Memo For Phase " + esc(d.phase===null||d.phase===undefined?"":d.phase) + ", " + esc(txt(d.year)) + "</div>";
+  h += "<table class='memo-table'>";
+  h += row("1. Name", txt(d.name));
+  h += row("2. Father Name", txt(d.fname));
+  h += row("3. Date of Birth", fmtDate(d.dob));
+  h += "<tr><th>4. Merit/Registration Number</th><td>: " + merit + "</td></tr>";
+  h += "<tr><th>5. Community/Reservation Category</th><td>: " + commCat + "</td></tr>";
+  h += row("6. Date of Admission", fmtDate(d.dateOfAdmission));
+  h += "<tr><th>7. Admitted In The Institute</th><td>: " + itiText + "</td></tr>";
+  h += "<tr><th>8. Trade Allotted</th><td>: " + tradeText + "</td></tr>";
+  h += row("9. Admission Number", txt(d.admissionNumber));
+  h += "<tr><th colspan='2'>10. Tuition Fees for PVT ITI Admitted Candidate</th></tr>";
+  h += "<tr class='fee-line'><td>Fee for Engineering Trades in Urban Areas</td><td>Rs." + esc(txt(d.feeUrbanEngg)) + "</td></tr>";
+  h += "<tr class='fee-line'><td>Fee for Non Engineering Trades in Urban Areas</td><td>Rs." + esc(txt(d.feeUrbanNonEngg)) + "</td></tr>";
+  h += "<tr class='fee-line'><td>Fee for Engineering Trades in Rural Areas</td><td>Rs." + esc(txt(d.feeRuralEngg)) + "</td></tr>";
+  h += "<tr class='fee-line'><td>Fee for Non Engineering Trades in Rural Areas</td><td>Rs." + esc(txt(d.feeRuralNonEngg)) + "</td></tr>";
+  h += "<tr><th colspan='2'>11. Submit Your Medical Fitness Certificate</th></tr>";
+  h += "<tr class='sign-row'><td>Candidate Signature</td><td class='pr'>PRINCIPAL</td></tr>";
+  h += "<tr><td colspan='2' class='convener'>District Convinor &amp; Principal, " + esc(txt(d.districtName)) + "</td></tr>";
   h += "</table>";
-  h += "<div class='sec-title'>Admission Details</div><table class='slip-table'>";
-  h += row("Date of Admission", fmtDate(d.dateOfAdmission)) + row("ITI Code", txt(d.itiCode)) + row("Trade Code", txt(d.tradeCode));
-  h += row("Admission Number", txt(d.admissionNumber));
-  h += "</table>";
-  h += "<div class='note-box'>This is a system generated admission slip. The candidate must carry the original certificates at the time of admission reporting.</div>";
+
   area.innerHTML = h;
   document.getElementById("printBtn").style.display = "";
 }
 document.getElementById("admissionNumber").addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); getAdmissionSlip(); } });
+(function(){
+  var p = new URLSearchParams(window.location.search).get("admissionNumber");
+  if(p){ document.getElementById("admissionNumber").value = p; getAdmissionSlip(); }
+})();
 </script>
 </body>
 </html>

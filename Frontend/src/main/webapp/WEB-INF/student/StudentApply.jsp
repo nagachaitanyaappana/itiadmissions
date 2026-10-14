@@ -166,7 +166,18 @@
                         alert("Registration Id is required");
                         return false;
                     }
+                    var captcha = document.getElementById("captcha").value.trim();
+                    if (captcha === "") {
+                        alert("Captcha is required");
+                        document.getElementById("captcha").focus();
+                        return false;
+                    }
                     return true;
+                }
+
+                function refreshCaptcha() {
+                    var img = document.getElementById("captchaImage");
+                    if (img) { img.src = '${pageContext.request.contextPath}/captcha?ts=' + (new Date()).getTime(); }
                 }
 
             </script>
@@ -176,9 +187,24 @@
                 var CURRENT_YEAR = '';
                 var CURRENT_PHASE = '';
 
-                // Gate submit: fetch the registration record and open the application form
+                // Gate submit: verify captcha, fetch the registration record and open the application form
                 function fetchApplication() {
                     if (!validate()) return false;
+                    var enteredCaptcha = document.getElementById("captcha").value.trim().toUpperCase();
+                    $.get('${pageContext.request.contextPath}/captcha/text', function (serverCaptcha) {
+                        if (enteredCaptcha !== String(serverCaptcha).trim().toUpperCase()) {
+                            alert("Captcha does not match. Please try again.");
+                            refreshCaptcha();
+                            document.getElementById("captcha").value = "";
+                            document.getElementById("captcha").focus();
+                            return;
+                        }
+                        loadApplication();
+                    });
+                    return false;
+                }
+
+                function loadApplication() {
                     var regid = document.getElementById("regid").value.trim();
                     var hallticket = document.getElementById("ssc_regno").value.trim().toUpperCase();
                     var dob = document.getElementById("dob").value;
@@ -194,85 +220,17 @@
                         }
                         CURRENT_REGID = s.regid;
                         CURRENT_SSC_TYPE = s.sscType;
-                        prefill(s);
                         document.getElementById("gateDiv").style.display = "none";
-                        document.getElementById("applyDiv").style.display = "";
+                        renderRegistrationDetails(s);
                         initSelectionStep();
                         window.scrollTo(0, 0);
                     }).fail(function () {
                         alert("No registration found for Registration Id " + regid + ". Please register first (Step 1).");
                     });
-                    return false;
-                }
-
-                function prefill(s) {
-                    document.getElementById("prefillInfo").innerHTML =
-                        '<b>Registration Id:</b> ' + s.regid + ' &nbsp;|&nbsp; <b>Hall Ticket:</b> ' + s.sscRegNo
-                        + ' &nbsp;|&nbsp; <b>Board:</b> ' + s.sscBoard + ' &nbsp;|&nbsp; <b>Year:</b> ' + s.sscYear
-                        + ' &nbsp;|&nbsp; <b>Result Type:</b> ' + (s.sscType === 'sscm' ? 'Marks' : 'GPA');
-                    document.getElementById("name").value = s.name || '';
-                    document.getElementById("fname").value = s.fname || '';
-                    document.getElementById("mname").value = s.mname || '';
-                    document.getElementById("gender").value = s.gender || '';
-                    document.getElementById("appdob").value = s.dob ? String(s.dob).substring(0, 10) : '';
-                    document.getElementById("adarno").value = s.adarno || '';
-                    document.getElementById("phno").value = s.phno || '';
-                    document.getElementById("email").value = s.email || '';
-                    document.getElementById("addr").value = s.addr || '';
-                    document.getElementById("pincode").value = s.pincode || '';
-                    document.getElementById("local").value = s.local || '';
-                    document.getElementById("interPassed").value = s.interPassed === true ? 'true' : (s.interPassed === false ? 'false' : '');
-                    document.getElementById("interMarks").value = s.interMarks != null ? s.interMarks : '';
-                    if (s.caste) $('#casteSelect').append('<option value="' + s.caste + '" selected>' + s.caste + '</option>');
-                    if (s.subCaste) $('#subCasteSelect').append('<option value="' + s.subCaste + '" selected>' + s.subCaste + '</option>');
-                    document.getElementById("ewsChk").checked = s.economicWeakerSection === true;
-                    document.getElementById("phcChk").checked = s.phc === true;
-                    document.getElementById("exsChk").checked = s.exservice === true;
-                    // marks section per result type of this registration
-                    if (s.sscType === 'sscm') {
-                        document.getElementById("gpaRow").style.display = "none";
-                        document.querySelectorAll('.gpaRow2').forEach(function (r) { r.style.display = "none"; });
-                        document.getElementById("marksRow").style.display = "";
-                        document.querySelectorAll('.marksRow2').forEach(function (r) { r.style.display = ""; });
-                    } else {
-                        document.getElementById("marksRow").style.display = "none";
-                        document.querySelectorAll('.marksRow2').forEach(function (r) { r.style.display = "none"; });
-                        document.getElementById("gpaRow").style.display = "";
-                        document.querySelectorAll('.gpaRow2').forEach(function (r) { r.style.display = ""; });
-                    }
-                }
-
-                function isAlphaKey(evt) {
-                    var charCode = (evt.which) ? evt.which : event.keyCode;
-                    if ((charCode < 65 || charCode > 90) && (charCode < 97 || charCode > 123) && charCode !== 32 && charCode !== 8 && charCode !== 46) {
-                        return false;
-                    }
-                    return true;
-                }
-
-                function val(id) { var v = document.getElementById(id).value.trim(); return v === "" ? null : v; }
-
-                // Local preview of the selected passport photo (the upload itself happens on submit).
-                function previewPhoto(input) {
-                    var box = document.getElementById("photoPrev");
-                    box.innerHTML = "";
-                    if (!input || !input.files || input.files.length === 0) { return; }
-                    var file = input.files[0];
-                    if (file.type !== "image/png" && file.type !== "image/jpeg") {
-                        input.value = "";
-                        alert("Please select a PNG or JPEG image.");
-                        return;
-                    }
-                    var img = document.createElement("img");
-                    img.src = URL.createObjectURL(file);
-                    img.style.width = "90px";
-                    img.style.height = "110px";
-                    img.style.border = "1px solid #666";
-                    box.appendChild(img);
                 }
 
                 $(document).ready(function () {
-                    loadCastes();
+                    $("#captchaRef").click(refreshCaptcha);
                     // Current session year/phase come from admissions.admission_phase (current = true),
                     // mirroring itiap_new's open_Application_Interface_Student.jsp lookup.
                     $.get('${backendBaseUrl}/api/reports/current-admission-phase', function (data) {
@@ -285,167 +243,65 @@
                 });
             </script>
             <script type="text/javascript">
-                function loadCastes() {
-                    // Master list comes from public.caste_master (caste_code / caste_name).
-                    // The codes (BC-A, SC-I, ...) are exactly what student_application.caste stores.
-                    $.get('${backendBaseUrl}/api/student/castes', function (list) {
-                        $.each(list, function (i, c) {
-                            $('#casteSelect').append('<option value="' + c.casteCode + '">' + c.casteName + '</option>');
-                        });
-                    });
-                }
-
-                function loadSubCastes() {
-                    var code = document.getElementById("casteSelect").value;
-                    var sel = document.getElementById("subCasteSelect");
-                    sel.innerHTML = '<option value="">--Select Sub Caste--</option>';
-                    if (!code) { return; }
-                    // Sub-caste master is the local reference (ids preserved from real
-                    // applications; names land as the true master becomes available)
-                    $.get('${backendBaseUrl}/api/student/subcastes/' + encodeURIComponent(code))
-                        .done(function (list) {
-                            (list || []).forEach(function (r) {
-                                var label = (r.subCasteName && r.subCasteName !== '') ? r.subCasteName : ('Sub-caste ' + r.subCasteId);
-                                var opt = document.createElement('option');
-                                opt.value = r.subCasteId; opt.textContent = label + ' (' + r.subCasteId + ')';
-                                sel.appendChild(opt);
-                            });
-                        });
-                }
-
-                $(document).on('change', '#casteSelect', loadSubCastes);
-
-                function validateApplication() {
-                    var req = [["name","Name"],["fname","Father's Name"],["gender","Gender"],["appdob","Date of Birth"],["phno","Mobile Number"],["addr","Address"],["local","Local/Non-Local"],["casteSelect","Caste"]];
-                    for (var i = 0; i < req.length; i++) {
-                        var el = document.getElementById(req[i][0]);
-                        if (!el.value || !el.value.trim()) { alert("Please enter " + req[i][1] + "."); el.focus(); return false; }
-                    }
-                    if (!/^\d{10}$/.test(document.getElementById("phno").value.trim())) { alert("Mobile Number must be 10 digits."); return false; }
-                    var ad = document.getElementById("adarno").value.trim();
-                    if (ad !== "" && !/^\d{12}$/.test(ad)) { alert("Aadhaar must be 12 digits."); return false; }
-                    var pin = document.getElementById("pincode").value.trim();
-                    if (pin !== "" && !/^\d{6}$/.test(pin)) { alert("Pincode must be 6 digits."); return false; }
-                    var p = document.getElementById("photo");
-                    if (!p || !p.files || p.files.length === 0) { alert("Please upload your photograph (PNG or JPEG)."); return false; }
-                    return true;
-                }
-            </script>
-            <script type="text/javascript">
-                // Final submit: PUT /api/student/update/{regid} + POST /api/student/marks/save
-                // Double-submit guard: a second click/Enter while the two nested AJAX
-                // calls are in flight used to POST /marks/save twice, and with no
-                // unique constraint on student_cand_marks that wrote duplicate rows.
-                var __applySubmitting = false;
-                function setApplySubmitting(on) {
-                    __applySubmitting = on;
-                    var form = document.forms ? document.forms['ApplicationForm'] : null;
-                    if (!form) return;
-                    var els = form.querySelectorAll('input[type="submit"], button[type="submit"]');
-                    for (var i = 0; i < els.length; i++) { els[i].disabled = on; }
-                }
-                function submitApplication() {
-                    if (__applySubmitting) return false;
-                    if (!validateApplication()) return false;
-                    setApplySubmitting(true);
-                    // Step 2a: upload the photograph (required; PNG/JPEG) to /api/student/photo/{regid},
-                    // then Step 2b saves details and marks. Mirrors open_Application_Interface_Student.jsp,
-                    // which uploaded the photo in the same multipart post as the details.
-                    var fd = new FormData();
-                    var fileInput = document.getElementById("photo");
-                    if (fileInput && fileInput.files && fileInput.files.length > 0) {
-                        fd.append("photo", fileInput.files[0]);
-                    }
-                    $.ajax({
-                        url: '${backendBaseUrl}/api/student/photo/' + CURRENT_REGID,
-                        type: 'POST',
-                        data: fd,
-                        processData: false,
-                        contentType: false,
-                        success: function () { submitDetailsAndMarks(); },
-                        error: function (xhr) {
-                            setApplySubmitting(false);
-                            var msg = "Failed to upload the photograph. Please try again.";
-                            if (xhr.responseJSON && xhr.responseJSON.error) { msg = xhr.responseJSON.error; }
-                            alert(msg);
-                        }
-                    });
-                    return false;
-                }
-
-                function submitDetailsAndMarks() {
-                    var payload = {
-                        name: document.getElementById("name").value.trim(),
-                        fname: document.getElementById("fname").value.trim(),
-                        mname: document.getElementById("mname").value.trim(),
-                        gender: document.getElementById("gender").value,
-                        dob: document.getElementById("appdob").value,
-                        adarno: document.getElementById("adarno").value.trim(),
-                        phno: document.getElementById("phno").value.trim(),
-                        email: document.getElementById("email").value.trim(),
-                        addr: document.getElementById("addr").value.trim(),
-                        pincode: document.getElementById("pincode").value.trim(),
-                        caste: document.getElementById("casteSelect").value,
-                        subCaste: document.getElementById("subCasteSelect").value,
-                        local: document.getElementById("local").value,
-                        economicWeakerSection: document.getElementById("ewsChk").checked,
-                        phc: document.getElementById("phcChk").checked,
-                        exservice: document.getElementById("exsChk").checked,
-                        interPassed: document.getElementById("interPassed").value === "" ? null : document.getElementById("interPassed").value === 'true',
-                        interMarks: document.getElementById("interMarks").value === "" ? null : parseInt(document.getElementById("interMarks").value, 10)
-                    };
-                    $.ajax({
-                        url: '${backendBaseUrl}/api/student/update/' + CURRENT_REGID,
-                        type: 'PUT', contentType: 'application/json',
-                        data: JSON.stringify(payload),
-                        success: function () {
-                            // marks payload: only fields relevant to this registration's result type
-                            var m = { regid: CURRENT_REGID, year: CURRENT_YEAR };
-                            if (CURRENT_SSC_TYPE === 'sscm') {
-                                m.sscFirstLangMarks = val("m_firstlang"); m.sscSecondLangMarks = val("m_secondlang");
-                                m.sscEngMarks = val("m_english"); m.sscMathMarks = val("m_math");
-                                m.sscSciMarks = val("m_science"); m.sscSocialMarks = val("m_social");
-                                m.sscTotMarks = val("m_total");
-                            } else {
-                                m.sscFirstLangGpa = val("g_firstlang"); m.sscSecondLangGpa = val("g_secondlang");
-                                m.sscEngGpa = val("g_english"); m.sscMathGpa = val("g_math");
-                                m.sscSciGpa = val("g_science"); m.sscSocialGpa = val("g_social");
-                                m.sscTotGpa = val("g_total");
-                            }
-                            $.ajax({
-                                url: '${backendBaseUrl}/api/student/marks/save',
-                                type: 'POST', contentType: 'application/json',
-                                data: JSON.stringify(m),
-                                success: function () {
-                                    $('#applyResult').html('<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:70%;">'
-                                        + '<h3 style="color:#155724;">Application Submitted Successfully!</h3>'
-                                        + '<p style="color:#155724;">Your application details and marks have been saved for Registration Id <b>' + CURRENT_REGID + '</b>.</p>'
-                                        + '<p><a href="${pageContext.request.contextPath}/">Back to Home</a></p></div>');
-                                    document.getElementById("applyDiv").style.display = "none";
-                                    window.scrollTo(0, 0);
-                                    // Keep submit locked after success (form is hidden).
-                                },
-                                error: function () { setApplySubmitting(false); alert("Details saved but marks could not be saved. Please retry from Edit Registration."); }
-                            });
-                        },
-                        error: function (xhr) {
-                            setApplySubmitting(false);
-                            var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message
-                                : "Failed to save application details. Please check the values and try again.";
-                            alert(msg);
-                        }
-                    });
-                }
-            </script>
-
-            <script type="text/javascript">
-                // ================= Step 3: ITI selection =================
+                // ================= Step 3: selection =================
                 // Writes student_trade_sel through /admission/student-trade-selection.
-                // Ported from web/open_Application_Interface.jsp (locDeptTable) and its
-                // getColleges()/abc() partials; the district list comes from dist_mst instead of
-                // the 13 districts the legacy page hard-coded.
+                // Phase 1 selects districts only (legacy student_trade_sel2025phase1 rows have
+                // iti_code=''); phase 2+ selects district + ITI.
                 var MAX_CHOICES = 60;
                 var DISTRICT_OPTIONS = null;
+
+                // ---- read-only registration details shown before the selection step ----
+                function aplEsc(v) {
+                    if (v === null || v === undefined) { return ''; }
+                    return String(v).replace(/[&<>"]/g, function (c) {
+                        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+                    });
+                }
+                function aplVal(v) {
+                    if (v === null || v === undefined || String(v).trim() === '') { return '&nbsp;'; }
+                    return aplEsc(v);
+                }
+                function aplPair(l1, v1, l2, v2) {
+                    return '<tr><td class="lbl">' + l1 + '</td><td>' + aplVal(v1)
+                        + '</td><td class="lbl">' + l2 + '</td><td>' + aplVal(v2) + '</td></tr>';
+                }
+                function renderRegistrationDetails(s) {
+                    var dob = s.dob ? String(s.dob).substring(0, 10) : '';
+                    var boardMap = { '28': 'Andhra Pradesh State Board (SSC)', '51': 'CBSE', '52': 'ICSE', '36': 'Telangana' };
+                    var board = boardMap[String(s.sscBoard)] || s.sscBoard;
+                    var resType = (s.sscType === 'sscm') ? 'Marks' : 'GPA';
+                    var gender = s.gender ? (s.gender.charAt(0).toUpperCase() + s.gender.slice(1)) : '';
+                    var localVal = s.local === 'NonLocal' ? 'Non-Local' : (s.local || '');
+                    var monthMap = { '03': 'March', '04': 'Supplymentary' };
+                    var month = monthMap[String(s.sscMonth)] || s.sscMonth || '';
+                    var pwdMap = { '1': 'Blind', '2': 'Deaf', '3': 'Motor Disability', '4': 'Mental Disability' };
+                    var pwd = (s.pwdCategory && s.pwdCategory !== 'N') ? (pwdMap[String(s.pwdCategory)] || s.pwdCategory) : '';
+                    var qual = (s.sscPassed === true) ? 'SSC Passed' : (s.sscPassed === false ? '8th Passed' : '');
+
+                    var h = '<h4 align="center"><b>Candidates Details are displayed from Database</b></h4>'
+                        + '<table class="apply-details">'
+                        + '<tr class="hdr"><td colspan="5">Registration Details (read-only)</td></tr>'
+                        + aplPair('Hall Ticket Number', s.sscRegNo, 'Board', board)
+                        + aplPair('Year of Pass', s.sscYear, 'Month of Pass', month)
+                        + aplPair('Result Type', resType, 'Qualification', qual)
+                        + aplPair("Applicant's Name", s.name, "Father's Name", s.fname)
+                        + aplPair("Mother's Name", s.mname, 'Gender', gender)
+                        + aplPair('Date of Birth', dob, 'Aadhaar Number', s.adarno)
+                        + aplPair('Mobile Number', s.phno, 'Email', s.email)
+                        + aplPair('Caste', s.caste, 'Sub Caste', s.subCaste)
+                        + aplPair('Local / Non-Local', localVal, 'Pincode', s.pincode)
+                        + aplPair('Economic Weaker Section', s.economicWeakerSection ? 'Yes' : 'No',
+                                  'Physically Challenged', s.phc ? 'Yes' : 'No')
+                        + aplPair('PWD Category', pwd, 'Ex-Service Man', s.exservice ? 'Yes' : 'No')
+                        + '<tr><td class="lbl">Address</td><td colspan="4">' + aplVal(s.addr) + '</td></tr>'
+                        + '</table>';
+
+                    var box = document.getElementById("applyDetails");
+                    box.innerHTML = h;
+                    box.style.display = "";
+                }
+
+                function isPhaseOne() { return String(CURRENT_PHASE) === '1'; }
 
                 function loadDistrictOptions(after) {
                     if (DISTRICT_OPTIONS) { after(); return; }
@@ -457,9 +313,21 @@
                     });
                 }
 
-                // Reveals Step 3 and re-renders anything already saved for this candidate.
+                // Reveals the selection step and re-renders anything already saved for this candidate.
                 function initSelectionStep() {
                     document.getElementById("selectDiv").style.display = "";
+                    var phaseOne = isPhaseOne();
+                    document.getElementById("selectHeading").innerHTML = phaseOne
+                        ? 'Selection of Districts (Step 2)'
+                        : 'Selection of ITIs (Step 2)';
+                    document.getElementById("selectInstruction").innerHTML = phaseOne
+                        ? 'Phase 1: select the districts you want to be considered for (maximum 60). '
+                          + '<b>Save the list</b> &mdash; a merit list is prepared only for candidates who have selected at least one district.'
+                        : 'Phase ' + CURRENT_PHASE + ': select the district and ITI combinations you want to be considered for '
+                          + '(maximum 60). <b>Save the list</b> &mdash; a merit list is prepared only for candidates who have selected at least one ITI.';
+                    document.getElementById("itiColHead").style.display = phaseOne ? "none" : "";
+                    document.getElementById("addRowBtn").value = phaseOne ? "Add District" : "Add ITI";
+                    document.getElementById("saveSelBtn").value = phaseOne ? "Save District Selections" : "Save ITI Selections";
                     loadDistrictOptions(function () {
                         if (document.getElementById("locDeptBody").rows.length === 0) { addSelectRow(); }
                         loadSavedSelections();
@@ -467,9 +335,10 @@
                 }
 
                 function addSelectRow(distCode, itiCode) {
+                    var phaseOne = isPhaseOne();
                     var body = document.getElementById("locDeptBody");
                     if (body.rows.length >= MAX_CHOICES) {
-                        alert("A maximum of " + MAX_CHOICES + " ITIs can be selected.");
+                        alert("A maximum of " + MAX_CHOICES + " selections can be made.");
                         return;
                     }
                     var row = body.insertRow(-1);
@@ -488,15 +357,19 @@
                         o.textContent = d.name;
                         districtSelect.appendChild(o);
                     });
-                    districtSelect.onchange = function () { loadItisForRow(this); };
+                    districtSelect.onchange = function () { if (!phaseOne) { loadItisForRow(this); } };
                     cDist.appendChild(districtSelect);
 
-                    var itiSelect = document.createElement("select");
-                    itiSelect.className = "selIti";
-                    itiSelect.style.width = "320px";
-                    itiSelect.innerHTML = '<option value="">--Select ITI--</option>';
-                    itiSelect.onchange = function () { showTrades(this.value); };
-                    cIti.appendChild(itiSelect);
+                    if (phaseOne) {
+                        cIti.style.display = "none";
+                    } else {
+                        var itiSelect = document.createElement("select");
+                        itiSelect.className = "selIti";
+                        itiSelect.style.width = "320px";
+                        itiSelect.innerHTML = '<option value="">--Select ITI--</option>';
+                        itiSelect.onchange = function () { showTrades(this.value); };
+                        cIti.appendChild(itiSelect);
+                    }
 
                     var remove = document.createElement("input");
                     remove.type = "button";
@@ -509,7 +382,7 @@
 
                     if (distCode) { districtSelect.value = distCode; }
                     renumberRows();
-                    if (distCode) { loadItisForRow(districtSelect, itiCode); }
+                    if (distCode && !phaseOne) { loadItisForRow(districtSelect, itiCode); }
                 }
 
                 function renumberRows() {
@@ -557,32 +430,42 @@
                 }
 
                 function collectChoices() {
+                    var phaseOne = isPhaseOne();
                     var rows = document.getElementById("locDeptBody").rows;
                     var choices = [];
                     for (var i = 0; i < rows.length; i++) {
                         var distCode = rows[i].querySelector(".selDistrict").value;
-                        var itiCode = rows[i].querySelector(".selIti").value;
-                        if (!itiCode) { continue; }
-                        choices.push({ distCode: distCode, itiCode: itiCode });
+                        if (phaseOne) {
+                            if (!distCode) { continue; }
+                            choices.push({ distCode: distCode });
+                        } else {
+                            var itiEl = rows[i].querySelector(".selIti");
+                            var itiCode = itiEl ? itiEl.value : "";
+                            if (!itiCode) { continue; }
+                            choices.push({ distCode: distCode, itiCode: itiCode });
+                        }
                     }
                     return choices;
                 }
 
                 function saveSelections() {
                     if (!CURRENT_REGID) { alert("Load your application first."); return false; }
+                    var phaseOne = isPhaseOne();
                     var choices = collectChoices();
-                    if (choices.length === 0) { alert("Please select at least one ITI."); return false; }
+                    if (choices.length === 0) { alert(phaseOne ? "Please select at least one district." : "Please select at least one ITI."); return false; }
                     $.ajax({
                         url: '${backendBaseUrl}/admission/student-trade-selection/' + CURRENT_REGID,
                         type: 'POST', contentType: 'application/json',
                         data: JSON.stringify({ regid: CURRENT_REGID, choices: choices }),
                         success: function (r) {
-                            showSelectMessage(true, 'Saved ' + r.saved + ' ITI selection(s) for year '
+                            var what = (r && r.districtOnly) ? 'district' : 'ITI';
+                            showSelectMessage(true, 'Saved ' + r.saved + ' ' + what + ' selection(s) for year '
                                 + r.year + ' (phase ' + r.phase + ').');
+                            showApplicationSuccess(CURRENT_REGID);
                             loadSavedSelections();
                         },
                         error: function (xhr) {
-                            var msg = "Could not save your ITI selections.";
+                            var msg = "Could not save your selections.";
                             if (xhr.responseJSON && xhr.responseJSON.error) { msg = xhr.responseJSON.error; }
                             showSelectMessage(false, msg);
                         }
@@ -592,20 +475,24 @@
 
                 function loadSavedSelections() {
                     if (!CURRENT_REGID) { return; }
+                    var phaseOne = isPhaseOne();
                     $.get('${backendBaseUrl}/admission/student-trade-selection/' + CURRENT_REGID,
                         function (list) {
                             var box = document.getElementById("savedSelections");
                             if (!list || list.length === 0) {
-                                box.innerHTML = '<p align="center">No ITI selection saved yet.</p>';
+                                box.innerHTML = '<p align="center">' + (phaseOne ? 'No district selection saved yet.' : 'No ITI selection saved yet.') + '</p>';
                                 return;
                             }
-                            var html = '<b>Saved ITI selections (' + list.length + ')</b>'
+                            var html = '<b>Saved ' + (phaseOne ? 'district' : 'ITI') + ' selections (' + list.length + ')</b>'
                                 + '<table border="1" align="center" style="margin:6px auto;">'
-                                + '<tr><th>S.No</th><th>District</th><th>ITI</th></tr>';
+                                + '<tr><th>S.No</th><th>District</th>' + (phaseOne ? '' : '<th>ITI</th>') + '</tr>';
                             list.forEach(function (r, idx) {
                                 html += '<tr><td align="center">' + (idx + 1) + '</td><td>'
-                                    + (r.distName || r.distCode) + '</td><td>'
-                                    + (r.itiName || r.itiCode) + ' (' + r.itiCode + ')</td></tr>';
+                                    + (r.distName || r.distCode) + '</td>';
+                                if (!phaseOne) {
+                                    html += '<td>' + (r.itiName || r.itiCode) + ' (' + r.itiCode + ')</td>';
+                                }
+                                html += '</tr>';
                             });
                             box.innerHTML = html + '</table>';
                         });
@@ -617,19 +504,31 @@
                         + ';background-color:' + (ok ? '#d4edda' : '#f8d7da')
                         + ';padding:10px;width:70%;margin:10px auto;">' + msg + '</div>';
                 }
+
+                // Success banner shown after the application is submitted, with the link
+                // to the printable acknowledgement (Application_printdist).
+                function showApplicationSuccess(regid) {
+                    var box = document.getElementById("applySuccess");
+                    box.innerHTML = '<div class="apply-success">'
+                        + 'You have successfully applied for the ITI with Registration Id <b>' + regid + '</b>. '
+                        + '<a href="${pageContext.request.contextPath}/print-application?regid=' + regid
+                        + '" target="_blank">Click here to download the application</a>.'
+                        + '</div>';
+                    box.style.display = "";
+                }
             </script>
 
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
+    <%@ include file="_windowGate.jsp" %>
     </head>
-    <body>
+    <body class="lg-page">
         
 <center>
     <img src="${pageContext.request.contextPath}/images/gen.jpg" id="banner-id" width="100%">
 </center>
-
-<div id="applyResult"></div>
 
 <!-- ============ GATE: LOOK UP THE REGISTRATION ============ -->
 <div id="gateDiv">
@@ -639,9 +538,13 @@
             <div align="center"><b><font color="blue">Note:: Applicant has to register his/her details first by clicking <a href="${pageContext.request.contextPath}/student-registration">Student Registration</a> note your registration number, then click &quot;Apply for ITI&quot;<br><br></br> </font></b>
             </div> <br>
 
-                <table width="50%" height="30%" align="center" bgcolor="#cbd6b2">
+                <table width="50%" height="30%" align="center" bgcolor="#cbd6b2" style="border:2px solid black;">
                     <tr bgcolor="#4ab131">
                         <td colspan="2">&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td><u>Student Apply For ITI Form</u></td>
                     </tr>
                     <tr>
                         <td>SSC HallTicket Number</td>
@@ -656,6 +559,17 @@
                         <td>Registration Id<font color="red">*</font></td>
                         <td><input type="text" name="regid" maxlength="10" value="" onkeypress="return NumericsOnly(event);" id="regid"></td>
                     </tr>  
+                    <tr>
+                        <td><b><label for="captcha">Captcha<font color="red">*</font></label></b></td>
+                        <td><input type="text" name="captcha" value="" id="captcha" autocomplete="off"></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <input type="button" id="captchaRef" value="&#8635; New Captcha">
+                            <img src="${pageContext.request.contextPath}/captcha" id="captchaImage" border="0" width="135" height="30">
+                        </td>
+                    </tr>
                     <tr colspan="4">
                         <td style="text-align: center" > 
                             <a href="${pageContext.request.contextPath}/"> <input type="button" name="back" id="submit" Style="width:100px;" value="Back to Home"/></a>
@@ -668,93 +582,47 @@
                 </table>
             </form>
 </div>
-<!-- ============ FULL APPLICATION FORM (opens after lookup) ============ -->
-<div id="applyDiv" style="display:none;">
-        <form name="ApplicationForm" method="post" action="#" onsubmit="return submitApplication()">
-            <h2 style="background-color: lightgreen" align="center" class="style4">
-                Application Form for Admission into the Industrial Training Institute for the session <span class="sessionYearPhase"></span></h2>
-
-            <p id="prefillInfo" style="text-align:center;background-color:#e4eeb9;padding:8px;border:1px solid #999;"></p>
-
-            <table width="70%" align="center" bgcolor="#cbd6b2" style="border:2px solid black;">
-                <tr bgcolor="#3399ff"><td colspan="2" id="heading"><u>Personal Details</u></td></tr>
-                <tr><td>Name<font color="red">*</font></td><td><input type="text" id="name" maxlength="60" onkeypress="return isAlphaKey(event);"></td></tr>
-                <tr><td>Father's Name<font color="red">*</font></td><td><input type="text" id="fname" maxlength="60"></td></tr>
-                <tr><td>Mother's Name</td><td><input type="text" id="mname" maxlength="60"></td></tr>
-                <tr><td>Gender<font color="red">*</font></td><td><select id="gender"><option value="">--Select--</option><option value="male">Male</option><option value="female">Female</option></select></td></tr>
-                <tr><td>Date of Birth<font color="red">*</font></td><td><input type="date" id="appdob"></td></tr>
-                <tr><td>Aadhaar Number</td><td><input type="text" id="adarno" maxlength="12" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr><td>Mobile Number<font color="red">*</font></td><td><input type="text" id="phno" maxlength="10" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr><td>Email</td><td><input type="text" id="email" maxlength="80"></td></tr>
-                <tr><td>Address<font color="red">*</font></td><td><textarea id="addr" rows="3" cols="40"></textarea></td></tr>
-                <tr><td>Pincode</td><td><input type="text" id="pincode" maxlength="6" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr><td>Photograph (Passport size)<font color="red">*</font></td>
-                    <td><input type="file" id="photo" accept="image/png,image/jpeg" onchange="previewPhoto(this);">
-                        <div id="photoPrev"></div></td></tr>
-                <tr><td>Caste<font color="red">*</font></td><td><select id="casteSelect" onchange="loadSubCastes();"><option value="">--Select Caste--</option></select></td></tr>
-                <tr><td>Sub Caste</td><td><select id="subCasteSelect"><option value="">--Select Sub Caste--</option></select></td></tr>
-                <tr><td>Local / Non-Local<font color="red">*</font></td><td><select id="local"><option value="">--Select--</option><option value="Local">Local</option><option value="NonLocal">Non-Local</option></select></td></tr>
-                <tr><td>Economic Weaker Section</td><td><input type="checkbox" id="ewsChk"></td></tr>
-                <tr><td>Physically Challenged</td><td><input type="checkbox" id="phcChk"></td></tr>
-                <tr><td>Ex-Service Man</td><td><input type="checkbox" id="exsChk"></td></tr>
-                <tr><td>Passed Intermediate?</td><td><select id="interPassed"><option value="">--Select--</option><option value="true">Yes</option><option value="false">No</option></select></td></tr>
-                <tr><td>Inter Marks (if passed)</td><td><input type="text" id="interMarks" maxlength="4" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr id="gpaRow"><td colspan="2" style="background-color:#d9e6f7;"><b>SSC Marks - GPA (as per your registration)</b></td></tr>
-                <tr class="gpaRow2"><td>First Language GPA</td><td><input type="text" id="g_firstlang" maxlength="3"></td></tr>
-                <tr class="gpaRow2"><td>Second Language GPA</td><td><input type="text" id="g_secondlang" maxlength="3"></td></tr>
-                <tr class="gpaRow2"><td>English GPA</td><td><input type="text" id="g_english" maxlength="3"></td></tr>
-                <tr class="gpaRow2"><td>Mathematics GPA</td><td><input type="text" id="g_math" maxlength="3"></td></tr>
-                <tr class="gpaRow2"><td>Science GPA</td><td><input type="text" id="g_science" maxlength="3"></td></tr>
-                <tr class="gpaRow2"><td>Social GPA</td><td><input type="text" id="g_social" maxlength="3"></td></tr>
-                <tr class="gpaRow2"><td>Total GPA</td><td><input type="text" id="g_total" maxlength="4"></td></tr>
-                <tr id="marksRow" style="display:none;"><td colspan="2" style="background-color:#d9e6f7;"><b>SSC Marks - Marks system (as per your registration)</b></td></tr>
-                <tr class="marksRow2" style="display:none;"><td>First Language Marks</td><td><input type="text" id="m_firstlang" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr class="marksRow2" style="display:none;"><td>Second Language Marks</td><td><input type="text" id="m_secondlang" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr class="marksRow2" style="display:none;"><td>English Marks</td><td><input type="text" id="m_english" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr class="marksRow2" style="display:none;"><td>Mathematics Marks</td><td><input type="text" id="m_math" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr class="marksRow2" style="display:none;"><td>Science Marks</td><td><input type="text" id="m_science" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr class="marksRow2" style="display:none;"><td>Social Marks</td><td><input type="text" id="m_social" maxlength="3" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr class="marksRow2" style="display:none;"><td>Total Marks</td><td><input type="text" id="m_total" maxlength="4" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr colspan="4">
-                    <td style="text-align: center;" colspan="2"> 
-                        <a href="${pageContext.request.contextPath}/"> <input type="button" name="back" id="submit" Style="width:100px;" value="Back to Home"/></a>
-                        <input type="submit" value="Submit Application">
-                    </td>
-                </tr>
-            </table>
-        </form>
-</div>
-
-<!-- ============ STEP 3: ITI SELECTION (writes student_trade_sel) ============ -->
+<!-- ============ STEP 3: SELECTION (phase 1 = districts, phase 2+ = district + ITI) ============ -->
 <div id="selectDiv" style="display:none;">
-    <h2 style="background-color: lightgreen" align="center" class="style4">Selection of ITIs (Step 3)</h2>
+    <h2 id="selectHeading" style="background-color: lightgreen" align="center" class="style4">Selection (Step 2)</h2>
 
-    <p align="center" style="width:70%;margin:auto;">
+    <p id="selectInstruction" align="center" style="width:70%;margin:auto;">
         Select the ITIs you want to be considered for, in order of preference (maximum 60).
         <b>Save the list</b> &mdash; a merit list is prepared only for candidates who have selected at least one ITI.
     </p>
 
+    <div id="applyDetails" style="display:none;width:70%;margin:10px auto;"></div>
+
+    <div id="applySuccess" style="display:none;"></div>
+
     <div id="selectResult"></div>
 
     <table width="70%" align="center" bgcolor="#cbd6b2" style="border:2px solid black;">
-        <tr bgcolor="#3399ff">
+        <tr bgcolor="#4ab131" style="color:#fff;">
             <th style="width:60px;">S.No</th>
             <th style="width:200px;">District</th>
-            <th>ITI</th>
+            <th id="itiColHead">ITI</th>
             <th style="width:90px;">Remove</th>
         </tr>
         <tbody id="locDeptBody"></tbody>
     </table>
 
     <div align="center" style="margin:10px;">
-        <input type="button" value="Add ITI" onclick="addSelectRow();">
-        <input type="button" value="Save ITI Selections" onclick="saveSelections();">
+        <input type="button" id="addRowBtn" value="Add ITI" onclick="addSelectRow();">
+        <input type="button" id="saveSelBtn" value="Save Selections" onclick="saveSelections();">
     </div>
 
     <div id="itiInfo" align="center"></div>
     <div id="savedSelections" style="width:70%;margin:10px auto;"></div>
 </div>
 <style>
+    .apply-details{ width:100%; margin:10px auto; border-collapse:collapse; background:#cbd6b2; border:2px solid #000; }
+    .apply-details td{ border:1px solid #7ba7c9; padding:6px 8px; }
+    .apply-details tr.hdr td{ background:#4ab131; color:#fff; font-weight:bold; text-align:center; font-size:larger; }
+    .apply-details td.lbl{ background:#b7e2f3; color:#1e43cc; font-weight:bold; width:20%; }
+    .apply-success{ border:2px solid #28a745; background:#d4edda; color:#14532d; padding:14px;
+        width:70%; margin:14px auto; text-align:center; font-size:15px; font-weight:bold; }
+    .apply-success a{ color:#000099; font-weight:bold; }
     #footer{
         position:fixed;
         bottom:0px;

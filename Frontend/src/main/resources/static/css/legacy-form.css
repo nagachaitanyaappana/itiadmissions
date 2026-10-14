@@ -1,0 +1,79 @@
+/* Shared "legacy" styling for pages restyled to match the old ITIAP look.
+   Colours/fonts lifted from itiap_new:
+     web/convinerTrade_interface.jsp          (Add Trade entry box)
+     web/showconvinerTrades_rep.jsp           (Add Trade / trades table)
+     web/permitted_shift_unit.jsp             (Permitted Shift Unit)
+     web/open_editview_form_phase2.jsp        (registration gate)
+     web/open_Application_Interface_Student.jsp (registration form + confirm modal)
+     web/manageseats_interface.jsp            (Reservation Entry)
+   Plain CSS only - no framework, no behaviour. */
+
+/* ---------- base ---------- */
+.lg-page { font-family: Verdana, Arial, sans-serif; }
+
+/* Legacy link colours, scoped so the shared navbar/header are untouched. */
+.lg-page a:link    { color: #000099; }
+.lg-page a:visited { color: #330000; }
+.lg-page a:hover   { color: #FF0000; }
+.lg-page a:active  { color: #003300; }
+
+/* ---------- pale green surfaces ---------- */
+.lg-bar   { background-color: #4ab131; color: #fff; }
+.lg-panel { background-color: #cbd6b2; }
+.lg-box   { background-color: #e4eeb9; }
+
+/* green header row/bar with white centred text */
+.lg-bar td, .lg-bar th { color: #fff; }
+.lg-bar-title { background-color: #4ab131; color: #fff; text-align: center; font-weight: bold; }
+
+/* ---------- legacy text styles ---------- */
+.lg-h2        { color: blue; text-align: center; text-decoration: underline; font-weight: bold; }
+.lg-title24   { color: #330033; font-weight: bold; font-size: 24px; }            /* .style25 */
+.lg-warn      { color: #FF0000; font-weight: bold; font-size: 18px; }            /* .style22 */
+.lg-subh      { color: brown; text-align: center; text-decoration: underline; }  /* <font color=brown><h2> */
+.lg-res-title { color: #000099; font-size: 24px; }                              /* .style1 */
+.lg-res-sub   { color: #660066; font-size: 18px; }                              /* .style3  */
+.lg-purple    { color: #663399; font-weight: bold; }                            /* .style4  */
+.lg-courier18 { font-family: "Courier New", Courier, monospace; font-size: 18px; }
+.lg-courier24 { font-family: "Courier New", Courier, monospace; font-size: 24px; }
+
+/* ---------- legacy buttons ---------- */
+.lg-btn { font-weight: bold; border: none; border-radius: 4px; cursor: pointer; padding: 4px 16px; }
+.lg-btn-green       { background-color: green;       color: #fff; }
+.lg-btn-red         { background-color: red;         color: #fff; }
+.lg-btn-blue        { background-color: blue;        color: #fff; }
+.lg-btn-greenyellow { background-color: greenyellow; color: #000; height: 22px; width: 70px; border-radius: 4px; font-weight: bolder; }
+.lg-btn:disabled    { opacity: .55; cursor: default; }
+
+/* Legacy "link" buttons (Add Trade / Approve all in showconvinerTrades_rep.jsp) */
+.lg-linkbtn { color: #330000; text-decoration: underline; font-family: "Courier New", Courier, monospace;
+              font-size: 24px; font-weight: bold; background: none; border: none; cursor: pointer; padding: 0 10px; }
+.lg-linkbtn:hover { color: #FF0000; }
+.lg-linkbtn:disabled { color: #999; text-decoration: none; cursor: default; }
+
+/* ---------- legacy trades table (showconvinerTrades_rep.jsp) ---------- */
+.lg-trades { border-collapse: collapse; border: 1px solid #000; background-color: #ffffcc; }
+.lg-trades th, .lg-trades td { border: 1px solid #000; padding: 4px 8px; text-align: center;
+                               font-family: "Courier New", Courier, monospace; font-size: 18px; }
+.lg-trades th { background-color: green; color: #fff; font-weight: bold; }
+
+/* ---------- reservation table (manageseats_interface.jsp) ---------- */
+.lg-res { border-collapse: collapse; border: 1px solid #000; background-color: #E8F3FF; }
+.lg-res th, .lg-res td { border: 1px solid #000; padding: 4px 10px; text-align: center; }
+.lg-res th { font-weight: bold; background-color: transparent; }
+.lg-res td.name { text-align: left; }
+
+/* ---------- entry box (convinerTrade_interface.jsp) ---------- */
+.lg-entry { background-color: #e4eeb9; border: 2px solid #000; }
+
+/* ---------- confirmation modal (open_Application_Interface_Student.jsp) ---------- */
+.lg-modal-overlay { display: none; position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+                    background: rgba(0, 0, 0, 0.4); z-index: 2000; }
+.lg-modal { position: absolute; top: 4%; left: 50%; transform: translateX(-50%);
+            width: 56%; min-width: 520px; max-height: 90%; overflow: auto;
+            background: lightgreen; border: 2px solid #000; padding: 14px 18px 18px; }
+.lg-modal h3 { color: red; text-align: center; margin: 0 0 10px; }
+.lg-modal .lg-modal-btns { text-align: center; margin-top: 16px; }
+.lg-modal table { background: #fff; border: 1px solid #000; }
+.lg-modal table td, .lg-modal table th { border: 1px solid #000; padding: 3px 8px; }
+.lg-modal .lg-modal-req { color: #b00; text-align: center; font-weight: bold; margin: 6px 0 10px; }

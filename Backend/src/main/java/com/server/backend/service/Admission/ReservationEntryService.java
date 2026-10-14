@@ -34,13 +34,25 @@ public class ReservationEntryService {
     }
 
     public List<ReservationTradeDto> getTradesForIti(String itiCode) {
-        List<Map<String, Object>> rows = jdbc.getJdbcTemplate().queryForList(
-                "SELECT t.trade_code, t.trade_short, m.trade_name, m.durationyrs, t.strength,"
-                        + " t.strength_fill, t.strength_vacant"
-                        + " FROM ititrade t LEFT JOIN ititrade_master m ON m.trade_short = t.trade_short"
-                        + " WHERE t.iti_code = ?"
-                        + " ORDER BY m.trade_name NULLS LAST, t.trade_code",
-                itiCode);
+        return queryTrades(itiCode, false);
+    }
+
+    /**
+     * Only the trades that have been approved (Add Trade -&gt; Approve All) for the ITI. Reservation
+     * Entry must not offer unapproved trades.
+     */
+    public List<ReservationTradeDto> getApprovedTradesForIti(String itiCode) {
+        return queryTrades(itiCode, true);
+    }
+
+    private List<ReservationTradeDto> queryTrades(String itiCode, boolean approvedOnly) {
+        String sql = "SELECT t.trade_code, t.trade_short, m.trade_name, m.durationyrs, t.strength,"
+                + " t.strength_fill, t.strength_vacant"
+                + " FROM ititrade t LEFT JOIN ititrade_master m ON m.trade_short = t.trade_short"
+                + " WHERE t.iti_code = ?"
+                + (approvedOnly ? " AND t.conv_approval = 1" : "")
+                + " ORDER BY m.trade_name NULLS LAST, t.trade_code";
+        List<Map<String, Object>> rows = jdbc.getJdbcTemplate().queryForList(sql, itiCode);
         List<ReservationTradeDto> trades = new ArrayList<>();
         for (Map<String, Object> row : rows) {
             ReservationTradeDto dto = new ReservationTradeDto(
@@ -54,6 +66,51 @@ public class ReservationEntryService {
             trades.add(dto);
         }
         return trades;
+    }
+
+    /**
+     * Whether Reservation Entry may be opened for this ITI. It requires both an approved trade
+     * ({@code ititrade.conv_approval = 1}, produced by Add Trade -&gt; Approve All) and a shift-unit
+     * row ({@code shift_unit_permitted.available_year = true}, produced by DGT Permitted Shifts
+     * Units).
+     */
+    public Map<String, Object> getReadiness(String itiCode) {
+        Integer approvedTrades = jdbc.getJdbcTemplate().queryForObject(
+                "SELECT COUNT(*) FROM ititrade WHERE iti_code = ? AND conv_approval = 1",
+                Integer.class, itiCode);
+        Integer shiftUnits = jdbc.getJdbcTemplate().queryForObject(
+                "SELECT COUNT(*) FROM shift_unit_permitted WHERE iti_code = ? AND available_year = true",
+                Integer.class, itiCode);
+
+        int approved = approvedTrades == null ? 0 : approvedTrades;
+        int shifts = shiftUnits == null ? 0 : shiftUnits;
+        boolean tradesApproved = approved > 0;
+        boolean shiftUnitDone = shifts > 0;
+        boolean ready = tradesApproved && shiftUnitDone;
+
+        String message;
+        if (ready) {
+            message = "Reservation Entry is open for ITI " + itiCode;
+        } else if (!tradesApproved && !shiftUnitDone) {
+            message = "Add Trade and Approve All, and complete DGT Permitted Shifts Units for ITI "
+                    + itiCode + " before entering reservations.";
+        } else if (!tradesApproved) {
+            message = "No approved trade for ITI " + itiCode
+                    + ". Go to Add Trade and click Approve All first.";
+        } else {
+            message = "No shift units permitted for ITI " + itiCode
+                    + ". Complete DGT Permitted Shifts Units first.";
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("itiCode", itiCode);
+        result.put("approvedTrades", approved);
+        result.put("shiftUnits", shifts);
+        result.put("tradesApproved", tradesApproved);
+        result.put("shiftUnitDone", shiftUnitDone);
+        result.put("ready", ready);
+        result.put("message", message);
+        return result;
     }
 
     public ReservationEntryResponse getReservation(String itiCode, Integer tradeCode) {
@@ -90,6 +147,24 @@ public class ReservationEntryService {
 
         ReservationEntryResponse response = baseResponse(
                 request.getItiCode(), request.getTradeCode(), year, phase);
+
+        // Reservation Entry is gated: the ITI must have an approved trade and shift units, and the
+        // trade being edited must itself be approved (ititrade.conv_approval = 1).
+        Map<String, Object> readiness = getReadiness(request.getItiCode());
+        if (!Boolean.TRUE.equals(readiness.get("ready"))) {
+            response.setSuccess(false);
+            response.setMessage(String.valueOf(readiness.get("message")));
+            return response;
+        }
+        Integer tradeApproved = jdbc.getJdbcTemplate().queryForObject(
+                "SELECT COUNT(*) FROM ititrade WHERE iti_code = ? AND trade_code = ? AND conv_approval = 1",
+                Integer.class, request.getItiCode(), request.getTradeCode());
+        if (tradeApproved == null || tradeApproved == 0) {
+            response.setSuccess(false);
+            response.setMessage("Trade " + request.getTradeCode() + " is not approved for ITI "
+                    + request.getItiCode() + ". Approve the trade (Add Trade) before entering reservations.");
+            return response;
+        }
 
         if (response.getTotalStrength() == null) {
             response.setSuccess(false);

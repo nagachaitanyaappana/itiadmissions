@@ -1574,10 +1574,21 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public CurrentAdmissionPhaseResponse getCurrentAdmissionPhase() {
-        String sql = "SELECT year, phase FROM admissions.admission_phase WHERE current = true LIMIT 1";
-        List<CurrentAdmissionPhaseResponse> results = jdbcTemplate.query(sql, (rs, rowNum) ->
-            new CurrentAdmissionPhaseResponse(rs.getString("year"), rs.getInt("phase"))
-        );
+        // Mirrors legacy beans.MyUtil.LastDate(): the application window stays open until
+        // one day after application_to_date of the current phase.
+        String sql = "SELECT year, phase, application_to_date FROM admissions.admission_phase WHERE current = true LIMIT 1";
+        List<CurrentAdmissionPhaseResponse> results = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            java.sql.Timestamp toDate = rs.getTimestamp("application_to_date");
+            String toDateStr = toDate == null ? null : toDate.toString();
+            boolean open = true;
+            if (toDate != null) {
+                java.util.Calendar cal = java.util.Calendar.getInstance();
+                cal.setTimeInMillis(toDate.getTime());
+                cal.add(java.util.Calendar.DAY_OF_MONTH, 1);
+                open = !new java.sql.Timestamp(System.currentTimeMillis()).after(new java.sql.Timestamp(cal.getTimeInMillis()));
+            }
+            return new CurrentAdmissionPhaseResponse(rs.getString("year"), rs.getInt("phase"), toDateStr, open);
+        });
         return results.isEmpty() ? null : results.get(0);
     }
 

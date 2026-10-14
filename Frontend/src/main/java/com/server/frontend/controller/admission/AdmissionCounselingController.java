@@ -21,6 +21,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -335,6 +337,13 @@ public class AdmissionCounselingController {
             cand.put("year", year);
             cand.put("app_status", Boolean.TRUE.equals(data.get("is_admitted")) ? "A" : "N");
             cand.put("dob", data.get("dob"));
+            cand.put("phc", data.get("phc"));
+            cand.put("exservice", data.get("exservice"));
+            cand.put("ssc_regno", data.get("ssc_regno"));
+            cand.put("ssc_year", data.get("ssc_year"));
+            cand.put("is_admitted", data.get("is_admitted"));
+            cand.put("admission_details", data.get("admission_details"));
+            cand.put("photo_base64", data.get("photo_base64"));
 
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("source", "rank-lookup");
@@ -524,6 +533,99 @@ public class AdmissionCounselingController {
     private static Map<String, Object> asMapOrEmpty(Object value) {
         Map<String, Object> m = asMap(value);
         return m != null ? m : Map.of();
+    }
+
+    /**
+     * Proxy the real seat matrix: {@code POST /api/admission/iti-seat-matrix}.
+     * Returns {@code {success, year, phase, data:[{iti_code,iti_name,trade_code,trade_name,
+     * strength_total,categories:{General:{T,F,V},IM,PH,EXS}}]}} for the caller's scope
+     * (district login = every ITI in the district).
+     */
+    @PostMapping("/api/seat-matrix")
+    @ResponseBody
+    public ResponseEntity<Object> seatMatrix(HttpServletRequest request) {
+        try {
+            HttpHeaders headers = scopeHeaders(request);
+            ResponseEntity<Object> resp = rest.exchange(
+                    backendBaseUrl + "/api/admission/iti-seat-matrix",
+                    org.springframework.http.HttpMethod.POST,
+                    new HttpEntity<>(headers),
+                    new ParameterizedTypeReference<Object>() {
+                    });
+            return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            return ResponseEntity.status(e.getStatusCode().value())
+                    .body(e.getResponseBodyAs(Map.class));
+        } catch (Exception e) {
+            return ResponseEntity.status(502)
+                    .body(Map.of("success", false, "error", "Unable to load the seat matrix."));
+        }
+    }
+
+    /** Proxy the type-of-admission (board) list: {@code GET /api/admission/iti-boards}. */
+    @GetMapping("/api/iti-boards")
+    @ResponseBody
+    public ResponseEntity<Object> itiBoards(HttpServletRequest request) {
+        try {
+            HttpEntity<Void> entity = new HttpEntity<>(scopeHeaders(request));
+            ResponseEntity<Object> resp = rest.exchange(
+                    backendBaseUrl + "/api/admission/iti-boards",
+                    org.springframework.http.HttpMethod.GET, entity,
+                    new ParameterizedTypeReference<Object>() {
+                    });
+            return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("success", false, "data", new Object[0]));
+        }
+    }
+
+    /**
+     * Proxy the real admission write: {@code POST /api/admission/take-admission}.
+     * The body is forwarded as-is (the page builds the legacy snake_case keys).
+     */
+    @PostMapping("/api/take-admission")
+    @ResponseBody
+    public ResponseEntity<Object> takeAdmission(@RequestBody Map<String, Object> body,
+                                                HttpServletRequest request) {
+        try {
+            HttpHeaders headers = scopeHeaders(request);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<Object> resp = rest.exchange(
+                    backendBaseUrl + "/api/admission/take-admission",
+                    org.springframework.http.HttpMethod.POST,
+                    new HttpEntity<>(body, headers),
+                    new ParameterizedTypeReference<Object>() {
+                    });
+            return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            return ResponseEntity.status(e.getStatusCode().value())
+                    .body(e.getResponseBodyAs(Map.class));
+        } catch (Exception e) {
+            return ResponseEntity.status(502)
+                    .body(Map.of("success", false, "error", "Unable to record the admission."));
+        }
+    }
+
+    /** Proxy the permitted shift/unit options: {@code GET /api/admission/shift-unit}. */
+    @GetMapping("/api/shift-unit")
+    @ResponseBody
+    public ResponseEntity<Object> shiftUnit(@RequestParam("itiCode") String itiCode,
+                                            @RequestParam("tradeCode") String tradeCode,
+                                            HttpServletRequest request) {
+        String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/api/admission/shift-unit")
+                .queryParam("itiCode", itiCode)
+                .queryParam("tradeCode", tradeCode)
+                .toUriString();
+        try {
+            HttpEntity<Void> entity = new HttpEntity<>(scopeHeaders(request));
+            ResponseEntity<Object> resp = rest.exchange(url,
+                    org.springframework.http.HttpMethod.GET, entity,
+                    new ParameterizedTypeReference<Object>() {
+                    });
+            return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("success", false, "shifts", new Object[0]));
+        }
     }
 
     /** Proxy open-seats. */

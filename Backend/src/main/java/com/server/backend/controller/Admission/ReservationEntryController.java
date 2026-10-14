@@ -13,6 +13,7 @@ import com.server.backend.DTO.ReservationTradeDto;
 import com.server.backend.service.Admission.ReservationEntryService;
 
 import java.util.List;
+import java.util.Map;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -38,6 +39,18 @@ public class ReservationEntryController {
     @GetMapping("/trades")
     public List<ReservationTradeDto> getTrades(@RequestParam String itiCode) {
         return service.getTradesForIti(itiCode);
+    }
+
+    /** Only approved trades — what Reservation Entry may edit. */
+    @GetMapping("/approved-trades")
+    public List<ReservationTradeDto> getApprovedTrades(@RequestParam String itiCode) {
+        return service.getApprovedTradesForIti(itiCode);
+    }
+
+    /** Whether Reservation Entry is open for this ITI (approved trade + shift units present). */
+    @GetMapping("/readiness")
+    public Map<String, Object> getReadiness(@RequestParam String itiCode) {
+        return service.getReadiness(itiCode);
     }
 
     @PutMapping

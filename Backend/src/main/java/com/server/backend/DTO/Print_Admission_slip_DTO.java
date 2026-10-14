@@ -16,6 +16,17 @@ public class Print_Admission_slip_DTO {
     private String tradeCode;
     private String admissionNumber;
 
+    private String rank;
+    private String itiName;
+    private String tradeName;
+    private String districtName;
+    private Integer phase;
+    private String year;
+    private String feeUrbanEngg;
+    private String feeUrbanNonEngg;
+    private String feeRuralEngg;
+    private String feeRuralNonEngg;
+
     public Print_Admission_slip_DTO() {
     }
 
@@ -79,4 +90,34 @@ public class Print_Admission_slip_DTO {
     public void setAdmissionNumber(String admissionNumber) {
         this.admissionNumber = admissionNumber;
     }
+
+    public String getRank() { return rank; }
+    public void setRank(String rank) { this.rank = rank; }
+
+    public String getItiName() { return itiName; }
+    public void setItiName(String itiName) { this.itiName = itiName; }
+
+    public String getTradeName() { return tradeName; }
+    public void setTradeName(String tradeName) { this.tradeName = tradeName; }
+
+    public String getDistrictName() { return districtName; }
+    public void setDistrictName(String districtName) { this.districtName = districtName; }
+
+    public Integer getPhase() { return phase; }
+    public void setPhase(Integer phase) { this.phase = phase; }
+
+    public String getYear() { return year; }
+    public void setYear(String year) { this.year = year; }
+
+    public String getFeeUrbanEngg() { return feeUrbanEngg; }
+    public void setFeeUrbanEngg(String feeUrbanEngg) { this.feeUrbanEngg = feeUrbanEngg; }
+
+    public String getFeeUrbanNonEngg() { return feeUrbanNonEngg; }
+    public void setFeeUrbanNonEngg(String feeUrbanNonEngg) { this.feeUrbanNonEngg = feeUrbanNonEngg; }
+
+    public String getFeeRuralEngg() { return feeRuralEngg; }
+    public void setFeeRuralEngg(String feeRuralEngg) { this.feeRuralEngg = feeRuralEngg; }
+
+    public String getFeeRuralNonEngg() { return feeRuralNonEngg; }
+    public void setFeeRuralNonEngg(String feeRuralNonEngg) { this.feeRuralNonEngg = feeRuralNonEngg; }
 }

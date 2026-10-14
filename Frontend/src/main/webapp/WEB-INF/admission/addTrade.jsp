@@ -7,26 +7,32 @@
 <title>:: ITI :: Add Trade</title>
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css" />
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css" />
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css" />
 <script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
 <style>
-  .page-title { font-family:Verdana,Arial,sans-serif; font-size:20px; margin:16px 0 2px 12px; color:#000; }
+  .page-title { font-family:"Courier New",Courier,monospace; font-size:24px; margin:16px 0 6px; text-align:center; color:blue; text-decoration:underline; font-weight:bold; }
   .req-note { font-family:Verdana,Arial,sans-serif; font-size:12px; color:#c0392b; text-align:center; margin:0 0 6px; }
-  .seat-box { width:62%; min-width:560px; margin:0 auto 18px 12px; border:1px solid #7a7a7a; background:#fff; }
+  .seat-box { width:50%; min-width:560px; margin:0 auto 18px; border:2px solid #000; background:#e4eeb9; padding:0 0 12px 0; }
   .seat-box table { width:100%; border-collapse:collapse; font-family:Verdana,Arial,sans-serif; font-size:13px; }
-  .seat-box td { border-top:1px solid #ddd; border-bottom:1px solid #ddd; padding:8px; }
+  .seat-box td { padding:8px; font-weight:bold; }
   .seat-box td.label { width:26%; font-weight:bold; }
   .seat-box select, .seat-box input[type=text] { width:96%; padding:4px; font-size:13px; }
-  .submit-btn { background-color:#4CAF50; border:none; color:#fff; padding:6px 30px; font-size:15px; font-weight:bold; cursor:pointer; }
+  .submit-btn { background-color:greenyellow; border:none; color:#000; padding:4px 10px; font-size:13px; font-weight:bolder; border-radius:4px; cursor:pointer; }
   .submit-btn:disabled { opacity:.55; cursor:default; }
   .err { color:red; font-size:12px; }
   .ok { color:green; font-size:12px; }
   .result-wrap { width:96%; margin:10px auto 60px; font-family:Verdana,Arial,sans-serif; }
-  .vac-head { text-align:center; color:blue; font-size:18px; font-weight:bold; margin:14px 0 2px; }
+  .vac-head { text-align:center; color:#330033; font-size:24px; font-weight:bold; margin:14px 0 2px; }
   .vac-sub { text-align:center; font-size:14px; font-weight:bold; margin:0 0 10px; }
   .vac-sub span { color:blue; }
-  .res-table { border-collapse:collapse; margin:10px auto; font-size:13px; background:#fff; }
-  .res-table th, .res-table td { border:1px solid #7a7a7a; padding:5px 10px; text-align:center; }
-  .res-table th { background:#E8F3FF; }
+  .sub-head { text-align:center; color:brown; font-size:22px; font-weight:bold; text-decoration:underline; margin:8px 0; }
+  .freeze-warn { text-align:center; color:#FF0000; font-weight:bold; font-size:18px; margin:6px 0; }
+  .res-table { border-collapse:collapse; margin:10px auto; font-size:13px; background:#ffffcc; border:1px solid #000; }
+  .res-table th, .res-table td { border:1px solid #000; padding:5px 10px; text-align:center; font-family:"Courier New",Courier,monospace; font-size:18px; }
+  .res-table th { background:green; color:#fff; font-weight:bold; }
+  .add-form { border-collapse:collapse; margin:10px auto; background:#e4eeb9; border:2px solid #000; font-family:Verdana,Arial,sans-serif; font-size:13px; }
+  .add-form td { padding:6px 10px; }
+  .add-form select, .add-form input[type=text] { padding:3px; font-size:13px; }
   .block-note { width:60%; margin:10px auto; padding:10px; text-align:center; font-weight:bold;
                 color:#a00; background:#fdecea; border:1px solid #e74c3c; }
   .act-row { text-align:center; margin:14px 0; }
@@ -59,6 +65,7 @@
 <script>
 var CTX = '${pageContext.request.contextPath}';
 var DIST = '${sessionScope.insCode}';
+var CURRENT_ITI = '';
 function esc(s){ if(s===null||s===undefined) return ''; return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function setErr(id,m){ document.getElementById(id).innerHTML = esc(m); }
 function setMsg(id,m){ var e = document.getElementById(id); if(e) e.innerHTML = esc(m); }
@@ -100,32 +107,45 @@ function getTrades(){
 }
 
 function render(resp, iti){
+  CURRENT_ITI = iti;
   var area = document.getElementById('resultArea');
   if(!resp || (!resp.addableTrades && !resp.existingTrades)){
     area.innerHTML = '<p style="color:red;text-align:center;">No data for ITI=' + esc(iti) + '.</p>'; return;
   }
-  var h = '<div class="vac-head">Trades for ITI ' + esc(iti) + ' - ' + esc(resp.itiName || '') + '</div>';
+  var h = '<div class="vac-head">Trades for ITI ' + esc(iti) + ' - ' + esc(resp.itiName || '') + '</div>'
+        + '<div class="freeze-warn">Once the Trades are frozen ,they cannot be edited</div>';
 
   var existing = resp.existingTrades || [];
   h += '<table class="res-table"><thead><tr><th>Trade Code</th><th>Trade</th><th>Strength</th><th>Filled</th>'
-     + '<th>Vacant</th><th>Available for year</th><th>Approved</th></tr></thead><tbody>';
+     + '<th>Vacant</th><th>Available for year</th><th>Approved</th><th>Frozen</th><th>Edit</th></tr></thead><tbody>';
   if(existing.length === 0){
-    h += '<tr><td colspan="7">No trades added yet.</td></tr>';
+    h += '<tr><td colspan="9" style="text-align:center;">No trades attached to this ITI.</td></tr>';
   }
   existing.forEach(function(t){
-    h += '<tr><td>' + esc(t.tradeShort) + '</td><td>' + esc(t.tradeName) + '</td>'
-      + '<td>' + num(t.strength) + '</td><td>' + num(t.strengthFill) + '</td><td>' + num(t.strengthVacant) + '</td>'
-      + '<td>' + (String(t.availableForYear) === '1' ? 'Yes' : 'No') + '</td>'
-      + '<td>' + (num(t.convApproval) === 1 ? 'Yes' : 'No') + '</td></tr>';
+    h += '<tr><td>' + esc(t.tradeCode) + '</td><td>' + esc(t.tradeShort) + ' - ' + esc(t.tradeName) + '</td>'
+       + '<td>' + num(t.strength) + '</td><td>' + num(t.strengthFill) + '</td>'
+       + '<td>' + num(t.strengthVacant) + '</td>'
+       + '<td>' + (String(t.availableForYear) === '1' ? 'Yes' : 'No') + '</td>'
+       + '<td>' + (num(t.convApproval) === 1 ? 'Yes' : 'No') + '</td>'
+       + '<td>' + (num(t.tradeFreeze) === 1 ? 'Frozen' : 'Open') + '</td>'
+       + '<td><input type="button" class="lg-linkbtn" value="Edit" onclick="openEdit('
+       + "'" + esc(iti) + "'" + ',' + num(t.tradeCode) + ');" /></td></tr>';
   });
   h += '</tbody></table>';
+
+  h += '<div class="act-row">'
+     + '<input type="button" class="lg-linkbtn" value="Freeze All Trades" onclick="freezeAll(true);" />'
+     + '&nbsp;<input type="button" class="lg-linkbtn" value="UnFreeze All Trades" onclick="freezeAll(false);" />'
+     + '<div style="margin-top:6px;"><span class="ok" id="freezeMsg"></span> <span class="err" id="freezeErr"></span></div>'
+     + '</div>';
+
 
   if(resp.approvedExists){
     h += '<div class="block-note">Trades for this ITI are already approved. '
        + 'No further trades can be added.</div>';
   } else {
     var addable = resp.addableTrades || [];
-    h += '<table class="res-table" style="width:60%;"><tbody>'
+    h += '<table class="add-form" style="width:60%;"><tbody>'
       + '<tr><td class="label" style="text-align:right;font-weight:bold;">Trade * :</td><td style="text-align:left;">'
       + '<select id="tradeSel">' + opt('','--select--')
       + addable.map(function(t){ return opt(t.tradeCode, t.tradeShort + ' - ' + t.tradeName); }).join('')
@@ -136,8 +156,8 @@ function render(resp, iti){
       + '<label><input type="radio" name="avail" value="1" checked="checked" /> Yes</label>&nbsp;&nbsp;'
       + '<label><input type="radio" name="avail" value="0" /> No</label></td></tr>'
       + '<tr><td colspan="2" style="text-align:center;">'
-      + '<input type="button" id="addBtn" class="submit-btn" value="Add Trade" onclick="addTradeGo();" />'
-      + '&nbsp;<input type="button" id="apprBtn" class="submit-btn" value="Approve All" onclick="approveGo();" />'
+      + '<input type="button" id="addBtn" class="lg-linkbtn" value="Add Trade" onclick="addTradeGo();" />'
+      + '&nbsp;<input type="button" id="apprBtn" class="lg-linkbtn" value="Approve All" onclick="approveGo();" />'
       + '<div style="margin-top:8px;"><span class="err" id="actErr"></span> <span class="ok" id="actOk"></span></div>'
       + '</td></tr></tbody></table>';
     if(addable.length === 0){
@@ -193,6 +213,96 @@ function numerics(evt){
   var charCode = (evt.which) ? evt.which : evt.keyCode;
   if(charCode > 31 && (charCode < 48 || charCode > 57)){ return false; }
   return true;
+}
+
+function freezeAll(freeze){
+  setMsg('freezeMsg',''); setMsg('freezeErr','');
+  var iti = CURRENT_ITI || document.getElementById('itiSel').value;
+  if(!iti){ setMsg('freezeErr','Select an ITI first.'); return; }
+  fetch(CTX + '/AddTrade/api/iti/' + encodeURIComponent(iti) + '/freeze-trades?freeze=' + (freeze ? 'true' : 'false'), {method:'POST'})
+  .then(function(r){ return r.json().then(function(b){ return {s:r.status,b:b}; }); })
+  .then(function(x){
+    if(x.b && x.b.success){
+      setMsg('freezeMsg', x.b.message || (freeze ? 'Trades frozen.' : 'Trades unfrozen.'));
+      getTrades();
+    } else {
+      setMsg('freezeErr', (x.b && (x.b.error || x.b.message)) ? (x.b.error || x.b.message) : ('HTTP ' + x.s));
+    }
+  }).catch(function(){ setMsg('freezeErr','Backend unavailable.'); });
+}
+
+var EDIT = null;
+function openEdit(iti, tradeCode){
+  var area = document.getElementById('resultArea');
+  area.innerHTML = '<p style="text-align:center;">Loading trade...</p>';
+  fetch(CTX + '/AddTrade/api/iti/' + encodeURIComponent(iti) + '/trade/' + encodeURIComponent(tradeCode))
+  .then(function(r){ return r.json().then(function(b){ return {s:r.status,b:b}; }); })
+  .then(function(x){
+    if(x.s >= 400 || !x.b || x.b.tradeCode === undefined){
+      area.innerHTML = '<p style="color:red;text-align:center;">' + esc((x.b && (x.b.message || x.b.error)) || 'Trade not found.') + '</p>'; return;
+    }
+    renderEdit(x.b);
+  }).catch(function(){ area.innerHTML = '<p style="color:red;text-align:center;">Unable to load trade.</p>'; });
+}
+
+function renderEdit(d){
+  EDIT = d;
+  var h = '<div class="vac-head">Edit Trade ' + esc(d.tradeShort || '') + ' - ' + esc(d.tradeName || '') + '</div>'
+        + '<div class="vac-sub">ITI ' + esc(d.itiCode) + ' - ' + esc(d.itiName || '') + '</div>'
+        + '<table class="add-form" style="width:60%;"><tbody>'
+        + '<tr><td style="text-align:right;font-weight:bold;">Strength * :</td><td style="text-align:left;">'
+        + '<input type="text" id="edStrength" value="' + num(d.strength) + '" onkeypress="return numerics(event);" /></td></tr>'
+        + '<tr><td style="text-align:right;font-weight:bold;">Available for year :</td><td style="text-align:left;">'
+        + '<label><input type="radio" name="edAvail" value="1"' + (String(d.availableForYear) === '1' ? ' checked="checked"' : '') + ' /> Yes</label>&nbsp;&nbsp;'
+        + '<label><input type="radio" name="edAvail" value="0"' + (String(d.availableForYear) === '0' ? ' checked="checked"' : '') + ' /> No</label></td></tr>'
+        + '</tbody></table>';
+  var units = d.shiftUnits || [];
+  if(units.length){
+    h += '<div class="sub-head">Shift / Unit</div>'
+       + '<table class="res-table"><thead><tr><th>Shift</th><th>Unit</th><th>Strength</th><th>Available for year</th></tr></thead><tbody>';
+    units.forEach(function(u, i){
+      h += '<tr><td>' + esc(u.shiftAllowed) + '</td><td>' + esc(u.unitAllowed) + '</td><td>' + num(u.strength) + '</td>'
+         + '<td><input type="checkbox" class="ed-unit" data-i="' + i + '"'
+         + (u.availableYear ? ' checked="checked"' : '') + ' /></td></tr>';
+    });
+    h += '</tbody></table>';
+  }
+  h += '<div class="act-row">'
+     + '<input type="button" class="submit-btn" value="Update Above Details" onclick="saveEdit();" />'
+     + '&nbsp;<input type="button" class="lg-linkbtn" value="Cancel" onclick="getTrades();" />'
+     + '<div style="margin-top:6px;"><span class="err" id="editErr"></span> <span class="ok" id="editOk"></span></div>'
+     + '</div>';
+  document.getElementById('resultArea').innerHTML = h;
+}
+
+function saveEdit(){
+  if(!EDIT){ return; }
+  setMsg('editErr',''); setMsg('editOk','');
+  var strength = num(document.getElementById('edStrength').value);
+  var availEl = document.querySelector('input[name=edAvail]:checked');
+  var available = availEl ? availEl.value : '1';
+  var units = [];
+  document.querySelectorAll('.ed-unit').forEach(function(cb){
+    var i = parseInt(cb.getAttribute('data-i'), 10);
+    var u = (EDIT.shiftUnits || [])[i];
+    if(u){ units.push({ shiftAllowed: u.shiftAllowed, unitAllowed: u.unitAllowed, available: cb.checked }); }
+  });
+  var btn = event && event.target ? event.target : null;
+  if(btn){ btn.disabled = true; }
+  fetch(CTX + '/AddTrade/api/iti/' + encodeURIComponent(EDIT.itiCode) + '/trade/' + encodeURIComponent(EDIT.tradeCode), {
+    method: 'PUT', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ strength: strength, available: available, shiftUnits: units })
+  })
+  .then(function(r){ return r.json().then(function(b){ return {s:r.status,b:b}; }); })
+  .then(function(x){
+    if(x.b && x.b.tradeCode !== undefined){
+      setMsg('editOk', 'Trade updated successfully.');
+      setTimeout(function(){ getTrades(); }, 600);
+    } else {
+      setMsg('editErr', (x.b && (x.b.message || x.b.error)) ? (x.b.message || x.b.error) : ('HTTP ' + x.s));
+      if(btn){ btn.disabled = false; }
+    }
+  }).catch(function(){ setMsg('editErr','Backend unavailable. Update not completed.'); if(btn){ btn.disabled = false; } });
 }
 
 loadItis();

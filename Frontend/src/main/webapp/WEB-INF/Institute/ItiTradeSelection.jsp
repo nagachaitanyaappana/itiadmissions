@@ -12,7 +12,7 @@
     <title>ITI TRADE SELECTION</title>
     <style>
         .page-title {
-            color: #333;
+            color: #330033;
             font-size: 28px;
             font-weight: 600;
         }
@@ -21,7 +21,7 @@
             font-size: 14px;
         }
         .table th {
-            background-color: #212529 !important;
+            background-color: #4ab131 !important;
             color: white !important;
             padding: 12px;
             font-weight: bold;
@@ -32,19 +32,31 @@
             vertical-align: middle;
             font-size: 13px;
         }
+        .table, .table th, .table td { border: 1px solid #000 !important; }
+        .table-striped > tbody > tr:nth-child(odd) > td,
+        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #ffffff !important; }
         .selection-area {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
+            background-color: #cbd6b2;
+            padding: 0;
+            border-radius: 0;
             margin-bottom: 25px;
-            border: 1px solid #dee2e6;
+            border: 2px solid #000;
         }
+        .selection-area h5 {
+            background-color: #4ab131;
+            color: #fff;
+            margin: 0 0 15px;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .selection-area .row { padding: 0 20px 18px; }
         .details-area {
-            background-color: #f8f9fa;
+            background-color: #cbd6b2;
             padding: 20px;
-            border-radius: 8px;
+            border-radius: 0;
             margin-bottom: 25px;
-            border: 1px solid #dee2e6;
+            border: 2px solid #000;
         }
         .loading-message {
             text-align: center;
@@ -64,9 +76,14 @@
         }
         .btn-continue {
             min-width: 150px;
+            background-color: green;
+            border-color: green;
         }
+        .btn-continue:hover { background-color: #056b05; border-color: #056b05; }
+        .btn-continue:disabled { opacity: .55; }
     </style>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
 </head>
 
 <body>
@@ -75,7 +92,7 @@
         <jsp:include page="/WEB-INF/reports/header.jsp" />
     </header>
 
-    <div class="container-fluid px-5 mt-4 mb-5" style="min-height: 50vh;">
+    <div class="container-fluid px-5 mt-4 mb-5 lg-page" style="min-height: 50vh;">
         <!-- Page Header & Breadcrumbs -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="page-title text-uppercase">ITI TRADE SELECTION</h2>
