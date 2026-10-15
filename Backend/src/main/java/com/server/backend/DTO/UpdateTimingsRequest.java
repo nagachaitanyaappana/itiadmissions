@@ -1,5 +1,4 @@
 package com.server.backend.DTO;
-import jakarta.validation.constraints.Min;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotNull;
@@ -7,8 +6,8 @@ import jakarta.validation.constraints.NotNull;
 public record UpdateTimingsRequest(
     String minqul,
     String reservation,
-    @NotNull(message="meritFrom is Required")
-    @Min(value=1, message="meritFrom must be greater than or equal to 1")
+    // meritFrom is derived server-side as max(merit_to)+1 (legacy admission.jsp/admissionAction) and
+    // is accepted only as a fallback, so it is not required here.
     Integer meritFrom,
     @NotNull(message="meritTo is Required")
     Integer meritTo,

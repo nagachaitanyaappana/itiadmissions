@@ -11,6 +11,8 @@ import com.server.backend.entity.RankId;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import java.util.Date;
 import java.util.Map;
 @Service
@@ -121,6 +123,28 @@ public class MeritListService {
         // 3. 'qual' used to be ignored and every generated row was written as 'all'.
         String qualCode = (qual == null || qual.isBlank()) ? "all" : qual.trim();
 
+        // trno audit row (legacy generic.logTrace -> public.logtr), matching
+        // Rank_Generation_Process.jsp line 53 (logTrace(userName, "ranks", "insert", request)).
+        String ip = null;
+        String referer = null;
+        String sessionId = "";
+        String userId = "";
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs != null) {
+            jakarta.servlet.http.HttpServletRequest req = attrs.getRequest();
+            ip = req.getRemoteAddr();
+            referer = req.getHeader("referer");
+            sessionId = req.getSession().getId();
+            Object uname = req.getSession().getAttribute("userName");
+            userId = uname == null ? "" : String.valueOf(uname);
+        }
+        Integer trno = jdbcTemplate.getJdbcTemplate().queryForObject(
+                "INSERT INTO public.logtr (ip, userid, referal, tablename, transaction_type, sessionid, ts) "
+                        + "VALUES (?, ?, ?, 'ranks', 'insert', ?, ?) RETURNING trno",
+                Integer.class,
+                ip == null ? "" : ip, userId, referer == null ? "" : referer,
+                sessionId, new java.sql.Timestamp(System.currentTimeMillis()).toString());
+
         String dbTablename;
         String heading;
         String insertColumns;
@@ -130,14 +154,14 @@ public class MeritListService {
             dbTablename = "checklist";
             heading = "System Generated CheckList";
             
-            // checklist's primary key is regid alone (no year column), so this delete is
-            // deliberately left unscoped by phase/year. Scoping it would raise duplicate-key
-            // errors on the next phase instead of replacing the earlier phase's rows.
-            String deleteQuery = "DELETE FROM checklist WHERE temp_pk = :targetCode";
+            // Legacy Rank_Generation_Process.jsp clears the code from either code column
+            // (delete from checklist where iti_code=? or dist_code=?); checklist's primary key is
+            // regid alone (no year column), so this delete is left unscoped by phase/year.
+            String deleteQuery = "DELETE FROM checklist WHERE iti_code = :targetCode OR dist_code = :targetCode";
             jdbcTemplate.update(deleteQuery, new MapSqlParameterSource("targetCode", targetCode));
 
-            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, app_status";
-            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, null";
+            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, trno, app_status";
+            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :trno, app_status";
             
         } else if ("finalmeritlist".equals(status)) {
             // Check if checklist exists
@@ -157,19 +181,20 @@ public class MeritListService {
             String deleteQuery = String.format("DELETE FROM ranks WHERE phase = :phase AND %s = :targetCode", codeColumn);
             jdbcTemplate.update(deleteQuery, checkParams);
 
-            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, year, app_status";
-            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :year, null";
+            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, trno, app_status";
+            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :trno, app_status";
             
         } else if ("regeneratechecklist".equals(status)) {
             dbTablename = "checklist";
             heading = "Regenerated CHECK LIST";
 
-            // Delete from checklist where codeColumn = targetCode
-            String deleteQuery = String.format("DELETE FROM checklist WHERE %s = :targetCode", codeColumn);
+            // Legacy's regenerate branch deletes on iti_code only (Rank_Generation_Process.jsp
+            // line 111: "delete from checklist where iti_code=?").
+            String deleteQuery = "DELETE FROM checklist WHERE iti_code = :targetCode";
             jdbcTemplate.update(deleteQuery, new MapSqlParameterSource("targetCode", targetCode));
 
-            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, app_status";
-            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, null";
+            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, trno, app_status";
+            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :trno, app_status";
             
         } else {
             throw new IllegalArgumentException("Invalid status value provided: " + status);
@@ -189,6 +214,7 @@ public class MeritListService {
             "rank_generation AS (\n" +
             "    SELECT \n" +
             "        regid, \n" +
+            "        app_status, \n" +
             "        ROW_NUMBER() OVER (\n" +
             "            ORDER BY \n" +
             "                ssc_passed DESC, \n" +
@@ -203,12 +229,13 @@ public class MeritListService {
             "                name ASC\n" +
             "        ) as generated_rank\n" +
             "    FROM (\n" +
-            "        SELECT a.name, a.regid, a.dob, a.ssc_passed, b.ssc_tot_gpa, b.ssc_math_gpa, b.ssc_sci_gpa, b.ssc_social_gpa, b.ssc_eng_gpa, b.ssc_first_lang_gpa, b.ssc_second_lang_gpa\n" +
+            "        SELECT a.name, a.regid, a.dob, a.ssc_passed, a.app_status, b.ssc_tot_gpa, b.ssc_math_gpa, b.ssc_sci_gpa, b.ssc_social_gpa, b.ssc_eng_gpa, b.ssc_first_lang_gpa, b.ssc_second_lang_gpa\n" +
             "        FROM application a\n" +
             // cand_marks is the promoted marks table (one row per regid), matching the legacy
             // merit source. student_cand_marks is the per-phase staging table that is only
             // promoted to cand_marks at verification, so ranking off it would miss/duplicate.
-            "        LEFT JOIN (SELECT DISTINCT * FROM cand_marks) b ON a.regid::character varying = b.regid\n" +
+            // Legacy Rank_Generation_Process.jsp inner-joins application to cand_marks (a, b).
+            "        JOIN (SELECT DISTINCT * FROM cand_marks) b ON a.regid::character varying = b.regid\n" +
             "        WHERE hstore(a.phase)->:phase = 'true'\n" +
             "        AND a.app_status = 'A'\n" +
             "        AND EXISTS (\n" +
@@ -258,7 +285,7 @@ public class MeritListService {
                 .addValue("targetCode", targetCode)
                 .addValue("itiCode", user.itiCode())
                 .addValue("distCode", user.distCode())
-                .addValue("year", year);
+                .addValue("trno", trno);
 
         List<MeritListRow> results = jdbcTemplate.query(sql, queryParams, (rs, rowNum) -> new MeritListRow(
                 rs.getString("rank"),

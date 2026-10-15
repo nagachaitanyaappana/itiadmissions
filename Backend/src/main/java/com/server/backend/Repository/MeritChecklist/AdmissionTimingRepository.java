@@ -108,6 +108,45 @@ int insertScheduleRow(
     @Param("year") String year
 );
 
+/**
+ * The next {@code merit_from} for a scope/category. Legacy {@code admission.jsp} and
+ * {@code admissionAction} derive it as
+ * {@code SELECT max(merit_to)+1 FROM admission_timings WHERE <scope>=? AND minqul=? AND caste=?
+ * AND phase=? AND year=?}, defaulting to 1 when no session exists yet. Placeholder rows carry
+ * {@code merit_to = 0}, so they cannot raise the maximum.
+ */
+@Query(value = "SELECT COALESCE(MAX(merit_to), 0) + 1 FROM public.admission_timings "
+    + "WHERE ((:useDist = true AND dist_code = :code) OR (:useDist = false AND iti_code = :code)) "
+    + "AND phase = :phase AND year = :year AND caste = :caste AND minqul = :minqul", nativeQuery = true)
+Integer findNextMeritFrom(
+    @Param("useDist") boolean useDist,
+    @Param("code") String code,
+    @Param("phase") String phase,
+    @Param("year") String year,
+    @Param("caste") String caste,
+    @Param("minqul") String minqul
+);
+
+/**
+ * Drops unclaimed Step 1 placeholders for the same scope/category before a new one is written.
+ * {@code temp_pk} is now the institution code (legacy behaviour) rather than a unique value, so
+ * re-running Step 1 would otherwise leave several {@code merit_from = 0} rows that a later Step 2
+ * UPDATE could not tell apart.
+ */
+@Modifying
+@Query(value = "DELETE FROM public.admission_timings "
+    + "WHERE ((:useDist = true AND dist_code = :code) OR (:useDist = false AND iti_code = :code)) "
+    + "AND phase = :phase AND year = :year AND caste = :caste AND minqul = :minqul "
+    + "AND merit_from = 0 AND merit_to = 0", nativeQuery = true)
+int deleteUnclaimedPlaceholders(
+    @Param("useDist") boolean useDist,
+    @Param("code") String code,
+    @Param("phase") String phase,
+    @Param("year") String year,
+    @Param("caste") String caste,
+    @Param("minqul") String minqul
+);
+
 /** The unclaimed placeholder created by Step 1 for this scope/category, identified by its temp_pk. */
 @Query(value = "SELECT temp_pk FROM public.admission_timings "
     + "WHERE ((:useDist = true AND dist_code = :code) OR (:useDist = false AND iti_code = :code)) "

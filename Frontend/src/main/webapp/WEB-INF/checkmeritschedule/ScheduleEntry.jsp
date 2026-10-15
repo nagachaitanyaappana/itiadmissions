@@ -170,17 +170,16 @@
                     <div class="card-body card-body-custom">
                         <div class="row g-4">
                             <div class="col-md-6">
-                                <label class="form-label-custom">Category / Reservation:</label>
+                                <label class="form-label-custom">Reservation:</label>
                                 <select id="casteSelect" class="form-select form-control-custom">
-                                    <option value="all">All Categories</option>
+                                    <option value="all" selected>General</option>
+                                    <option value="w">Women</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label-custom">Minimum Qualification:</label>
+                                <label class="form-label-custom">Qualification:</label>
                                 <select id="qualSelect" class="form-select form-control-custom">
-                                    <option value="all">All Qualifications</option>
-                                    <option value="SSC Passed">SSC Passed</option>
-                                    <option value="8th Passed">8th Passed</option>
+                                    <option value="all">-All-</option>
                                 </select>
                             </div>
                             <div class="col-12 text-center mt-4 border-top pt-4">
@@ -230,8 +229,8 @@
 
                             <!-- Inputs -->
                             <div class="col-md-6">
-                                <label class="form-label-custom">Merit Rank From:</label>
-                                <input type="number" id="meritFrom" class="form-control form-control-custom" placeholder="e.g. 1" min="1">
+                                <label class="form-label-custom">Merit Rank From (auto):</label>
+                                <input type="number" id="meritFrom" class="form-control form-control-custom" readonly>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label-custom">Merit Rank To:</label>
@@ -257,6 +256,33 @@
                                 </button>
                                 <div id="feedbackArea" class="mt-3 fw-bold"></div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Already scheduled for the following ranks (legacy admission.jsp) -->
+                <div class="card form-card">
+                    <div class="card-header-primary">
+                        <i class="fas fa-list-ol"></i> Already scheduled for the following ranks
+                    </div>
+                    <div class="card-body card-body-custom">
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Sl Number</th>
+                                        <th>Merit From</th>
+                                        <th>Merit To</th>
+                                        <th>Call Date</th>
+                                        <th>Call Time</th>
+                                        <th>District Code</th>
+                                        <th>Caste</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="scheduledRows">
+                                    <tr><td colspan="7" class="text-center text-muted">No schedules yet.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -295,10 +321,10 @@
         }
         let currentInitData = null;
 
-        // Fetch Caste List
-        async function fetchCastes() {
+        // Load the running phase for the header. The reservation list is the fixed legacy pair
+        // (General / Women -> all / w), so no caste lookup is made.
+        async function initPage() {
             try {
-                // Fetch Global Status (Year/Phase)
                 const statusResp = await fetch(`${NODE_API_BASE}/api/status`, { 
                     credentials: 'include',
                     method: 'POST',
@@ -307,20 +333,6 @@
                 const statusRes = await statusResp.json();
                 if (statusRes.success) {
                     document.getElementById('headerPhase').innerText = statusRes.phase;
-                }
-
-                // Fetch Caste List
-                const response = await fetch(`${NODE_API_BASE}/api/dsc/caste-list`, { 
-                    credentials: 'include'
-                });
-                const result = await response.json();
-                if (result.success && result.data) {
-                    const select = document.getElementById('casteSelect');
-                    result.data.forEach(item => {
-                        const opt = document.createElement('option');
-                        opt.value = opt.textContent = item.casteCode;
-                        select.appendChild(opt);
-                    });
                 }
             } catch (err) {
                 console.error("Initialization error:", err);
@@ -344,7 +356,6 @@
 
                 const result = await response.json();
                 if (result.success) {
-                    currentInitData = payload;
                     // Handle placeholder response - build data from payload if not provided
                     const responseData = result.data || {
                         dist_name: localStorage.getItem('displayName') || 'Unknown',
@@ -353,6 +364,7 @@
                         minqul: payload.minqul,
                         phase: document.getElementById('headerPhase').innerText
                     };
+                    currentInitData = responseData;
                     showTimingForm(responseData);
                 } else {
                     alert("Initialization Failed: " + (result.error || result.message || "Unknown error"));
@@ -370,8 +382,12 @@
             document.getElementById('dispCaste').innerText = data.reservation || '-';
             document.getElementById('dispPhase').innerText = data.phase || document.getElementById('headerPhase').innerText || '-';
 
+            // merit_from is derived server-side (legacy admission.jsp: max(merit_to)+1); shown read-only.
+            document.getElementById('meritFrom').value = data.meritFrom != null ? data.meritFrom : 1;
+
             // Show container
             document.getElementById('timingContainer').style.display = 'block';
+            loadScheduledRanges(data);
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }
 
@@ -389,24 +405,20 @@
                 calTime: document.getElementById('calTime').value
             };
 
-            // Basic Validation
-            if(Number.isNaN(payload.meritFrom) || Number.isNaN(payload.meritTo) || !payload.calDate || !payload.calTime) {
+            // Basic Validation. meritFrom is auto-derived server-side, so only the fields the user
+            // actually supplies are checked here.
+            if(Number.isNaN(payload.meritTo) || !payload.calDate || !payload.calTime) {
                 setFeedback("Please fill all timing fields.", "text-danger");
                 return;
             }
-                if(payload.meritFrom <= 0 ){
-                setFeedback("Error: 'Merit Rank From' must be greater than 0.", "text-danger");
-                return;
-                } 
-                if(payload.meritTo <= 0 ){
+            if(payload.meritTo <= 0 ){
                 setFeedback("Error: 'Merit Rank To' must be greater than 0.", "text-danger");
                 return;
-                }
-                
-                 if(payload.meritFrom>payload.meritTo) {
-                setFeedback("Error: 'Merit Rank From' cannot be greater than 'Merit Rank To'.", "text-danger");
+            }
+            if(!Number.isNaN(payload.meritFrom) && payload.meritFrom > 0 && payload.meritFrom > payload.meritTo) {
+                setFeedback("Error: 'Merit Rank To' must be greater than 'Merit Rank From'.", "text-danger");
                 return;
-                 }
+            }
             // Time Validation (08:00 to 18:00)
             const [hours, minutes] = payload.calTime.split(':').map(Number);
             if (hours < 8 || hours > 18 || (hours === 18 && minutes > 0)) {
@@ -425,12 +437,49 @@
                 const result = await response.json();
                 if (response.ok&&result.success) {
                     setFeedback("Schedule entered successfully!", "text-success");
-                    // Optionally clear or scroll
+                    if (result.data) { currentInitData = result.data; }
+                    loadScheduledRanges(currentInitData);
                 } else {
                     setFeedback("Error: " + (result.error || result.message || "Unknown error"), "text-danger");
                 }
             } catch (err) {
                 setFeedback("Submission error occurred.", "text-danger");
+            }
+        }
+
+        // Lists the merit ranges already scheduled for this scope/phase/category (legacy admission.jsp
+        // "Already scheduled for the following ranks"). The backend scopes the rows to the caller and
+        // to the selected reservation/qualification.
+        async function loadScheduledRanges(data) {
+            const tbody = document.getElementById('scheduledRows');
+            if (!tbody) { return; }
+            try {
+                const response = await fetch(API_BASE + '/view', {
+                    credentials: 'include',
+                    method: 'POST',
+                    headers: scopeHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({
+                        caste: (data && data.reservation) || 'all',
+                        minqul: (data && data.minqul) || 'all'
+                    })
+                });
+                const result = await response.json();
+                const rows = (result && result.data) ? result.data : [];
+                const distCode = (data && data.distCode) ? data.distCode : '';
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No schedules yet.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = rows.map(function (r, i) {
+                    const parts = String(r.meritRange || '').split('-');
+                    const from = parts[0] || '';
+                    const to = parts.length > 1 ? parts[1] : '';
+                    return '<tr><td>' + (i + 1) + '</td><td>' + from + '</td><td>' + to + '</td><td>'
+                        + (r.date || '') + '</td><td>' + (r.calTime || '') + '</td><td>' + distCode + '</td><td>'
+                        + (r.caste || '') + '</td></tr>';
+                }).join('');
+            } catch (err) {
+                console.error("Load scheduled ranges error:", err);
             }
         }
 
@@ -455,7 +504,7 @@
         }
 
         // Start
-        window.onload = fetchCastes;
+        window.onload = initPage;
     </script>
 <%@ include file="../footer.jsp" %>
 </body>

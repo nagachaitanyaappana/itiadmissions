@@ -16,15 +16,48 @@ import com.server.backend.entity.AdmissionTiming;
 import com.server.backend.Repository.MeritChecklist.AdmissionTimingRepository;
 import com.server.backend.entity.AdmissionTimingId;
 import com.server.backend.DTO.*;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Date;
 @Service
 public class AdmissionTimingService {
     private final AdmissionTimingRepository admissionTimingRepository;
+    private final JdbcTemplate jdbcTemplate;
     private static final Logger logger = LoggerFactory.getLogger(AdmissionTimingService.class);
-    public AdmissionTimingService(AdmissionTimingRepository admissionTimingRepository) {
+    public AdmissionTimingService(AdmissionTimingRepository admissionTimingRepository, JdbcTemplate jdbcTemplate) {
         this.admissionTimingRepository = admissionTimingRepository;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    /**
+     * Audit row (legacy {@code generic.logTrace}, {@code generic.java:150}). Legacy schedule entry
+     * calls {@code logTrace(userName, "admissions.iti_admissions", "update", request)} at insert time
+     * and stores the returned {@code trno} on the {@code admission_timings} row; the port reproduces
+     * that instead of the previous {@code parseInt(ins_code)} placeholder value.
+     */
+    private Integer logTrace() {
+        String ip = null;
+        String referer = null;
+        String sessionId = "";
+        String userId = "";
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs != null) {
+            jakarta.servlet.http.HttpServletRequest req = attrs.getRequest();
+            ip = req.getRemoteAddr();
+            referer = req.getHeader("referer");
+            sessionId = req.getSession().getId();
+            Object uname = req.getSession().getAttribute("userName");
+            userId = uname == null ? "" : String.valueOf(uname);
+        }
+        return jdbcTemplate.queryForObject(
+            "INSERT INTO public.logtr (ip, userid, referal, tablename, transaction_type, sessionid, ts) "
+                + "VALUES (?, ?, ?, 'admissions.iti_admissions', 'update', ?, ?) RETURNING trno",
+            Integer.class,
+            ip == null ? "" : ip, userId, referer == null ? "" : referer,
+            sessionId, new java.sql.Timestamp(System.currentTimeMillis()).toString());
     }
 
     /**
@@ -187,25 +220,30 @@ public Map<String, Object> createScheduleEntry(CreateEntryRequest req, CurrentUs
     String caste = req.reservation() != null ? req.reservation() : "all";
     String quality = req.minqul() != null ? req.minqul() : "all";
 
-    // Serialise the MAX+1 read and the INSERT below. Without this, two Step 1 requests arriving
-    // together both read the same max and are handed the same temp_pk.
-    admissionTimingRepository.lockTempPkAllocation();
-    Integer nextPk = admissionTimingRepository.getNextTempPkVal();
+    boolean useDist = "3".equals(user.roleId());
+    String entityValue = useDist ? user.distCode() : user.itiCode();
 
-    int trno;
-    try {
-        trno = Integer.parseInt(user.insCode());
-    } catch (NumberFormatException e) {
-        trno = 0;
+    // Legacy admissionAction writes temp_pk = the institution code (the ins_code column), not a
+    // table-wide sequence. Re-initialising the wizard therefore starts by discarding any placeholder
+    // it left behind for the same scope/category, so Step 2 updates exactly one row.
+    admissionTimingRepository.deleteUnclaimedPlaceholders(
+        useDist, entityValue, phase, year, caste, quality);
+
+    // merit_from is server-derived (legacy admission.jsp: max(merit_to)+1), never client-supplied.
+    Integer nextMeritFrom = admissionTimingRepository.findNextMeritFrom(
+        useDist, entityValue, phase, year, caste, quality);
+    if (nextMeritFrom == null) {
+        nextMeritFrom = 1;
     }
-    String tempPk = String.valueOf(nextPk);
+
+    Integer trno = logTrace();
+    String tempPk = user.insCode();
     LocalDate calDate = resolveOptionalDate(req.calDate());
     LocalTime calTime = resolveTime(req.calTime());
 
     admissionTimingRepository.insertScheduleRow(
         user.itiCode(), user.distCode(), quality, calDate, calTime, caste, trno, tempPk, phase, year);
 
-    boolean useDist = "3".equals(user.roleId());
     String entityName = useDist 
         ? admissionTimingRepository.findDistName(user.distCode()).orElse("Unknown")
         : admissionTimingRepository.findItiName(user.itiCode()).orElse("Unknown");
@@ -213,8 +251,8 @@ public Map<String, Object> createScheduleEntry(CreateEntryRequest req, CurrentUs
     Map<String, Object> response = new HashMap<>();
     response.put("success", true);
     response.put("message", "Schedule entry created successfully");
-    response.put("data", schedulePayload(useDist, useDist ? user.distCode() : user.itiCode(),
-        phase, year, tempPk, calDate, calTime, 0, 0, caste, quality, entityName));
+    response.put("data", schedulePayload(useDist, entityValue,
+        phase, year, tempPk, calDate, calTime, nextMeritFrom, null, caste, quality, entityName));
     response.put("dist_name", useDist ? entityName : null);
     response.put("iti_name", useDist ? null : entityName);
 
@@ -241,6 +279,19 @@ public Map<String, Object> addScheduleTimings(UpdateTimingsRequest req, CurrentU
     }
     String tempPk = placeholderPks.get(0);
 
+    // merit_from is derived, not client-supplied (legacy admission.jsp/admissionAction:
+    // max(merit_to)+1 for this scope/category). Nothing is scheduled above the existing range.
+    Integer nextMeritFrom = admissionTimingRepository.findNextMeritFrom(
+        useDist, entityValue, phase, year, caste, quality);
+    if (nextMeritFrom == null) {
+        nextMeritFrom = 1;
+    }
+    if (req.meritTo() == null || req.meritTo() <= nextMeritFrom) {
+        throw new IllegalArgumentException("details entry fail. because, already untel "
+            + nextMeritFrom + " Rank have been scheduled... but, you are trying to insert rank ending with "
+            + req.meritTo() + " Rank ");
+    }
+
     LocalDate requestedDate = resolveDate(req.calDate());
     LocalTime requestedTime = resolveTime(req.calTime());
 
@@ -254,18 +305,18 @@ public Map<String, Object> addScheduleTimings(UpdateTimingsRequest req, CurrentU
     }
 
     List<Object[]> overlapList = admissionTimingRepository.findOverlappingMeritRange(
-        useDist, entityValue, phase, year, tempPk, req.meritFrom(), req.meritTo());
+        useDist, entityValue, phase, year, tempPk, nextMeritFrom, req.meritTo());
 
     if (!overlapList.isEmpty()) {
         Object[] existing = overlapList.get(0);
-        throw new IllegalArgumentException("The merit range " + req.meritFrom() + "-" + req.meritTo()
+        throw new IllegalArgumentException("The merit range " + nextMeritFrom + "-" + req.meritTo()
             + " overlaps with an existing entry (" + existing[0] + "-" + existing[1] + ") for this "
             + (useDist ? "District" : "ITI") + ".");
     }
 
     int updated = admissionTimingRepository.updateScheduleRow(
         useDist, entityValue, phase, year, caste, quality, tempPk,
-        req.meritFrom(), req.meritTo(), requestedDate, requestedTime);
+        nextMeritFrom, req.meritTo(), requestedDate, requestedTime);
 
     if (updated == 0) {
         throw new IllegalArgumentException("The schedule placeholder for this "
@@ -281,7 +332,7 @@ public Map<String, Object> addScheduleTimings(UpdateTimingsRequest req, CurrentU
     response.put("success", true);
     response.put("message", "Schedule timings updated successfully");
     response.put("data", schedulePayload(useDist, entityValue, phase, year, tempPk, requestedDate,
-        requestedTime, req.meritFrom(), req.meritTo(), caste, quality, entityName));
+        requestedTime, nextMeritFrom, req.meritTo(), caste, quality, entityName));
     response.put("dist_name", useDist ? entityName : null);
     response.put("iti_name", useDist ? null : entityName);
 
@@ -300,28 +351,34 @@ public Map<String, Object> addScheduleTimings(UpdateTimingsRequest req, CurrentU
  * value. Only one of the two is populated, matching the top-level keys, which are kept because that
  * is the shape the API has always returned.
  */
+/**
+ * Shapes the {@code data} object the JSP expects ({@code minqul}, {@code reservation}, {@code phase},
+ * {@code meritFrom}, ...). The values are supplied by the caller rather than re-read, so a scope can
+ * hold several rows sharing the same {@code temp_pk} (which is now the institution code) without the
+ * payload pairing the wrong row's date or range.
+ *
+ * <p>{@code dist_name} / {@code iti_name} are repeated inside {@code data} because the page renders
+ * the entity name from {@code result.data.dist_name || result.data.iti_name}
+ * ({@code checkmeritschedule/ScheduleEntry.jsp}, {@code showTimingForm}). Only one of the two is
+ * populated, matching the top-level keys.
+ */
 private Map<String, Object> schedulePayload(boolean useDist, String code, String phase, String year,
         String tempPk, LocalDate calDate, LocalTime calTime, Integer meritFrom, Integer meritTo,
         String caste, String minqul, String entityName) {
-    List<Object[]> rows = admissionTimingRepository.findRowByTempPk(useDist, code, phase, year, tempPk);
-    Object[] row = rows.isEmpty() ? new Object[] { tempPk, calDate, meritFrom, meritTo, calTime }
-                                 : rows.get(0);
-
     DateTimeFormatter dateWriter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-    LocalDate storedDate = asLocalDate(row[1]);
 
     Map<String, Object> payload = new HashMap<>();
-    payload.put("tempPk", row[0]);
+    payload.put("tempPk", tempPk);
     payload.put("phase", phase);
     payload.put("year", year);
     payload.put("itiCode", useDist ? null : code);
     payload.put("distCode", useDist ? code : null);
     payload.put("minqul", minqul);
     payload.put("reservation", caste);
-    payload.put("meritFrom", row[2]);
-    payload.put("meritTo", row[3]);
-    payload.put("calDate", storedDate == null ? null : storedDate.format(dateWriter));
-    payload.put("calTime", asLocalTime(row[4]) != null ? asLocalTime(row[4]) : calTime);
+    payload.put("meritFrom", meritFrom);
+    payload.put("meritTo", meritTo);
+    payload.put("calDate", calDate == null ? null : calDate.format(dateWriter));
+    payload.put("calTime", calTime == null ? null : calTime.toString());
     payload.put("dist_name", useDist ? entityName : null);
     payload.put("iti_name", useDist ? null : entityName);
     return payload;
