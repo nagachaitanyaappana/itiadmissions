@@ -29,8 +29,8 @@ public class eligible_iti_list_service {
             result.add(new eligible_iti_list_dto(
                     String.valueOf(row[0]),
                     String.valueOf(row[1]),
-                    String.valueOf(row[2]),
-                    row[3] == null ? null : ((Number) row[3]).intValue()
+                    row[2] == null ? null : String.valueOf(row[2]),
+                    row[3] == null ? null : String.valueOf(row[3])
             ));
         }
 

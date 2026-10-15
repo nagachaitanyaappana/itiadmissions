@@ -161,15 +161,28 @@
                 }
 
                 function validate() {
-                    var value = document.getElementById("regid").value;
-                    if (value === "") {
-                        alert("Registration Id is required");
+                    var captcha = document.getElementById("captcha").value;
+                    if (captcha === "" || captcha === null) {
+                        document.getElementById("captcha").focus();
+                        alert("Captcha is required");
                         return false;
                     }
-                    var captcha = document.getElementById("captcha").value.trim();
-                    if (captcha === "") {
-                        alert("Captcha is required");
-                        document.getElementById("captcha").focus();
+                    var ssc_regno = document.getElementById("ssc_regno").value;
+                    if (ssc_regno === "" || ssc_regno === null) {
+                        document.getElementById("ssc_regno").focus();
+                        alert("SSC HallTicket Number is required");
+                        return false;
+                    }
+                    var dob = document.getElementById("dob").value;
+                    if (dob === "" || dob === null) {
+                        document.getElementById("dob").focus();
+                        alert("Date of Birth is required");
+                        return false;
+                    }
+                    var regid = document.getElementById("regid").value;
+                    if (regid === "" || regid === null) {
+                        document.getElementById("regid").focus();
+                        alert("Registration Id is required");
                         return false;
                     }
                     return true;
@@ -190,6 +203,7 @@
                 // Gate submit: verify captcha, fetch the registration record and open the application form
                 function fetchApplication() {
                     if (!validate()) return false;
+                    document.getElementById("gateErrors").innerHTML = "";
                     var enteredCaptcha = document.getElementById("captcha").value.trim().toUpperCase();
                     $.get('${pageContext.request.contextPath}/captcha/text', function (serverCaptcha) {
                         if (enteredCaptcha !== String(serverCaptcha).trim().toUpperCase()) {
@@ -206,18 +220,26 @@
 
                 function loadApplication() {
                     var regid = document.getElementById("regid").value.trim();
-                    var hallticket = document.getElementById("ssc_regno").value.trim().toUpperCase();
+                    var ssc_regno = document.getElementById("ssc_regno").value.trim();
                     var dob = document.getElementById("dob").value;
 
-                    $.get('${backendBaseUrl}/api/student/' + regid, function (s) {
-                        if (hallticket !== "" && String(s.sscRegNo || '').toUpperCase() !== hallticket) {
-                            alert("Hall Ticket Number does not match this Registration Id.");
+                    $.get('${backendBaseUrl}/api/student/apply-gate', {
+                        regid: regid, dob: dob, ssc_regno: ssc_regno
+                    }, function (res) {
+                        var status = res && res.status;
+                        if (status === 'expired') {
+                            gateError('Date has Expired');
                             return;
                         }
-                        if (dob !== "" && s.dob && String(s.dob).substring(0, 10) !== dob) {
-                            alert("Date of Birth does not match this Registration Id.");
+                        if (status === 'admitted') {
+                            gateError('Already Admitted');
                             return;
                         }
+                        if (status === 'norecords' || !res.record) {
+                            gateError('No Records Found');
+                            return;
+                        }
+                        var s = res.record;
                         CURRENT_REGID = s.regid;
                         CURRENT_SSC_TYPE = s.sscType;
                         document.getElementById("gateDiv").style.display = "none";
@@ -228,8 +250,15 @@
                         initSelectionStep();
                         window.scrollTo(0, 0);
                     }).fail(function () {
-                        alert("No registration found for Registration Id " + regid + ". Please register first (Step 1).");
+                        gateError('No Records Found');
                     });
+                }
+
+                function gateError(message) {
+                    document.getElementById("gateDiv").style.display = "";
+                    document.getElementById("selectDiv").style.display = "none";
+                    var box = document.getElementById("gateErrors");
+                    box.innerHTML = '<center><h1 style="color:red;">' + message + '</h1></center>';
                 }
 
                 $(document).ready(function () {
@@ -270,9 +299,7 @@
                 }
                 function renderRegistrationDetails(s) {
                     var dob = s.dob ? String(s.dob).substring(0, 10) : '';
-                    var boardMap = { '28': 'Andhra Pradesh State Board (SSC)', '51': 'CBSE', '52': 'ICSE', '36': 'Telangana' };
-                    var board = boardMap[String(s.sscBoard)] || s.sscBoard;
-                    var resType = (s.sscType === 'sscm') ? 'Marks' : 'GPA';
+                    var board = s.sscBoard;
                     var gender = s.gender ? (s.gender.charAt(0).toUpperCase() + s.gender.slice(1)) : '';
                     var localVal = s.local === 'NonLocal' ? 'Non-Local' : (s.local || '');
                     var monthMap = { '03': 'March', '04': 'Supplymentary' };
@@ -283,22 +310,19 @@
                         : 'None';
                     var qual = (s.sscPassed === true) ? 'SSC Passed' : (s.sscPassed === false ? '8th Passed' : '');
 
-                    var h = '<h4 align="center"><b>Candidates Details are displayed from Database</b></h4>'
-                        + '<table class="apply-details">'
-                        + '<tr class="hdr"><td colspan="5">Registration Details (read-only)</td></tr>'
+                    var h = '<table class="apply-details">'
                         + aplPair('Hall Ticket Number', s.sscRegNo, 'Board', board)
                         + aplPair('Year of Pass', s.sscYear, 'Month of Pass', month)
-                        + aplPair('Result Type', resType, 'Qualification', qual)
-                        + aplPair("Applicant's Name", s.name, "Father's Name", s.fname)
-                        + aplPair("Mother's Name", s.mname, 'Gender', gender)
+                        + aplPair("Applicant's Name", s.name, 'Mobile Number', s.phno)
                         + aplPair('Date of Birth', dob, 'Aadhaar Number', s.adarno)
-                        + aplPair('Mobile Number', s.phno, 'Email', s.email)
-                        + aplPair('Caste', s.caste, 'Sub Caste', s.subCaste)
-                        + aplPair('Local / Non-Local', localVal, 'Pincode', s.pincode)
-                        + aplPair('Economic Weaker Section', s.economicWeakerSection ? 'Yes' : 'No',
-                                  'Physically Challenged', s.phc ? 'Yes' : 'No')
-                        + aplPair('PWD Category', pwd, 'Ex-Service Man', s.exservice ? 'Yes' : 'No')
-                        + '<tr><td class="lbl">Address</td><td colspan="4">' + aplVal(s.addr) + '</td></tr>'
+                        + aplPair("Father's Name", s.fname, 'Gender', gender)
+                        + aplPair("Mother's Name", s.mname, 'Physically Challenged', s.phc ? 'Yes' : 'No')
+                        + aplPair('Address', s.addr, 'PWD Category', pwd)
+                        + aplPair('Ex-Service Man', s.exservice ? 'Yes' : 'No', 'Qualification', qual)
+                        + aplPair('Pincode', s.pincode, 'Email', s.email)
+                        + aplPair('Caste', s.caste, 'Local / Non-Local', localVal)
+                        + '<tr><td class="lbl">Economic Weaker Section</td><td colspan="3">'
+                            + (s.economicWeakerSection ? 'Yes' : 'No') + '</td></tr>'
                         + '</table>';
 
                     var box = document.getElementById("applyDetails");
@@ -359,6 +383,7 @@
                         : 'Phase ' + CURRENT_PHASE + ': select the district and ITI combinations you want to be considered for '
                           + '(maximum 60). <b>Save the list</b> &mdash; a merit list is prepared only for candidates who have selected at least one ITI.';
                     document.getElementById("itiColHead").style.display = phaseOne ? "none" : "";
+                    document.getElementById("govtColHead").style.display = phaseOne ? "none" : "";
                     document.getElementById("addRowBtn").value = phaseOne ? "Add District" : "Add ITI";
                     document.getElementById("saveSelBtn").value = phaseOne ? "Save District Selections" : "Save ITI Selections";
                     loadDistrictOptions(function () {
@@ -377,8 +402,11 @@
                     var row = body.insertRow(-1);
                     var cSno = row.insertCell(0);
                     var cDist = row.insertCell(1);
-                    var cIti = row.insertCell(2);
-                    var cDel = row.insertCell(3);
+                    var cGov = row.insertCell(2);
+                    var cIti = row.insertCell(3);
+                    var cDel = row.insertCell(4);
+                    cGov.className = "selGovt";
+                    cGov.align = "center";
 
                     var districtSelect = document.createElement("select");
                     districtSelect.className = "selDistrict";
@@ -390,17 +418,28 @@
                         o.textContent = d.name;
                         districtSelect.appendChild(o);
                     });
-                    districtSelect.onchange = function () { if (!phaseOne) { loadItisForRow(this); } };
+                    districtSelect.onchange = function () {
+                        if (phaseOne && isDuplicateDistrict(this)) {
+                            alert("you have already Applied for this District");
+                            this.value = "";
+                            return;
+                        }
+                        if (!phaseOne) { loadItisForRow(this); }
+                    };
                     cDist.appendChild(districtSelect);
 
                     if (phaseOne) {
+                        cGov.style.display = "none";
                         cIti.style.display = "none";
                     } else {
                         var itiSelect = document.createElement("select");
                         itiSelect.className = "selIti";
                         itiSelect.style.width = "320px";
                         itiSelect.innerHTML = '<option value="">--Select ITI--</option>';
-                        itiSelect.onchange = function () { showTrades(this.value); };
+                        itiSelect.onchange = function () {
+                            updateGovtCell(this);
+                            showTrades(this.value);
+                        };
                         cIti.appendChild(itiSelect);
                     }
 
@@ -438,28 +477,66 @@
                                 seen[i.itiCode] = true;
                                 var o = document.createElement("option");
                                 o.value = i.itiCode;
-                                o.textContent = i.itiName + ' (' + i.itiCode + ')';
+                                o.textContent = i.itiName + ' (' + i.ncvtCode + ')';
+                                o.dataset.govt = i.govt;
                                 itiSelect.appendChild(o);
                             });
-                            if (preselectIti) { itiSelect.value = preselectIti; }
+                            if (preselectIti) { itiSelect.value = preselectIti; updateGovtCell(itiSelect); }
                         });
+                }
+
+                // Government/Private, shown next to the selected ITI (legacy getitibydist.jsp:87-100).
+                function updateGovtCell(itiSelect) {
+                    var cell = itiSelect.closest("tr").querySelector(".selGovt");
+                    if (!cell) { return; }
+                    var opt = itiSelect.options[itiSelect.selectedIndex];
+                    var govt = opt ? opt.dataset.govt : "";
+                    cell.innerHTML = (govt === 'G') ? 'Government' : (govt === 'P' ? 'Private' : (govt || ''));
+                }
+
+                // Inline duplicate-district guard (legacy Editviewpage.jsp:772-789 getcollegesdist).
+                function isDuplicateDistrict(select) {
+                    var value = select.value;
+                    if (!value) { return false; }
+                    var all = document.querySelectorAll(".selDistrict");
+                    for (var i = 0; i < all.length; i++) {
+                        if (all[i] !== select && all[i].value === value) { return true; }
+                    }
+                    return false;
                 }
                 // Same information the legacy getTrade_info.jsp showed for the chosen ITI.
                 function showTrades(itiCode) {
                     var box = document.getElementById("itiInfo");
                     if (!itiCode) { box.innerHTML = ""; return; }
+                    $.get('${backendBaseUrl}/admission/iti/' + encodeURIComponent(itiCode) + '/info',
+                        function (info) { renderTrades(itiCode, box, info); })
+                     .fail(function () { renderTrades(itiCode, box, null); });
+                }
+
+                function renderTrades(itiCode, box, info) {
+                    var head = '';
+                    if (info) {
+                        head = '<table align="center">'
+                            + '<tr><td align="center"><font color="blue">'
+                            + (info.itiName == null ? '' : info.itiName) + '(' + itiCode + ')</font></td></tr>'
+                            + '<tr><td align="center"><font color="red">'
+                            + (info.address == null ? '' : info.address) + ' '
+                            + (info.pinCode == null ? '' : info.pinCode) + '</font></td></tr>'
+                            + (info.website ? '<tr><td align="center"><font color="red"><a href="'
+                                + info.website + '" target="_blank">' + info.website + '</a></font></td></tr>' : '')
+                            + '</table>';
+                    }
                     $.get('${backendBaseUrl}/admission/iti/' + encodeURIComponent(itiCode) + '/trades',
                         function (list) {
-                            if (!list || list.length === 0) { box.innerHTML = ""; return; }
-                            var html = '<b>Trades and seats available</b>'
+                            var html = head + '<p>Listed are the Trades and Seats Available </p>'
                                 + '<table border="1" align="center" style="margin:4px auto;">'
                                 + '<tr><th>Trade Name</th><th>Number of Seats</th></tr>';
-                            list.forEach(function (t) {
+                            (list || []).forEach(function (t) {
                                 html += '<tr><td>' + (t.tradeName || t.tradeShort) + '</td><td>'
                                     + (t.strength == null ? 0 : t.strength) + '</td></tr>';
                             });
                             box.innerHTML = html + '</table>';
-                        });
+                        }).fail(function () { box.innerHTML = head; });
                 }
 
                 function collectChoices() {
@@ -483,6 +560,7 @@
 
                 function saveSelections() {
                     if (!CURRENT_REGID) { alert("Load your application first."); return false; }
+                    if (!$("#consent").prop("checked")) { alert("Consent is required"); $('#consent').focus(); return false; }
                     var phaseOne = isPhaseOne();
                     var choices = collectChoices();
                     if (choices.length === 0) { alert(phaseOne ? "Please select at least one district." : "Please select at least one ITI."); return false; }
@@ -518,12 +596,14 @@
                             }
                             var html = '<b>Saved ' + (phaseOne ? 'district' : 'ITI') + ' selections (' + list.length + ')</b>'
                                 + '<table border="1" align="center" style="margin:6px auto;">'
-                                + '<tr><th>S.No</th><th>District</th>' + (phaseOne ? '' : '<th>ITI</th>') + '</tr>';
+                                + '<tr><th>S.No</th><th>District Name</th>'
+                                + (phaseOne ? '' : '<th>Government/Private</th><th>College Name</th>') + '</tr>';
                             list.forEach(function (r, idx) {
                                 html += '<tr><td align="center">' + (idx + 1) + '</td><td>'
                                     + (r.distName || r.distCode) + '</td>';
                                 if (!phaseOne) {
-                                    html += '<td>' + (r.itiName || r.itiCode) + ' (' + r.itiCode + ')</td>';
+                                    var govt = (r.govt === 'G') ? 'Government' : (r.govt === 'P' ? 'Private' : '');
+                                    html += '<td>' + govt + '</td><td>' + (r.itiName || r.itiCode) + '</td>';
                                 }
                                 html += '</tr>';
                             });
@@ -568,7 +648,7 @@
         <form name="EditForm_phase2" method="post" action="#" onsubmit="return fetchApplication()">
             <h2 style="background-color: lightgreen" align="center"  class="style4" >Application Form for Admission into the Industrial Training Institute for the session <span class="sessionYearPhase"></span> </h2>
 
-            <div align="center"><b><font color="blue">Note:: Applicant has to register his/her details first by clicking <a href="${pageContext.request.contextPath}/student-registration">Student Registration</a> note your registration number, then click &quot;Apply for ITI&quot;<br><br></br> </font></b>
+            <div align="center"><b><font color="red">Note:: Applicant has to register his/her details first by clicking <a href="${pageContext.request.contextPath}/student-registration">Student Registration</a> note your registration number, then click &quot;Apply for ITI&quot;<br><br></br> </font></b>
             </div> <br>
 
                 <table width="50%" height="30%" align="center" bgcolor="#cbd6b2" style="border:2px solid black;">
@@ -613,6 +693,7 @@
                         <td colspan="2">&nbsp;</td>
                     </tr>
                 </table>
+                <div id="gateErrors" align="center"></div>
             </form>
 </div>
 <!-- ============ STEP 3: SELECTION (phase 1 = districts, phase 2+ = district + ITI) ============ -->
@@ -635,11 +716,18 @@
         <tr bgcolor="#4ab131" style="color:#fff;">
             <th style="width:60px;">S.No</th>
             <th style="width:200px;">District</th>
+            <th id="govtColHead" style="width:120px;">Government/Private</th>
             <th id="itiColHead">ITI</th>
             <th style="width:90px;">Remove</th>
         </tr>
         <tbody id="locDeptBody"></tbody>
     </table>
+
+    <div align="center" style="margin:10px;">
+        <input type="checkbox" id="consent" name="aadhar">
+        <label for="consent"> I hereby consent to the use of Aadhaar Numbers  provided in the
+            application to carryout Identity Validation for ITI college admission process.</label>
+    </div>
 
     <div align="center" style="margin:10px;">
         <input type="button" id="addRowBtn" value="Add ITI" onclick="addSelectRow();">

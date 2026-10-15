@@ -54,6 +54,17 @@ public class StudentApplicationController {
 
         return ResponseEntity.ok(service.register(dto, bytes, contentType));
     }
+    // Gate check for the Apply page: verifies regid+dob+hall ticket, the application window, and
+    // whether the candidate is already admitted (legacy applicationForm.Apply_iti + LastDate()).
+    @GetMapping("/apply-gate")
+    public ResponseEntity<java.util.Map<String, Object>> applyGate(
+            @RequestParam Integer regid,
+            @RequestParam(required = false) String dob,
+            @RequestParam(name = "ssc_regno", required = false) String sscRegNo) {
+
+        return ResponseEntity.ok(service.applyGate(regid, dob, sscRegNo));
+    }
+
     // Get Student By RegId
     @GetMapping("/{regid}")
     public ResponseEntity<StudentApplicationDto> getStudentById(

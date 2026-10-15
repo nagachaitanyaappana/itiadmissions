@@ -100,9 +100,77 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
         return pending;
     }
 
+    /**
+     * Gate check for the Apply page. Ports {@code applicationForm.Apply_iti} (which matched on
+     * regid + dob + hall ticket and blocked already-admitted candidates) together with the
+     * last-date guard in {@code web/open_editview_form.jsp} ({@code beans.MyUtil.LastDate()}).
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> applyGate(Integer regid, String dob, String sscRegNo) {
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        // Window guard: legacy reads application_to_date from admissions.admission_phase and treats
+        // the window as open until one day after it (Calendar.DAY_OF_MONTH += 1).
+        Timestamp toDate = jdbcTemplate.query(
+                "SELECT application_to_date FROM admissions.admission_phase LIMIT 1",
+                rs -> rs.next() ? rs.getTimestamp("application_to_date") : null);
+        if (toDate != null
+                && LocalDateTime.now().isAfter(toDate.toLocalDateTime().plusDays(1))) {
+            result.put("status", "expired");
+            return result;
+        }
+
+        if (regid == null || sscRegNo == null || sscRegNo.trim().isEmpty()) {
+            result.put("status", "norecords");
+            return result;
+        }
+        java.sql.Date dobDate = parseDob(dob);
+        if (dobDate == null) {
+            result.put("status", "norecords");
+            return result;
+        }
+
+        Integer matched = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM student_application WHERE regid = ? AND dob = ? AND ssc_regno = ?",
+                Integer.class, String.valueOf(regid), dobDate, sscRegNo.trim());
+        if (matched == null || matched == 0) {
+            result.put("status", "norecords");
+            return result;
+        }
+
+        Integer admitted = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM admissions.iti_admissions WHERE regid = ?",
+                Integer.class, String.valueOf(regid));
+        if (admitted != null && admitted > 0) {
+            result.put("status", "admitted");
+            return result;
+        }
+
+        result.put("status", "ok");
+        result.put("record", getStudentById(regid));
+        return result;
+    }
+
+    /** Accepts the {@code <input type="date">} value (yyyy-MM-dd) or the legacy dd-MM-yyyy. */
+    private static java.sql.Date parseDob(String dob) {
+        if (dob == null || dob.trim().isEmpty()) {
+            return null;
+        }
+        String value = dob.trim();
+        try {
+            if (value.length() >= 10 && value.charAt(2) == '-') {
+                String[] parts = value.substring(0, 10).split("-");
+                return java.sql.Date.valueOf(parts[2] + "-" + parts[1] + "-" + parts[0]);
+            }
+            return java.sql.Date.valueOf(value.substring(0, 10));
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
     /** Null-safe, trim- and case-insensitive comparison of a submitted vs. stored value. */
-    private static boolean equalsNormalized(Object a, Object b) {
-        String sa = a == null ? null : a.toString().trim();
+    private static boolean equalsNormalized(Object a, Object b) {        String sa = a == null ? null : a.toString().trim();
         String sb = b == null ? null : b.toString().trim();
         if (sa == null || sb == null) {
             return sa == null && sb == null;

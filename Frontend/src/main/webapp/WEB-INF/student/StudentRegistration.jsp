@@ -576,6 +576,22 @@
                     m.sscEngMarks = regVal("m_english"); m.sscMathMarks = regVal("m_math");
                     m.sscSciMarks = regVal("m_science"); m.sscSocialMarks = regVal("m_social");
                     m.sscTotMarks = regVal("m_total");
+                    // Legacy convert(): derive subject GPAs from marks so ssc_*_gpa is always
+                    // populated (the merit ranking reads only the GPA columns).
+                    m.sscFirstLangGpa = marksToGpa(m.sscFirstLangMarks, false);
+                    m.sscSecondLangGpa = marksToGpa(m.sscSecondLangMarks, true);
+                    m.sscEngGpa = marksToGpa(m.sscEngMarks, false);
+                    m.sscMathGpa = marksToGpa(m.sscMathMarks, false);
+                    m.sscSciGpa = marksToGpa(m.sscSciMarks, false);
+                    m.sscSocialGpa = marksToGpa(m.sscSocialMarks, false);
+                    // Legacy add(): tot_gpa = average of subject GPAs (5 when "two" languages, else 6).
+                    var twoLang = !!(document.getElementById("sub1") && document.getElementById("sub1").checked);
+                    var gpaVals = twoLang
+                        ? [m.sscFirstLangGpa, m.sscEngGpa, m.sscMathGpa, m.sscSciGpa, m.sscSocialGpa]
+                        : [m.sscFirstLangGpa, m.sscSecondLangGpa, m.sscEngGpa, m.sscMathGpa, m.sscSciGpa, m.sscSocialGpa];
+                    var gpaSum = 0;
+                    for (var gi = 0; gi < gpaVals.length; gi++) { gpaSum += parseFloat(gpaVals[gi]) || 0; }
+                    m.sscTotGpa = String(Math.round((gpaSum / gpaVals.length) * 10) / 10);
                 } else {
                     m.sscFirstLangGpa = regVal("g_firstlang"); m.sscSecondLangGpa = regVal("g_secondlang");
                     m.sscEngGpa = regVal("g_english"); m.sscMathGpa = regVal("g_math");
@@ -710,6 +726,39 @@
                 for (i = 0; i < markIds.length; i++) { var m = num(markIds[i]); if (m !== null) { anyMark = true; markSum += m; } }
                 var mTotal = document.getElementById("m_total");
                 if (mTotal) { mTotal.value = anyMark ? markSum : ""; }
+            }
+
+            // Port of the legacy web/js/conversionLogic.js convert(secondLang, source, target).
+            // Derives a subject GPA from its marks. The second language uses a different scale.
+            // In legacy the "sscm" (marks) branch wired each marks input's onchange to this, so
+            // cand_marks.ssc_*_gpa was ALWAYS populated; the merit ranking orders solely by GPA,
+            // hence the derived values must still be stored when the candidate entered marks.
+            function marksToGpa(marks, secondLang) {
+                var m = parseFloat(marks);
+                if (isNaN(m)) { m = 0; }
+                var gpa;
+                if (secondLang) {
+                    if (m >= 90) gpa = '10';
+                    else if (m >= 80) gpa = '9';
+                    else if (m >= 70) gpa = '8';
+                    else if (m >= 60) gpa = '7';
+                    else if (m >= 50) gpa = '6';
+                    else if (m >= 40) gpa = '5';
+                    else if (m >= 30) gpa = '4';
+                    else if (m >= 20) gpa = '3';
+                    else gpa = '0';
+                } else {
+                    if (m >= 92) gpa = '10';
+                    else if (m >= 83) gpa = '9';
+                    else if (m >= 75) gpa = '8';
+                    else if (m >= 67) gpa = '7';
+                    else if (m >= 59) gpa = '6';
+                    else if (m >= 51) gpa = '5';
+                    else if (m >= 43) gpa = '4';
+                    else if (m >= 35) gpa = '3';
+                    else gpa = '0';
+                }
+                return gpa;
             }
 
             $(function () {

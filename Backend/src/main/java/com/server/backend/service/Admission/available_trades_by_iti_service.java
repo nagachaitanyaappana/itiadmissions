@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.server.backend.DTO.available_trades_by_iti_dto;
+import com.server.backend.DTO.iti_info_dto;
 import com.server.backend.Repository.Admission.available_trades_by_iti_repository;
 
 @Service
@@ -37,5 +38,19 @@ public class available_trades_by_iti_service {
         }
 
         return result;
+    }
+
+    /** ITI header for the popup: name/code, address, pincode and website (legacy getTrade_info.jsp). */
+    public iti_info_dto getItiInfo(String itiCode) {
+        return repository.findById(itiCode)
+                .map(i -> new iti_info_dto(
+                        i.getItiCode(),
+                        i.getItiName(),
+                        i.getNcvtCode(),
+                        i.getGovt(),
+                        i.getAddress(),
+                        i.getPinCode(),
+                        i.getWebsite()))
+                .orElse(null);
     }
 }

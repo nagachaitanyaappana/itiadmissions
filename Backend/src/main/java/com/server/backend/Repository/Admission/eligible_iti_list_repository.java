@@ -13,16 +13,13 @@ public interface eligible_iti_list_repository extends JpaRepository<Iti, String>
 
     @Query(value = """
         SELECT
-            i.iti_code,
-            i.iti_name,
-            t.trade_short,
-            t.strength_vacant
-        FROM iti i
-        JOIN ititrade t
-        ON i.iti_code = t.iti_code
-        WHERE i.dist_code = :distCode
-        AND t.strength_vacant > 0
-        ORDER BY i.iti_name
+            iti_code,
+            iti_name,
+            ncvt_code,
+            govt
+        FROM iti
+        WHERE dist_code::integer = CAST(:distCode AS integer)
+        ORDER BY govt, iti_name
         """, nativeQuery = true)
     List<Object[]> getEligibleItis(@Param("distCode") String distCode);
 }

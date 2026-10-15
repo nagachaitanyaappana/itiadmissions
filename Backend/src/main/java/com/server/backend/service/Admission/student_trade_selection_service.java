@@ -75,12 +75,12 @@ public class student_trade_selection_service {
                    s.year,
                    s.phase::text AS phase_text,
                    s.freezee
-              FROM student_trade_sel s
-              LEFT JOIN iti i      ON i.iti_code  = s.iti_code
-              LEFT JOIN dist_mst d ON d.dist_code = s.dist_code
-             WHERE s.regid = :regid
-             ORDER BY d.dist_name NULLS LAST, i.iti_name NULLS LAST, s.iti_code
-            """;
+               FROM student_trade_sel s
+               LEFT JOIN iti i      ON i.iti_code  = s.iti_code
+               LEFT JOIN dist_mst d ON d.dist_code = s.dist_code
+              WHERE s.regid = :regid
+              ORDER BY s.temp
+             """;
 
     /**
      * The legacy insert, with {@code temp} made explicit.
@@ -182,6 +182,12 @@ public class student_trade_selection_service {
                 new MapSqlParameterSource("regid", String.valueOf(regid)));
 
         insertRows(regid, year, phase, rows, request.getFreezee());
+
+        // Legacy also stamps the application on every save
+        // (OpeneditviewPageAction "update student_application set entry_date=? where regid=?").
+        jdbcTemplate.update(
+                "UPDATE student_application SET entry_date = now() WHERE regid = :regid",
+                new MapSqlParameterSource("regid", String.valueOf(regid)));
 
         logger.info("Saved {} {}selection(s) for regid {} (year {}, phase {}, {} replaced)",
                 rows.size(), districtOnly ? "district " : "ITI ", regid, year, phase, cleared);

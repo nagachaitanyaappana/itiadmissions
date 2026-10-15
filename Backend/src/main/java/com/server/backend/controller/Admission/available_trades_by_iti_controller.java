@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import com.server.backend.DTO.available_trades_by_iti_dto;
+import com.server.backend.DTO.iti_info_dto;
 import com.server.backend.service.Admission.available_trades_by_iti_service;
 
 @Tag(name = "Admission Process")
@@ -20,5 +21,10 @@ public class available_trades_by_iti_controller {
     @GetMapping("/iti/{itiCode}/trades")
     public List<available_trades_by_iti_dto> getAvailableTradesByIti(@PathVariable String itiCode) {
         return service.getAvailableTradesByIti(itiCode);
+    }
+
+    @GetMapping("/iti/{itiCode}/info")
+    public iti_info_dto getItiInfo(@PathVariable String itiCode) {
+        return service.getItiInfo(itiCode);
     }
 }
