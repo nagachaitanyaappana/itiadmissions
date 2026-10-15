@@ -264,11 +264,11 @@ function renderEdit(d){
   var units = d.shiftUnits || [];
   if(units.length){
     h += '<div class="sub-head">Shift / Unit</div>'
-       + '<table class="res-table"><thead><tr><th>Shift</th><th>Unit</th><th>Strength</th><th>Available for year</th></tr></thead><tbody>';
+       + '<table class="res-table"><thead><tr><th>Select</th><th>Shift</th><th>Unit</th><th>Strength</th></tr></thead><tbody>';
     units.forEach(function(u, i){
-      h += '<tr><td>' + esc(u.shiftAllowed) + '</td><td>' + esc(u.unitAllowed) + '</td><td>' + num(u.strength) + '</td>'
-         + '<td><input type="checkbox" class="ed-unit" data-i="' + i + '"'
-         + (u.availableYear ? ' checked="checked"' : '') + ' /></td></tr>';
+      h += '<tr><td><input type="checkbox" class="ed-unit" data-i="' + i + '"'
+         + (u.availableYear ? ' checked="checked"' : '') + ' onchange="updateTradeStrength();" /></td>'
+         + '<td>' + esc(u.shiftAllowed) + '</td><td>' + esc(u.unitAllowed) + '</td><td>' + num(u.strength) + '</td></tr>';
     });
     h += '</tbody></table>';
   }
@@ -278,6 +278,20 @@ function renderEdit(d){
      + '<div style="margin-top:6px;"><span class="err" id="editErr"></span> <span class="ok" id="editOk"></span></div>'
      + '</div>';
   document.getElementById('resultArea').innerHTML = h;
+}
+
+function updateTradeStrength(){
+  if(!EDIT){ return; }
+  var total = 0;
+  document.querySelectorAll('.ed-unit').forEach(function(cb){
+    if(cb.checked){
+      var i = parseInt(cb.getAttribute('data-i'), 10);
+      var u = (EDIT.shiftUnits || [])[i];
+      if(u){ total += num(u.strength); }
+    }
+  });
+  var el = document.getElementById('edStrength');
+  if(el){ el.value = total; }
 }
 
 function saveEdit(){
