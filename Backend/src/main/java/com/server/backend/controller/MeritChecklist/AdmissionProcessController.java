@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.server.backend.DTO.CouncilMeritsRequest;
+import com.server.backend.DTO.ProcessOptimizeRequest;
 import com.server.backend.DTO.RankLookupRequest;
 import com.server.backend.DTO.TakeAdmissionRequest;
 import com.server.backend.DTO.UserPrincipal;
@@ -107,6 +109,30 @@ public class AdmissionProcessController {
             body.put("shifts", admissionProcessService.getShiftUnits(itiCode, tradeCode));
             return body;
         });
+    }
+
+    @Operation(summary = "Start admission: validate rank generation and resolve the merit window")
+    @PostMapping("/council-merits")
+    public ResponseEntity<Map<String, Object>> councilMerits(
+            @RequestBody(required = false) CouncilMeritsRequest request,
+            @RequestHeader(name = "X-Role-Id", required = false) String roleId,
+            @RequestHeader(name = "X-Ins-Code", required = false) String insCode,
+            @RequestHeader(name = "X-Iti-Code", required = false) String itiCode,
+            @RequestHeader(name = "X-Dist-Code", required = false) String distCode) {
+        return handle(() -> admissionProcessService.councilMerits(
+                request, resolveUser(roleId, insCode, itiCode, distCode)));
+    }
+
+    @Operation(summary = "Admission counseling: resolve rank and compute the seat-matrix check cascade")
+    @PostMapping("/process-optimize")
+    public ResponseEntity<Map<String, Object>> processOptimize(
+            @RequestBody(required = false) ProcessOptimizeRequest request,
+            @RequestHeader(name = "X-Role-Id", required = false) String roleId,
+            @RequestHeader(name = "X-Ins-Code", required = false) String insCode,
+            @RequestHeader(name = "X-Iti-Code", required = false) String itiCode,
+            @RequestHeader(name = "X-Dist-Code", required = false) String distCode) {
+        return handle(() -> admissionProcessService.processOptimize(
+                request, resolveUser(roleId, insCode, itiCode, distCode)));
     }
 
     /** Keeps every endpoint's error shape identical: {@code {success:false, error:"..."}} at 400. */

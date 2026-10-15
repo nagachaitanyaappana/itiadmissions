@@ -500,23 +500,8 @@
                     
                     <div class="seat-matrix-container">
                         <table class="table table-bordered table-seat-matrix">
-                            <thead>
-                                <tr>
-                                    <th rowspan="2" class="align-middle text-center">ITI Name</th>
-                                    <th rowspan="2" class="align-middle text-center">Trade Name</th>
-                                    <th rowspan="2" class="align-middle text-center">Select</th>
-                                    <th rowspan="2" class="align-middle text-center">Total</th>
-                                    <th colspan="3" class="category-header">General</th>
-                                    <th colspan="3" class="category-header">IM</th>
-                                    <th colspan="3" class="category-header">PH</th>
-                                    <th colspan="3" class="category-header">EX-S</th>
-                                </tr>
-                                <tr>
-                                    <th class="tfv-header">T</th><th class="tfv-header">F</th><th class="tfv-header">V</th>
-                                    <th class="tfv-header">T</th><th class="tfv-header">F</th><th class="tfv-header">V</th>
-                                    <th class="tfv-header">T</th><th class="tfv-header">F</th><th class="tfv-header">V</th>
-                                    <th class="tfv-header">T</th><th class="tfv-header">F</th><th class="tfv-header">V</th>
-                                </tr>
+                            <thead id="seatMatrixHead">
+                                <!-- Header built dynamically from the candidate's layout -->
                             </thead>
                             <tbody id="seatMatrixBody">
                                 <!-- Data dynamic -->
@@ -691,6 +676,9 @@
         let currentStudent = null;
         let seatMatrixData = [];
         let shiftUnitOptions = [];
+        let shiftUnitMatrix = [];
+        let meritFrom = null;
+        let meritTo = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             console.log("DOM Content Loaded - Initializing...");
@@ -828,35 +816,40 @@
         async function handleFilterSubmit(e) {
             e.preventDefault();
             const caste = document.getElementById('casteSelect').value;
-            const minqul = document.getElementById('qualSelect').value;
-            const date = document.getElementById('dateSelect').value;
+            const qual = document.getElementById('qualSelect').value;
             const time = document.getElementById('timeSelect').value;
 
-            const payload = { caste, minqul };
-            if (date) {
-                payload.cal_date = date;
-            }
-            if (time) {
-                payload.cal_time = time;
-            }
-
             try {
-                // The counselling-session list lives at /admission-timings/view; the bare POST on
-                // /admission-timings creates a schedule row and answered 400 for this payload.
-                const resp = await fetch(`\${NODE_API_BASE}/admission-timings/view`, {
+                // Legacy startAdmission_ConvvinerLevel.jsp -> itiAdmissionEntry.do: validates rank
+                // generation, checks the seat matrix, and resolves the merit window (merit_from/
+                // merit_to) from admission_timings for the district/ITI and today.
+                const resp = await fetch(`\${NODE_API_BASE}/api/admission/council-merits`, {
                     method: 'POST',
                     headers: apiHeaders({ 'Content-Type': 'application/json' }),
                     credentials: 'include',
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ caste_perform: caste, qual_perform: qual, adm_perform: time })
                 });
                 const result = await resp.json();
                 if (result.success && result.data) {
-                    renderTimings(result.data);
+                    meritFrom = result.data.merit_from;
+                    meritTo = result.data.merit_to;
+                    document.getElementById('meritRangeDisp').innerText =
+                        `Ranks for counseling: \${meritFrom} to \${meritTo}`;
+                    document.getElementById('admDateDisp').innerText =
+                        `Date: \${result.data.current_date}`;
+                    renderTimings([{
+                        date: result.data.current_date,
+                        meritRange: \`\${meritFrom} to \${meritTo}\`,
+                        caste: caste,
+                        qualification: qual,
+                        calTime: result.data.cal_time || time
+                    }]);
                 } else {
-                    showFilterError(result.error || result.message || "No records found.");
+                    // Legacy shows "Admission Date is Expired" when phase != 1, or the failure page.
+                    showFilterError(result.message || result.error || "No counselling window for today.");
                 }
             } catch (err) {
-                showFilterError("Failed to fetch timings.");
+                showFilterError("Failed to start admission.");
             }
         }
 
@@ -891,24 +884,53 @@
         async function handleRankSubmit(e) {
             e.preventDefault();
             const rank = document.getElementById('rankInput').value;
+            // Legacy DistrictAdmissionEntry.jsp checkRange(): rank must be within merit_from..merit_to.
+            if (meritFrom != null && meritTo != null) {
+                const val = Number(rank);
+                if (val < meritFrom || val > meritTo) {
+                    alert(\`Please Enter valid Rank and It should between '\${meritFrom}' and '\${meritTo}'\`);
+                    document.getElementById('rankInput').value = '';
+                    document.getElementById('rankInput').focus();
+                    return;
+                }
+            }
             try {
-                const resp = await fetch(`\${NODE_API_BASE}/api/admission/rank-lookup`, {
+                // Legacy districtAdmissionProcessOptimise.do: resolve the candidate and compute
+                // the seat-matrix check cascade for this rank's profile.
+                const resp = await fetch(`\${NODE_API_BASE}/api/admission/process-optimize`, {
                     method: 'POST',
                     headers: apiHeaders({ 'Content-Type': 'application/json' }),
                     credentials: 'include',
-                    body: JSON.stringify({ rank })
+                    body: JSON.stringify({
+                        rank,
+                        caste_perform: document.getElementById('casteSelect').value,
+                        qual_perform: document.getElementById('qualSelect').value,
+                        adm_perform: document.getElementById('timeSelect').value
+                    })
                 });
                 const result = await resp.json();
                 if (result.success && result.data) {
                     currentStudent = result.data;
                     showStudentDetails(result.data, rank);
-                    fetchSeatMatrix();
+                    seatMatrixData = result.seat_matrix || [];
+                    shiftUnitMatrix = result.shift_units || [];
+                    renderSeatMatrix();
+                } else if (result.code === 'ALREADY_ADMITTED' && result.admission_details) {
+                    showAlreadyAdmitted(result.admission_details, result.data);
                 } else {
-                    showRankError(result.message || "Student not found.");
+                    showRankError(result.message || result.error || "Student not found.");
                 }
             } catch (err) {
                 showRankError("Failed to lookup rank.");
             }
+        }
+
+        function showAlreadyAdmitted(adm, student) {
+            document.getElementById('rankError').style.display = 'none';
+            document.getElementById('admissionSection').style.display = 'none';
+            document.getElementById('alreadyAdmittedSection').style.display = 'block';
+            document.getElementById('admNoticeText').innerHTML =
+                \`Student was admitted in <strong class="text-primary">\${adm.iti_name}</strong> for <strong class="text-primary">\${adm.trade_name}</strong> on <strong>\${new Date(adm.date_of_admission).toLocaleDateString('en-GB')}</strong>.\`;
         }
 
         function showStudentDetails(s, rank) {
@@ -983,43 +1005,65 @@
 
         function renderSeatMatrix(filter = '') {
             const tbody = document.getElementById('seatMatrixBody');
+            const thead = document.getElementById('seatMatrixHead');
             tbody.innerHTML = '';
-            
-            const filtered = seatMatrixData.filter(item => 
-                item.iti_name.toLowerCase().includes(filter.toLowerCase()) ||
-                item.trade_name.toLowerCase().includes(filter.toLowerCase())
+
+            // Header: a category group (3 columns each) per the candidate's layout branch.
+            if (thead) {
+                const groups = seatMatrixLayout.map(c =>
+                    `<th colspan="3" class="category-header">\${c.label}</th>`).join('');
+                const subs = seatMatrixLayout.map(() =>
+                    `<th class="tfv-header">T</th><th class="tfv-header">F</th><th class="tfv-header">V</th>`).join('');
+                thead.innerHTML = `
+                    <tr>
+                        <th rowspan="2" class="align-middle text-center">ITI Name</th>
+                        <th rowspan="2" class="align-middle text-center">Trade Name</th>
+                        <th rowspan="2" class="align-middle text-center">Select</th>
+                        <th rowspan="2" class="align-middle text-center">Total</th>
+                        \${groups}
+                    </tr>
+                    <tr>\${subs}</tr>`;
+            }
+
+            const filtered = seatMatrixData.filter(item =>
+                (item.iti_name || '').toLowerCase().includes(filter.toLowerCase()) ||
+                (item.trade_name || '').toLowerCase().includes(filter.toLowerCase())
             );
 
-            filtered.forEach((item, idx) => {
+            filtered.forEach((item) => {
+                // Legacy radio value is iti_name+iti_code+trade_code+check; check 0 = no vacancy
+                // (radio disabled). The check code is what decides res_category on submit.
+                const check = item.check != null ? item.check : 0;
+                const disabled = check === 0;
+                const value = \`\${item.iti_name}+\${item.iti_code}+\${item.trade_code}+\${check}\`;
+                const cells = seatMatrixLayout.map(c =>
+                    `<td class="text-center">\${item[c.strength]}</td>
+                     <td class="text-center">\${item[c.fill]}</td>
+                     <td class="text-center">\${item[c.vacant]}</td>`).join('');
                 const row = `
                     <tr>
                         <td class="small">\${item.iti_name}</td>
                         <td class="small fw-bold">\${item.trade_name}</td>
                         <td class="text-center">
-                            <input type="radio" name="selectedTrade" value="\${idx}" 
+                            <input type="radio" name="selectedTrade" value="\${value}"
                                 data-iti="\${item.iti_code}" data-trade="\${item.trade_code}"
-                                data-iti-name="\${item.iti_name}" data-trade-name="\${item.trade_name}">
+                                data-check="\${check}"
+                                data-iti-name="\${item.iti_name}" data-trade-name="\${item.trade_name}"
+                                \${disabled ? 'disabled' : ''}>
                         </td>
-                        <td class="text-center fw-bold">\${item.strength_total || 'N/A'}</td>
-                        <!-- General -->
-                        <td class="tfv-cell"><span class="tfv-val tfv-t">\${item.categories.General.T}</span></td>
-                        <td class="tfv-cell"><span class="tfv-val tfv-f">\${item.categories.General.F}</span></td>
-                        <td class="tfv-cell"><span class="tfv-val tfv-v">\${item.categories.General.V}</span></td>
-                        <!-- IM -->
-                        <td class="tfv-cell"><span class="tfv-val tfv-t">\${item.categories.IM.T}</span></td>
-                        <td class="tfv-cell"><span class="tfv-val tfv-f">\${item.categories.IM.F}</span></td>
-                        <td class="tfv-cell"><span class="tfv-val tfv-v">\${item.categories.IM.V}</span></td>
-                        <!-- PH -->
-                        <td class="tfv-cell"><span class="tfv-val tfv-t">\${item.categories.PH.T}</span></td>
-                        <td class="tfv-cell"><span class="tfv-val tfv-f">\${item.categories.PH.F}</span></td>
-                        <td class="tfv-cell"><span class="tfv-val tfv-v">\${item.categories.PH.V}</span></td>
-                        <!-- EX-S -->
-                        <td class="tfv-cell"><span class="tfv-val tfv-t">\${item.categories.EXS.T}</span></td>
-                        <td class="tfv-cell"><span class="tfv-val tfv-f">\${item.categories.EXS.F}</span></td>
-                        <td class="tfv-cell"><span class="tfv-val tfv-v">\${item.categories.EXS.V}</span></td>
+                        <td class="text-center fw-bold">\${item.total_strength || 'N/A'}</td>
+                        \${cells}
                     </tr>
                 `;
-                tbody.insertAdjacentHTML('beforeend', row);
+                tbody.insertAdjacentHTML('beforeend',row);
+            });
+
+            // Wire radio selection to load the shift/unit options for that ITI/trade
+            // (legacy onRadioClick -> getShiftUnit.jsp).
+            tbody.querySelectorAll('input[name="selectedTrade"]').forEach((radio) => {
+                radio.addEventListener('change', () => {
+                    loadShiftUnit(radio.dataset.iti, radio.dataset.trade);
+                });
             });
         }
 
@@ -1034,10 +1078,19 @@
             empty.style.display = 'none';
             card.style.display = 'block';
             try {
-                const url = `\${NODE_API_BASE}/api/admission/shift-unit?itiCode=\${encodeURIComponent(itiCode)}&tradeCode=\${encodeURIComponent(tradeCode)}`;
-                const resp = await fetch(url, { headers: apiHeaders(), credentials: 'include' });
-                const res = await resp.json();
-                const list = (res && res.shifts) ? res.shifts : [];
+                // Prefer the options already returned by the process-optimize cascade; fall back
+                // to the getShiftUnit.jsp-equivalent endpoint.
+                let list = [];
+                const preloaded = shiftUnitMatrix.find(
+                    (s) => s.iti_code === itiCode && String(s.trade_code) === String(tradeCode));
+                if (preloaded && preloaded.options) {
+                    list = preloaded.options;
+                } else {
+                    const url = `\${NODE_API_BASE}/api/admission/shift-unit?itiCode=\${encodeURIComponent(itiCode)}&tradeCode=\${encodeURIComponent(tradeCode)}`;
+                    const resp = await fetch(url, { headers: apiHeaders(), credentials: 'include' });
+                    const res = await resp.json();
+                    list = (res && res.shifts) ? res.shifts : [];
+                }
                 shiftUnitOptions = list;
                 if (list.length === 0) {
                     empty.style.display = 'block';
@@ -1048,10 +1101,13 @@
                     const unit = s.unit_allowed != null ? s.unit_allowed : '';
                     const strength = s.strength != null ? s.strength : '';
                     const vacant = s.strength_vacant != null ? s.strength_vacant : '';
+                    // Legacy selectedRadio value is shift|unit|strength (DistrictAdmissionAction
+                    // splits on | and takes [0]=shift [1]=unit [2]=strength).
                     const row = `
                         <tr>
                             <td class="text-center"><input type="radio" name="selectedShiftUnit"
-                                value="\${shift}|\${unit}" data-shift="\${shift}" data-unit="\${unit}"></td>
+                                value="\${shift}|\${unit}|\${strength}"
+                                data-shift="\${shift}" data-unit="\${unit}" data-strength="\${strength}"></td>
                             <td class="text-center">\${shift}</td>
                             <td class="text-center">\${unit}</td>
                             <td class="text-center">\${strength}</td>
@@ -1088,6 +1144,9 @@
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Admitting...';
                 document.getElementById('admissionError').style.display = 'none';
 
+                const selectedRadio = shiftUnit
+                    ? \`\${shiftUnit.dataset.shift}|\${shiftUnit.dataset.unit}|\${shiftUnit.dataset.strength}\`
+                    : null;
                 const payload = {
                     regid: currentStudent.regid,
                     trade_code: selected.dataset.trade,
@@ -1100,7 +1159,11 @@
                     ssc_month: currentStudent.ssc_month,
                     type_admission: document.getElementById('admissionBoard').value,
                     shift: shiftUnit ? shiftUnit.dataset.shift : null,
-                    unit: shiftUnit ? shiftUnit.dataset.unit : null
+                    unit: shiftUnit ? shiftUnit.dataset.unit : null,
+                    strength: shiftUnit ? shiftUnit.dataset.strength : null,
+                    selectedRadio,
+                    check: selected.dataset.check,
+                    caste_name: document.getElementById('casteSelect').value
                 };
 
                 console.log("Processing admission with payload:", payload);
