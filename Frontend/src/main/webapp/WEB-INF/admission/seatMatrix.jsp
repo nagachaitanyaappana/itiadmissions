@@ -67,15 +67,23 @@
 function esc(s){ if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function opt(v,t){ return '<option value="'+esc(v)+'">'+esc(t)+'</option>'; }
 function setErr(id,m){ document.getElementById(id).innerHTML = m||''; }
+var SESSION_INS_CODE = '<c:out value="${sessionScope.insCode}"/>';
+if(!SESSION_INS_CODE){ try { SESSION_INS_CODE = localStorage.getItem('insCode') || ''; } catch(e){} }
+var DIST = SESSION_INS_CODE;
 function loadItis(){
   var sel = document.getElementById('itiSel');
-  fetch(CTX + '/SeatMatrix/api/district/32/itis').then(function(r){ return r.json(); }).then(function(list){
+  if(!DIST){
+    sel.innerHTML = opt('','--select--');
+    setErr('itiError','No district is set for this login.');
+    return;
+  }
+  fetch(CTX + '/SeatMatrix/api/district/' + encodeURIComponent(DIST) + '/itis').then(function(r){ return r.json(); }).then(function(list){
     if(!Array.isArray(list) || list.length===0) throw 0;
     var h = opt('','--select--');
     list.forEach(function(x){ h += opt(x.itiCode, x.itiCode + ' - ' + x.itiName); });
     sel.innerHTML = h;
   }).catch(function(){
-    fetch(CTX + '/SeatMatrix/api/itis/32').then(function(r){ return r.json(); }).then(function(nm){
+    fetch(CTX + '/SeatMatrix/api/itis/' + encodeURIComponent(DIST)).then(function(r){ return r.json(); }).then(function(nm){
       var h = opt('','--select--');
       (Array.isArray(nm)?nm:[]).forEach(function(n){ h += opt(n,n); });
       sel.innerHTML = h;

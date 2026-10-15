@@ -67,7 +67,8 @@
                             <li><a class="dropdown-item" href="${pageContext.request.contextPath}/MeritList">Merit List
                                 </a>
                             </li>
-                            <li><a class="dropdown-item" href="#">Add Trade</a></li>
+                            <li><a class="dropdown-item" href="${pageContext.request.contextPath}/iti-trade-selection">DGT Permitted Shift Units</a></li>
+                            <li><a class="dropdown-item" href="${pageContext.request.contextPath}/AddTrade">Add Trade</a></li>
                             <li><a id="nav-admission-phase" class="dropdown-item"
                                     href="${pageContext.request.contextPath}/AdmissionCounseling/Start">Admission Phase 1 (Start)</a></li>
                             <li><a class="dropdown-item"
@@ -81,7 +82,6 @@
                             <li><a class="dropdown-item" href="#">Call Letter</a></li>
                             <li><a class="dropdown-item" href="#">DISCHARGE ADMISSION</a></li>
                             <li><a class="dropdown-item" href="${pageContext.request.contextPath}/VerifyApplication" onclick="validateReportAccess(event, '3', '${pageContext.request.contextPath}/VerifyApplication')">Verification For Online Application</a></li>
-                            <li><a class="dropdown-item" href="${pageContext.request.contextPath}/DgtPermittedShift">DGT Permitted Shift Units</a></li>
 
 
                         </ul>

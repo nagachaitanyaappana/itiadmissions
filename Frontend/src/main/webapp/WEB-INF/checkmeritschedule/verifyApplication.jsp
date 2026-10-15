@@ -71,12 +71,6 @@
         #marksTable .text-right { text-align: right; }
         #marksTable tfoot tr { background: #f5f5f5; font-weight: bold; }
 
-        /* Trades Table */
-        #tradesTable { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 400px; }
-        #tradesTable th { background: #f5f5f5; padding: 6px; border: 1px solid #ddd; text-align: center; }
-        #tradesTable td { padding: 6px; border: 1px solid #ddd; text-align: center; }
-        #tradesTable td:nth-child(3) { text-align: left; }
-
         /* Document Verification Table */
         #docTable { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
         #docTable th { background: #f5f5f5; padding: 6px; border: 1px solid #ddd; text-align: left; width: 40%; }
@@ -209,22 +203,6 @@
                     </tfoot>
                 </table>
 
-                <!-- Selected ITIs -->
-                <h6 class="section-hdr">Selected ITIs (in your district)</h6>
-                <div style="overflow-x: auto;">
-                    <table id="tradesTable">
-                        <thead>
-                            <tr style="background: #f5f5f5;">
-                                <th style="width: 50px;">S.No</th>
-                                <th>ITI Code</th>
-                                <th>ITI Name</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tradesBody">
-                            <tr><td colspan="3" style="text-align:center;color:#666;padding:12px;">No trade selections in your district</td></tr>
-                        </tbody>
-                    </table>
-                </div>
                 <div id="districtScopeMsg"></div>
 
                 <!-- Document Verification -->

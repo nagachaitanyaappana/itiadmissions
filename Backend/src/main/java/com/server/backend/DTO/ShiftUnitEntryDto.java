@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class ShiftUnitEntryDto {
 
-    /** Ignored on save: strength is derived from the trade's sanctioned strength (Add Trade). */
+    /** Permitted capacity for this shift/unit, entered on the DGT Permitted Shift Units screen. */
     private Integer strength;
 
     @NotNull(message = "Shift allowed is required")

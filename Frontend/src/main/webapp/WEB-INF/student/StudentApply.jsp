@@ -222,6 +222,9 @@
                         CURRENT_SSC_TYPE = s.sscType;
                         document.getElementById("gateDiv").style.display = "none";
                         renderRegistrationDetails(s);
+                        $.get('${backendBaseUrl}/api/student/marks/' + s.regid, function (m) {
+                            renderMarksDetails(s, m);
+                        }).fail(function () { renderMarksDetails(s, null); });
                         initSelectionStep();
                         window.scrollTo(0, 0);
                     }).fail(function () {
@@ -275,7 +278,9 @@
                     var monthMap = { '03': 'March', '04': 'Supplymentary' };
                     var month = monthMap[String(s.sscMonth)] || s.sscMonth || '';
                     var pwdMap = { '1': 'Blind', '2': 'Deaf', '3': 'Motor Disability', '4': 'Mental Disability' };
-                    var pwd = (s.pwdCategory && s.pwdCategory !== 'N') ? (pwdMap[String(s.pwdCategory)] || s.pwdCategory) : '';
+                    var pwd = (s.pwdCategory && s.pwdCategory !== 'N' && String(s.pwdCategory).trim() !== '')
+                        ? (pwdMap[String(s.pwdCategory)] || s.pwdCategory)
+                        : 'None';
                     var qual = (s.sscPassed === true) ? 'SSC Passed' : (s.sscPassed === false ? '8th Passed' : '');
 
                     var h = '<h4 align="center"><b>Candidates Details are displayed from Database</b></h4>'
@@ -298,6 +303,34 @@
 
                     var box = document.getElementById("applyDetails");
                     box.innerHTML = h;
+                    box.style.display = "";
+                }
+
+                // SSC marks/GPA entered at registration (cand_marks), shown alongside the
+                // personal details so the whole registration record is visible here.
+                function renderMarksDetails(s, m) {
+                    var box = document.getElementById("applyMarks");
+                    if (!m) { box.innerHTML = ''; box.style.display = "none"; return; }
+                    var gpa = (s.sscType !== 'sscm');
+                    var suffix = gpa ? 'GPA' : 'Marks';
+                    var second = gpa ? m.sscSecondLangGpa : m.sscSecondLangMarks;
+                    var numLang = (second !== null && second !== undefined && String(second).trim() !== '') ? 'Three' : 'Two';
+                    var rows = gpa
+                        ? [['First Language', m.sscFirstLangGpa], ['Second Language', m.sscSecondLangGpa],
+                           ['Third Language - English', m.sscEngGpa], ['Mathematics', m.sscMathGpa],
+                           ['General Science', m.sscSciGpa], ['Social Studies', m.sscSocialGpa], ['Total', m.sscTotGpa]]
+                        : [['First Language', m.sscFirstLangMarks], ['Second Language', m.sscSecondLangMarks],
+                           ['Third Language - English', m.sscEngMarks], ['Mathematics', m.sscMathMarks],
+                           ['General Science', m.sscSciMarks], ['Social Studies', m.sscSocialMarks], ['Total', m.sscTotMarks]];
+                    var h = '<h4 align="center"><b>SSC Details (read-only) &mdash; Number of Languages: ' + numLang + '</b></h4>'
+                        + '<table class="apply-details">'
+                        + '<tr class="hdr"><td colspan="3">Subject-wise ' + suffix + '</td></tr>'
+                        + '<tr><td class="lbl">S.No</td><td class="lbl">Subject</td><td class="lbl">' + suffix + '</td></tr>';
+                    for (var i = 0; i < rows.length; i++) {
+                        h += '<tr><td>' + (i + 1) + '</td><td>' + rows[i][0] + '</td><td>'
+                            + aplVal(rows[i][1]) + '</td></tr>';
+                    }
+                    box.innerHTML = h + '</table>';
                     box.style.display = "";
                 }
 
@@ -592,6 +625,7 @@
     </p>
 
     <div id="applyDetails" style="display:none;width:70%;margin:10px auto;"></div>
+    <div id="applyMarks" style="display:none;width:70%;margin:10px auto;"></div>
 
     <div id="applySuccess" style="display:none;"></div>
 

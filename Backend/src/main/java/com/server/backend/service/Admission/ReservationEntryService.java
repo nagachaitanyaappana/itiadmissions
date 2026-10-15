@@ -92,7 +92,7 @@ public class ReservationEntryService {
         if (ready) {
             message = "Reservation Entry is open for ITI " + itiCode;
         } else if (!tradesApproved && !shiftUnitDone) {
-            message = "Add Trade and Approve All, and complete DGT Permitted Shifts Units for ITI "
+            message = "Complete DGT Permitted Shifts Units, then Add Trade and click Approve All, for ITI "
                     + itiCode + " before entering reservations.";
         } else if (!tradesApproved) {
             message = "No approved trade for ITI " + itiCode

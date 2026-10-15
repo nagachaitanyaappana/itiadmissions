@@ -158,8 +158,7 @@
                     <div class="col-md-7">
                         <select id="statusSelect" class="form-select custom-select-box">
                             <option value="checklist">checklist</option>
-                            <option value="regeneratechecklist">regeneratechecklist</option>
-                            <option value="finalmeritlist">finalmeritlist</option>
+                            <option value="finalmeritlist">merit</option>
                         </select>
                     </div>
                 </div>

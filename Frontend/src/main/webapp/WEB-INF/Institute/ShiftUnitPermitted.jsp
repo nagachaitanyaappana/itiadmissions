@@ -271,8 +271,6 @@
             let entries = [];
             let isSaving = false;
             let hadExistingConfig = false;
-            // Sanctioned strength taken from Add Trade (ititrade.strength); shown read-only.
-            let tradeStrength = null;
 
             // Initialize page
             initializePage();
@@ -325,13 +323,12 @@
                         return response.json();
                     })
                     .then(data => {
-                        tradeStrength = (data && data.tradeStrength != null) ? data.tradeStrength : null;
                         if (data && data.entries) {
                             // Populate existing configuration
                             availableYearSelect.value = String(data.availableYear);
                             hadExistingConfig = data.entries.length > 0;
                             entries = data.entries.map(entry => ({
-                                strength: tradeStrength != null ? tradeStrength : entry.strength,
+                                strength: entry.strength,
                                 shiftAllowed: entry.shiftAllowed,
                                 unitAllowed: entry.unitAllowed,
                                 strengthVacant: entry.strengthVacant
@@ -365,11 +362,11 @@
                 }
 
                 entries.forEach((entry, index) => {
-                    const strengthValue = tradeStrength != null ? tradeStrength : (entry.strength != null ? entry.strength : '');
+                    const strengthValue = (entry.strength != null ? entry.strength : '');
                     const row = document.createElement("tr");
                     row.innerHTML = `
                         <td>
-                            <input type="text" class="form-control form-control-sm strength-display" data-index="\${index}" value="\${strengthValue}" readonly>
+                            <input type="number" class="form-control form-control-sm strength-input" data-index="\${index}" value="\${strengthValue}" min="1" style="width: 100px;">
                         </td>
                         <td>
                             <select class="form-select form-select-sm shift-select" data-index="\${index}">
@@ -385,7 +382,7 @@
                         </td>
                         <td>
                             <input type="number" class="form-control form-control-sm strength-vacant-input" 
-                                   data-index="\${index}" value="\${entry.strengthVacant}" min="0" style="width: 100px;">
+                                   data-index="\${index}" value="\${entry.strengthVacant != null ? entry.strengthVacant : ''}" min="0" style="width: 100px;" placeholder="= strength">
                         </td>
                         <td>
                             <button class="btn btn-danger btn-sm remove-entry-btn" data-index="\${index}">
@@ -415,10 +412,10 @@
 
             function addEntry() {
                 entries.push({
-                    strength: tradeStrength != null ? tradeStrength : 0,
+                    strength: '',
                     shiftAllowed: 1,
                     unitAllowed: 1,
-                    strengthVacant: tradeStrength != null ? tradeStrength : 0
+                    strengthVacant: ''
                 });
                 renderEntries();
                 hideMessages();
@@ -434,7 +431,7 @@
                 const errors = [];
 
                 // Get current values from DOM
-                const strengthInputs = document.querySelectorAll('.strength-display');
+                const strengthInputs = document.querySelectorAll('.strength-input');
                 const shiftSelects = document.querySelectorAll('.shift-select');
                 const unitSelects = document.querySelectorAll('.unit-select');
                 const vacantInputs = document.querySelectorAll('.strength-vacant-input');
@@ -454,9 +451,9 @@
                     const unit = parseInt(unitSelects[i].value);
                     const vacant = parseInt(vacantInputs[i].value) || 0;
 
-                    // Strength comes from Add Trade; nothing to configure here.
+                    // Strength is entered here (permitted capacity for the shift/unit).
                     if (!(strength > 0)) {
-                        errors.push(`Entry ${i + 1}: Strength is not available. Configure the trade's strength in Add Trade first.`);
+                        errors.push(`Entry ${i + 1}: Strength is required and must be greater than 0.`);
                     }
 
                     // Validate shift
@@ -489,17 +486,19 @@
             function buildPayload() {
                 // Read current values from DOM
                 const updatedEntries = [];
-                const strengthInputs = document.querySelectorAll('.strength-display');
+                const strengthInputs = document.querySelectorAll('.strength-input');
                 const shiftSelects = document.querySelectorAll('.shift-select');
                 const unitSelects = document.querySelectorAll('.unit-select');
                 const vacantInputs = document.querySelectorAll('.strength-vacant-input');
 
                 for (let i = 0; i < entries.length; i++) {
+                    const vacantRaw = vacantInputs[i].value;
                     updatedEntries.push({
                         strength: parseInt(strengthInputs[i].value),
                         shiftAllowed: parseInt(shiftSelects[i].value),
                         unitAllowed: parseInt(unitSelects[i].value),
-                        strengthVacant: parseInt(vacantInputs[i].value) || 0
+                        // Blank means "not specified": let the backend default it to the strength.
+                        strengthVacant: vacantRaw === '' ? null : parseInt(vacantRaw)
                     });
                 }
 

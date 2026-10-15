@@ -43,6 +43,11 @@ public class AddTradeService {
             response.setItiName(String.valueOf(itiRows.get(0).get("iti_name")));
         }
 
+        Map<String, Object> config = currentPhaseConfig();
+        String year = config.get("year") == null ? null : String.valueOf(config.get("year"));
+        int phase = seatMatrixPhase(config);
+        response.setYear(year);
+
         Integer approved = jdbc.getJdbcTemplate().queryForObject(
                 "SELECT COUNT(*) FROM ititrade WHERE iti_code = ? AND conv_approval = 1",
                 Integer.class, itiCode);
@@ -56,8 +61,9 @@ public class AddTradeService {
                         + " ORDER BY m.trade_name NULLS LAST, t.trade_code",
                 itiCode);
         for (Map<String, Object> row : existing) {
+            Integer tradeCode = asInteger(row.get("trade_code"));
             response.getExistingTrades().add(new ExistingTradeDto(
-                    asInteger(row.get("trade_code")),
+                    tradeCode,
                     row.get("trade_short") == null ? null : String.valueOf(row.get("trade_short")),
                     row.get("trade_name") == null ? null : String.valueOf(row.get("trade_name")),
                     asInteger(row.get("strength")),
@@ -65,7 +71,8 @@ public class AddTradeService {
                     asInteger(row.get("strength_vacant")),
                     row.get("available_for_year") == null ? null : String.valueOf(row.get("available_for_year")),
                     asInteger(row.get("trade_freeze")),
-                    asInteger(row.get("conv_approval"))));
+                    asInteger(row.get("conv_approval")),
+                    buildSeatMatrix(itiCode, tradeCode, year, phase)));
         }
 
         List<Map<String, Object>> addable = jdbc.getJdbcTemplate().queryForList(
@@ -255,6 +262,51 @@ public class AddTradeService {
                 new MapSqlParameterSource()
                         .addValue("freeze", freeze ? 1 : 0)
                         .addValue("itiCode", itiCode));
+    }
+
+    private Map<String, Object> currentPhaseConfig() {
+        List<Map<String, Object>> rows = jdbc.getJdbcTemplate().queryForList(
+                "SELECT year, phase, seatmatrix_phase FROM admissions.admission_phase WHERE current = 'true'");
+        if (rows.isEmpty()) {
+            throw new IllegalStateException(
+                    "No current admission phase found in admissions.admission_phase");
+        }
+        return rows.get(0);
+    }
+
+    private static int seatMatrixPhase(Map<String, Object> config) {
+        Object seatMatrixPhase = config.get("seatmatrix_phase");
+        if (seatMatrixPhase != null && asInteger(seatMatrixPhase) != null && asInteger(seatMatrixPhase) > 0) {
+            return asInteger(seatMatrixPhase);
+        }
+        return asInteger(config.get("phase"));
+    }
+
+    /**
+     * Legacy "Seat Matrix" cell: the ITI+trade's per-category sanctioned strength from
+     * {@code iti_seatmatrix.strength} (hstore), rendered as {@code "OC-9 PH-13 EWS-9"}.
+     */
+    private String buildSeatMatrix(String itiCode, Integer tradeCode, String year, int phase) {
+        if (tradeCode == null || year == null) {
+            return "";
+        }
+        List<Map<String, Object>> rows = jdbc.getJdbcTemplate().queryForList(
+                "SELECT c.category_name, s.strength FROM"
+                        + " (SELECT skeys(strength) AS category_code, svals(strength) AS strength"
+                        + " FROM iti_seatmatrix"
+                        + " WHERE iti_code = ? AND trade_code = ? AND year = ? AND phase = ?) s"
+                        + " JOIN (SELECT DISTINCT category_code, category_name, category_order"
+                        + " FROM category_mast WHERE category_code IS NOT NULL) c"
+                        + " ON c.category_code = s.category_code"
+                        + " ORDER BY c.category_order NULLS LAST, c.category_name",
+                itiCode, tradeCode, year, phase);
+        StringBuilder builder = new StringBuilder();
+        for (Map<String, Object> row : rows) {
+            Integer value = asInteger(row.get("strength"));
+            builder.append(row.get("category_name")).append('-')
+                    .append(value == null ? 0 : value).append(' ');
+        }
+        return builder.toString().trim();
     }
 
     private static Integer asInteger(Object value) {

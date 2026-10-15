@@ -14,13 +14,16 @@ public class ExistingTradeDto {
     private String availableForYear;
     private Integer tradeFreeze;
     private Integer convApproval;
+    /** Per-category sanctioned strength, e.g. "OC-9 PH-13 EWS-9" (legacy "Seat Matrix" column). */
+    private String seatMatrix;
 
     public ExistingTradeDto() {
     }
 
     public ExistingTradeDto(Integer tradeCode, String tradeShort, String tradeName,
                             Integer strength, Integer strengthFill, Integer strengthVacant,
-                            String availableForYear, Integer tradeFreeze, Integer convApproval) {
+                            String availableForYear, Integer tradeFreeze, Integer convApproval,
+                            String seatMatrix) {
         this.tradeCode = tradeCode;
         this.tradeShort = tradeShort;
         this.tradeName = tradeName;
@@ -30,5 +33,6 @@ public class ExistingTradeDto {
         this.availableForYear = availableForYear;
         this.tradeFreeze = tradeFreeze;
         this.convApproval = convApproval;
+        this.seatMatrix = seatMatrix;
     }
 }

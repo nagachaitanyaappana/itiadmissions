@@ -30,6 +30,12 @@
   .res-table { border-collapse:collapse; margin:10px auto; font-size:13px; background:#ffffcc; border:1px solid #000; }
   .res-table th, .res-table td { border:1px solid #000; padding:5px 10px; text-align:center; font-family:"Courier New",Courier,monospace; font-size:18px; }
   .res-table th { background:green; color:#fff; font-weight:bold; }
+  .trade-table { width:788px; max-width:96%; margin:10px auto; border-collapse:collapse; background:#E9E7FE; border:1px solid #000; }
+  .trade-table th, .trade-table td { border:1px solid #000; padding:4px 6px; font-family:"Courier New",Courier,monospace; font-size:18px; text-align:left; vertical-align:top; }
+  .trade-table th { font-weight:bold; }
+  .trade-table a { color:#000099; }
+  .big-link { font-family:"Courier New",Courier,monospace; font-size:24px; font-weight:bold; color:#000099; cursor:pointer; }
+  .big-link:hover { color:#FF0000; }
   .add-form { border-collapse:collapse; margin:10px auto; background:#e4eeb9; border:2px solid #000; font-family:Verdana,Arial,sans-serif; font-size:13px; }
   .add-form td { padding:6px 10px; }
   .add-form select, .add-form input[type=text] { padding:3px; font-size:13px; }
@@ -91,7 +97,7 @@ function loadItis(){
     });
 }
 
-function getTrades(){
+function getTrades(onDone){
   var iti = document.getElementById('itiSel').value;
   setErr('itiError', iti ? '' : 'ITI is required.');
   if(!iti) return;
@@ -101,7 +107,7 @@ function getTrades(){
   area.innerHTML = '<p style="text-align:center;">Loading trades...</p>';
   fetch(CTX + '/AddTrade/api/iti/' + encodeURIComponent(iti) + '/available-trades')
     .then(function(r){ return r.json(); })
-    .then(function(resp){ render(resp, iti); })
+    .then(function(resp){ render(resp, iti); if(onDone) onDone(); })
     .catch(function(){ area.innerHTML = '<p style="color:red;text-align:center;">Backend unavailable. Please try again later.</p>'; })
     .finally(function(){ btn.disabled = false; btn.value = 'Submit'; });
 }
@@ -112,59 +118,75 @@ function render(resp, iti){
   if(!resp || (!resp.addableTrades && !resp.existingTrades)){
     area.innerHTML = '<p style="color:red;text-align:center;">No data for ITI=' + esc(iti) + '.</p>'; return;
   }
+  var year = resp.year ? esc(resp.year) : '';
   var h = '<div class="vac-head">Trades for ITI ' + esc(iti) + ' - ' + esc(resp.itiName || '') + '</div>'
-        + '<div class="freeze-warn">Once the Trades are frozen ,they cannot be edited</div>';
+        + '<div class="freeze-warn">when the Trades are frozen , its not possible to edit</div>';
 
   var existing = resp.existingTrades || [];
-  h += '<table class="res-table"><thead><tr><th>Trade Code</th><th>Trade</th><th>Strength</th><th>Filled</th>'
-     + '<th>Vacant</th><th>Available for year</th><th>Approved</th><th>Frozen</th><th>Edit</th></tr></thead><tbody>';
+  h += '<table class="trade-table"><thead><tr>'
+     + '<th>Trade Code</th><th>Trade</th><th>Strength</th>'
+     + '<th>Avail able for year ' + year + '</th>'
+     + '<th>Seat Matrix</th><th>Edit</th><th>Reservation Entry</th>'
+     + '</tr></thead><tbody>';
   if(existing.length === 0){
-    h += '<tr><td colspan="9" style="text-align:center;">No trades attached to this ITI.</td></tr>';
+    h += '<tr><td colspan="7" style="text-align:center;">No trades attached to this ITI.</td></tr>';
   }
   existing.forEach(function(t){
-    h += '<tr><td>' + esc(t.tradeCode) + '</td><td>' + esc(t.tradeShort) + ' - ' + esc(t.tradeName) + '</td>'
-       + '<td>' + num(t.strength) + '</td><td>' + num(t.strengthFill) + '</td>'
-       + '<td>' + num(t.strengthVacant) + '</td>'
+    var frozen = num(t.tradeFreeze) === 1;
+    var editCell = frozen ? ''
+        : '<a href="javascript:void(0)" onclick="openEdit(' + "'" + esc(iti) + "'" + ',' + num(t.tradeCode) + ');">Edit</a>';
+    var resCell = frozen ? '<a href="' + CTX + '/ReservationEntry">Reservation Entry</a>' : '';
+    h += '<tr><td>' + esc(t.tradeCode) + '</td>'
+       + '<td>' + esc(t.tradeShort) + ' - ' + esc(t.tradeName) + '</td>'
+       + '<td>' + num(t.strength) + '</td>'
        + '<td>' + (String(t.availableForYear) === '1' ? 'Yes' : 'No') + '</td>'
-       + '<td>' + (num(t.convApproval) === 1 ? 'Yes' : 'No') + '</td>'
-       + '<td>' + (num(t.tradeFreeze) === 1 ? 'Frozen' : 'Open') + '</td>'
-       + '<td><input type="button" class="lg-linkbtn" value="Edit" onclick="openEdit('
-       + "'" + esc(iti) + "'" + ',' + num(t.tradeCode) + ');" /></td></tr>';
+       + '<td>' + esc(t.seatMatrix || '') + '</td>'
+       + '<td>' + editCell + '</td>'
+       + '<td>' + resCell + '</td></tr>';
   });
   h += '</tbody></table>';
 
-  h += '<div class="act-row">'
-     + '<input type="button" class="lg-linkbtn" value="Freeze All Trades" onclick="freezeAll(true);" />'
-     + '&nbsp;<input type="button" class="lg-linkbtn" value="UnFreeze All Trades" onclick="freezeAll(false);" />'
-     + '<div style="margin-top:6px;"><span class="ok" id="freezeMsg"></span> <span class="err" id="freezeErr"></span></div>'
+  h += '<div class="act-row">';
+  if(existing.length > 0){
+    h += '<input type="button" id="apprBtn" class="lg-linkbtn" value="Approve All" onclick="approveGo();" />';
+  }
+  if(!resp.approvedExists){
+    h += ' <span class="big-link" id="addTradeLink" onclick="toggleAddTrade();">Add Trade</span>';
+  }
+  h += '<div style="margin-top:6px;"><span class="ok" id="actOk"></span> <span class="err" id="actErr"></span></div>'
      + '</div>';
-
 
   if(resp.approvedExists){
     h += '<div class="block-note">Trades for this ITI are already approved. '
        + 'No further trades can be added.</div>';
   } else {
     var addable = resp.addableTrades || [];
-    h += '<table class="add-form" style="width:60%;"><tbody>'
-      + '<tr><td class="label" style="text-align:right;font-weight:bold;">Trade * :</td><td style="text-align:left;">'
-      + '<select id="tradeSel">' + opt('','--select--')
-      + addable.map(function(t){ return opt(t.tradeCode, t.tradeShort + ' - ' + t.tradeName); }).join('')
-      + '</select></td></tr>'
-      + '<tr><td style="text-align:right;font-weight:bold;">Strength * :</td><td style="text-align:left;">'
-      + '<input type="text" id="strengthInput" onkeypress="return numerics(event);" /></td></tr>'
-      + '<tr><td style="text-align:right;font-weight:bold;">Available :</td><td style="text-align:left;">'
-      + '<label><input type="radio" name="avail" value="1" checked="checked" /> Yes</label>&nbsp;&nbsp;'
-      + '<label><input type="radio" name="avail" value="0" /> No</label></td></tr>'
-      + '<tr><td colspan="2" style="text-align:center;">'
-      + '<input type="button" id="addBtn" class="lg-linkbtn" value="Add Trade" onclick="addTradeGo();" />'
-      + '&nbsp;<input type="button" id="apprBtn" class="lg-linkbtn" value="Approve All" onclick="approveGo();" />'
-      + '<div style="margin-top:8px;"><span class="err" id="actErr"></span> <span class="ok" id="actOk"></span></div>'
-      + '</td></tr></tbody></table>';
+    h += '<div id="addTradeForm" style="display:none;">'
+       + '<div class="sub-head" style="color:#330066;">Add a new Trade for the ITI ' + esc(resp.itiName || '') + '</div>'
+       + '<table class="add-form" style="width:60%;"><tbody>'
+       + '<tr><td style="text-align:right;font-weight:bold;">Trade Code :</td><td style="text-align:left;">'
+       + '<select id="tradeSel">' + opt('','-----select-----')
+       + addable.map(function(t){ return opt(t.tradeCode, t.tradeShort + ' - ' + t.tradeName); }).join('')
+       + '</select></td></tr>'
+       + '<tr><td style="text-align:right;font-weight:bold;">strength :</td><td style="text-align:left;">'
+       + '<input type="text" id="strengthInput" onkeypress="return numerics(event);" /></td></tr>'
+       + '<tr><td style="text-align:right;font-weight:bold;">available :</td><td style="text-align:left;">'
+       + '<label><input type="radio" name="avail" value="1" checked="checked" /> Yes</label>&nbsp;&nbsp;'
+       + '<label><input type="radio" name="avail" value="0" /> No</label></td></tr>'
+       + '<tr><td colspan="2" style="text-align:center;">'
+       + '<input type="button" id="addBtn" class="submit-btn" value="Submit" onclick="addTradeGo();" /></td></tr>'
+       + '</tbody></table>'
+       + '</div>';
     if(addable.length === 0){
       h += '<div class="note">All master trades are already attached to this ITI.</div>';
     }
   }
   area.innerHTML = h;
+}
+
+function toggleAddTrade(){
+  var f = document.getElementById('addTradeForm');
+  if(f){ f.style.display = (f.style.display === 'none' || !f.style.display) ? 'block' : 'none'; }
 }
 
 function addTradeGo(){
@@ -200,8 +222,7 @@ function approveGo(){
   .then(function(r){ return r.json().then(function(b){ return {s: r.status, b: b}; }); })
   .then(function(x){
     if(x.b && x.b.success){
-      getTrades();
-      setMsg('actOk', x.b.message || 'Approved.');
+      getTrades(function(){ setMsg('actOk', x.b.message || 'Approved.'); });
     } else {
       setMsg('actErr', 'Approve All not completed: ' + ((x.b && (x.b.error || x.b.message)) ? (x.b.error || x.b.message) : ('HTTP ' + x.s)));
     }
@@ -213,22 +234,6 @@ function numerics(evt){
   var charCode = (evt.which) ? evt.which : evt.keyCode;
   if(charCode > 31 && (charCode < 48 || charCode > 57)){ return false; }
   return true;
-}
-
-function freezeAll(freeze){
-  setMsg('freezeMsg',''); setMsg('freezeErr','');
-  var iti = CURRENT_ITI || document.getElementById('itiSel').value;
-  if(!iti){ setMsg('freezeErr','Select an ITI first.'); return; }
-  fetch(CTX + '/AddTrade/api/iti/' + encodeURIComponent(iti) + '/freeze-trades?freeze=' + (freeze ? 'true' : 'false'), {method:'POST'})
-  .then(function(r){ return r.json().then(function(b){ return {s:r.status,b:b}; }); })
-  .then(function(x){
-    if(x.b && x.b.success){
-      setMsg('freezeMsg', x.b.message || (freeze ? 'Trades frozen.' : 'Trades unfrozen.'));
-      getTrades();
-    } else {
-      setMsg('freezeErr', (x.b && (x.b.error || x.b.message)) ? (x.b.error || x.b.message) : ('HTTP ' + x.s));
-    }
-  }).catch(function(){ setMsg('freezeErr','Backend unavailable.'); });
 }
 
 var EDIT = null;

@@ -105,14 +105,15 @@ function loadTrades(){
   gate.innerHTML = '';
   goBtn.disabled = false;
   if(!iti) return;
-  // Reservation Entry opens only after Add Trade (Approve All) AND DGT Permitted Shifts Units.
+  // Reservation Entry opens only after DGT Permitted Shifts Units AND Add Trade (Approve All).
   fetch(CTX + '/ReservationEntry/api/iti/' + encodeURIComponent(iti) + '/readiness')
     .then(function(r){ return r.json(); })
     .then(function(rd){
       if(!rd || !rd.ready){
         gate.className = 'gate-banner block';
         gate.innerHTML = esc((rd && rd.message) ? rd.message : 'Reservation Entry is not open for this ITI.')
-          + ' <a href="' + CTX + '/AddTrade">Go to Add Trade</a>';
+          + ' <a href="' + CTX + '/iti-trade-selection">DGT Permitted Shift Units</a>'
+          + ' | <a href="' + CTX + '/AddTrade">Add Trade</a>';
         sel.innerHTML = '<option value="">--select--</option>';
         goBtn.disabled = true;
         return;

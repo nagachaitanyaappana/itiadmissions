@@ -108,7 +108,6 @@ function showNoPhoto() {
 function renderResult(data) {
     const app = data.student;
     const marks = data.marks;
-    const trades = data.trades;
     const appStatus = data.appStatus || 'N';
     const allowed = data.allowed;
     const alreadyApproved = data.alreadyInApplication;
@@ -151,9 +150,6 @@ function renderResult(data) {
 
     // Marks
     renderMarks(marks);
-
-    // Trades
-    renderTrades(trades);
 
     // Document verification - pre-populate from student data
     populateDocumentVerification(app);
@@ -287,24 +283,6 @@ function renderMarks(marks) {
         ? marks.ssc_tot_marks 
         : marks.ssc_tot_gpa;
     document.getElementById('totalScore').textContent = total ?? '-';
-}
-
-function renderTrades(trades) {
-    const tbody = document.getElementById('tradesBody');
-    if (!trades || trades.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#666;padding:12px;">No trade selections in your district</td></tr>';
-        return;
-    }
-
-    let rows = '';
-    trades.forEach((t, i) => {
-        rows += `<tr>
-            <td style="text-align:center;padding:6px;border:1px solid #ddd;">${i + 1}</td>
-            <td style="text-align:center;padding:6px;border:1px solid #ddd;">${t.iti_code}</td>
-            <td style="padding:6px;border:1px solid #ddd;">${t.iti_name || ''}</td>
-        </tr>`;
-    });
-    document.getElementById('tradesBody').innerHTML = rows;
 }
 
 function showRejectReason() {

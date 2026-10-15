@@ -302,8 +302,7 @@
                                   + 'Your existing Registration ID is: <b>' + student.regid + '</b></p>'
                                 : '<p style="font-size:18px;color:#155724;">Your Registration ID is: <b>' + student.regid + '</b></p>';
                             var note = resumed
-                                ? '<p style="color:#155724;">Your registration details are already on record.</p>'
-                                  + '<p><a href="${pageContext.request.contextPath}/student-apply">Click here to continue to Apply for ITI (select your districts)</a></p>'
+                                ? '<p style="color:#155724;">Your earlier registration details are loaded below. Please verify/complete the personal details and SSC marks, then click <b>APPLY NOW</b> to continue.</p>'
                                 : '<p style="color:#155724;">Please note down your Registration ID. Now complete your application details below.</p>';
                             $('#regResult').html(
                                 '<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:60%;">'
@@ -311,7 +310,8 @@
                                 + regLine + note
                                 + '</div>');
                             document.getElementById("regFormDiv").style.display = "none";
-                            if (!resumed) { showStep2(student.regid, document.getElementById("ssc_type").value); }
+                            if (resumed) { resumeExisting(student.regid); }
+                            else { showStep2(student.regid, document.getElementById("ssc_type").value); }
                             window.scrollTo(0, 0);
                         },
                         error: function (xhr) {
@@ -403,20 +403,136 @@
                 document.getElementById("step2Div").style.display = "";
             }
 
-            function validateDetails() {
-                var req = [["name","Name"],["fname","Father's Name"],["appdob","Date of Birth"],["phno","Mobile Number"],["addr","Address"],["local","Local/Non-Local"],["casteSelect","Caste"]];
-                for (var i = 0; i < req.length; i++) {
-                    var el = document.getElementById(req[i][0]);
-                    if (!el.value || !el.value.trim()) { alert("Please enter " + req[i][1] + "."); el.focus(); return false; }
+            function setRadio(name, value) {
+                var els = document.getElementsByName(name);
+                for (var i = 0; i < els.length; i++) { els[i].checked = (els[i].value === value); }
+            }
+
+            // Resume path: an application for this SSC Hall Ticket already exists. Load the
+            // saved record (and marks) and re-open the personal-details form so the candidate
+            // can verify/complete it instead of being sent straight to district selection.
+            function resumeExisting(regid) {
+                $.get('${backendBaseUrl}/api/student/' + regid, function (s) {
+                    showStep2(s.regid, s.sscType);
+                    prefillExisting(s);
+                    $.get('${backendBaseUrl}/api/student/marks/' + regid, function (m) { prefillMarks(m); });
+                    window.scrollTo(0, 0);
+                }).fail(function () {
+                    alert("Could not load the existing registration. Please try again.");
+                });
+            }
+
+            function prefillExisting(s) {
+                document.getElementById("ssc_month").value = s.sscMonth || '';
+                document.getElementById("name").value = s.name || '';
+                document.getElementById("fname").value = s.fname || '';
+                document.getElementById("mname").value = s.mname || '';
+                setRadio("gender", s.gender || '');
+                document.getElementById("appdob").value = s.dob ? String(s.dob).substring(0, 10) : '';
+                document.getElementById("adarno").value = s.adarno || '';
+                document.getElementById("phno").value = s.phno || '';
+                document.getElementById("email").value = s.email || '';
+                document.getElementById("addr").value = s.addr || '';
+                document.getElementById("pincode").value = s.pincode || '';
+                document.getElementById("local").value = s.local || '';
+                document.getElementById("pwdCategory").value = (s.pwdCategory && s.pwdCategory !== 'N') ? s.pwdCategory : '';
+                document.getElementById("ssc").value = s.sscPassed === true ? 'yes' : (s.sscPassed === false ? 'no' : '');
+                setRadio("phc", s.phc === true ? 'yes' : (s.phc === false ? 'no' : ''));
+                setRadio("exs", s.exservice === true ? 'yes' : (s.exservice === false ? 'no' : ''));
+                setRadio("ews", s.economicWeakerSection === true ? 'yes' : (s.economicWeakerSection === false ? 'no' : ''));
+                if (s.caste) {
+                    if (!$('#casteSelect option[value="' + s.caste + '"]').length) {
+                        $('#casteSelect').append('<option value="' + s.caste + '" selected>' + s.caste + '</option>');
+                    } else {
+                        $('#casteSelect').val(s.caste);
+                    }
                 }
-                if (!radioVal("gender")) { alert("Please select Gender."); return false; }
+                if (s.subCaste && !$('#subCasteSelect option[value="' + s.subCaste + '"]').length) {
+                    $('#subCasteSelect').append('<option value="' + s.subCaste + '" selected>' + s.subCaste + '</option>');
+                }
+                if (s.regid) {
+                    $.get('${backendBaseUrl}/api/student/photo/' + s.regid, function (r) {
+                        var img = document.getElementById("uploadPreview");
+                        if (r && r.photo) { img.src = 'data:image/jpeg;base64,' + r.photo; }
+                    });
+                }
+            }
+
+            function prefillMarks(m) {
+                if (!m) { return; }
+                var gpa = (CURRENT_SSC_TYPE !== 'sscm');
+                var map = gpa
+                    ? [["g_firstlang","sscFirstLangGpa"],["g_secondlang","sscSecondLangGpa"],["g_english","sscEngGpa"],
+                       ["g_math","sscMathGpa"],["g_science","sscSciGpa"],["g_social","sscSocialGpa"],["g_total","sscTotGpa"]]
+                    : [["m_firstlang","sscFirstLangMarks"],["m_secondlang","sscSecondLangMarks"],["m_english","sscEngMarks"],
+                       ["m_math","sscMathMarks"],["m_science","sscSciMarks"],["m_social","sscSocialMarks"],["m_total","sscTotMarks"]];
+                for (var i = 0; i < map.length; i++) {
+                    var el = document.getElementById(map[i][0]);
+                    if (el && m[map[i][1]] !== null && m[map[i][1]] !== undefined) { el.value = m[map[i][1]]; }
+                }
+            }
+
+            function validateDetails() {
+                function required(id, label) {
+                    var el = document.getElementById(id);
+                    if (!el || String(el.value).trim() === "") {
+                        alert("Please enter " + label);
+                        if (el && el.focus) { el.focus(); }
+                        return false;
+                    }
+                    return true;
+                }
+
+                if (!required("ssc_month", "SSC Month")) return false;
+                if (!required("name", "Applicants name")) return false;
+                if (!required("phno", "mobile number")) return false;
                 if (!/^\d{10}$/.test(document.getElementById("phno").value.trim())) { alert("Mobile Number must be 10 digits."); return false; }
-                var ad = document.getElementById("adarno").value.trim();
-                if (ad !== "" && !/^\d{12}$/.test(ad)) { alert("Aadhaar must be 12 digits."); return false; }
-                var pin = document.getElementById("pincode").value.trim();
-                if (pin !== "" && !/^\d{6}$/.test(pin)) { alert("Pincode must be 6 digits."); return false; }
+                if (!required("appdob", "Date of Birth")) return false;
+                if (!required("adarno", "Adhar No")) return false;
+                if (!/^\d{12}$/.test(document.getElementById("adarno").value.trim())) { alert("Aadhar Number must be 12 digits."); return false; }
+                if (!radioVal("gender")) { alert("Please Select Gender"); return false; }
+                if (!required("fname", "Father name")) return false;
+                if (!required("mname", "Mother name")) return false;
+                if (!required("addr", "Address")) return false;
+                if (!required("local", "Local/Non local")) return false;
+                if (!required("casteSelect", "Caste")) return false;
+                if (!radioVal("phc")) { alert("Please Select Physically Challenged"); return false; }
+                if (radioVal("phc") === "yes" && String(document.getElementById("pwdCategory").value).trim() === "") { alert("please Enter PWD category"); return false; }
+                if (!radioVal("exs")) { alert("Please Select Ex-Servicemen"); return false; }
+                if (!required("ssc", "Qualification Id")) return false;
+                if (!radioVal("ews")) { alert("Please Select Economic Weaker Section"); return false; }
+
+                var email = document.getElementById("email").value.trim();
+                if (email === "") { alert("Please Enter Email"); return false; }
+                if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert("Please Enter valid Email"); return false; }
+
                 var p = document.getElementById("photo");
                 if (!p || !p.files || p.files.length === 0) { alert("Please upload your photograph (PNG or JPEG)."); return false; }
+
+                var consent = document.getElementById("consent");
+                if (!consent || !consent.checked) { alert("Consent is required"); return false; }
+
+                var board = document.getElementById("ssc_board") ? document.getElementById("ssc_board").value : '';
+                var year = document.getElementById("passed_year") ? document.getElementById("passed_year").value : '';
+                var qual = document.getElementById("ssc").value;
+                if (!(year === "2020" && qual === "yes" && board === "28")) {
+                    var gpa = (CURRENT_SSC_TYPE !== 'sscm');
+                    var suffix = gpa ? 'GPA' : 'Marks';
+                    var fields = [
+                        [gpa ? "g_firstlang" : "m_firstlang", "First Language " + suffix],
+                        [gpa ? "g_english" : "m_english", "Third Language " + suffix],
+                        [gpa ? "g_math" : "m_math", "Maths " + suffix],
+                        [gpa ? "g_science" : "m_science", "Science " + suffix],
+                        [gpa ? "g_social" : "m_social", "Social " + suffix]
+                    ];
+                    for (var i = 0; i < fields.length; i++) {
+                        if (!required(fields[i][0], fields[i][1])) return false;
+                    }
+                    var sub2 = document.getElementById("sub2");
+                    if (sub2 && sub2.checked) {
+                        if (!required(gpa ? "g_secondlang" : "m_secondlang", "Second Language " + suffix)) return false;
+                    }
+                }
                 return true;
             }
 
@@ -507,23 +623,44 @@
             }
 
             // ================= Confirmation modal (registration3) =================
-            // Review the entered details before the real save (photo -> update -> marks).
+            // Review every entered detail before the real save (photo -> update -> marks).
+            function optText(id) {
+                var el = document.getElementById(id);
+                if (!el) { return ''; }
+                if (el.tagName === 'SELECT') { return (el.options[el.selectedIndex] ? el.options[el.selectedIndex].text : ''); }
+                return el.value;
+            }
+            function yesNo(name) {
+                var v = radioVal(name);
+                return v === 'yes' ? 'Yes' : (v === 'no' ? 'No' : '');
+            }
             function confirmSubmit() {
                 if (!validateDetails()) return false;
                 var gpa = (CURRENT_SSC_TYPE !== 'sscm');
-                var name = document.getElementById("name").value.trim();
-                var fname = document.getElementById("fname").value.trim();
-                document.getElementById("c_sscregno").textContent = document.getElementById("ssc_regno") ? document.getElementById("ssc_regno").value : '';
+                var gender = radioVal("gender");
+                document.getElementById("c_sscregno").textContent = optText("ssc_regno");
                 document.getElementById("c_board").textContent = boardName();
-                document.getElementById("c_year").textContent = document.getElementById("passed_year") ? document.getElementById("passed_year").value : '';
-                document.getElementById("c_name").textContent = name + (fname ? ' ' + fname : '');
-                document.getElementById("c_dob").textContent = document.getElementById("appdob").value;
-                var casteSel = document.getElementById("casteSelect");
-                document.getElementById("c_caste").textContent = casteSel.options[casteSel.selectedIndex] ? casteSel.options[casteSel.selectedIndex].text : '';
-                var monthSel = document.getElementById("ssc_month");
-                document.getElementById("c_sscmonth").textContent = monthSel.options[monthSel.selectedIndex] ? monthSel.options[monthSel.selectedIndex].text : '';
-                var qualSel = document.getElementById("ssc");
-                document.getElementById("c_qual").textContent = qualSel.options[qualSel.selectedIndex] ? qualSel.options[qualSel.selectedIndex].text : '';
+                document.getElementById("c_year").textContent = optText("passed_year");
+                document.getElementById("c_sscmonth").textContent = optText("ssc_month");
+                document.getElementById("c_name").textContent = document.getElementById("name").value.trim();
+                document.getElementById("c_fname").textContent = document.getElementById("fname").value.trim();
+                document.getElementById("c_mname").textContent = document.getElementById("mname").value.trim();
+                document.getElementById("c_gender").textContent = gender ? (gender.charAt(0).toUpperCase() + gender.slice(1)) : '';
+                document.getElementById("c_dob").textContent = optText("appdob");
+                document.getElementById("c_adarno").textContent = optText("adarno");
+                document.getElementById("c_phno").textContent = optText("phno");
+                document.getElementById("c_email").textContent = optText("email");
+                document.getElementById("c_addr").textContent = optText("addr");
+                document.getElementById("c_pincode").textContent = optText("pincode");
+                document.getElementById("c_caste").textContent = optText("casteSelect");
+                document.getElementById("c_subcaste").textContent = optText("subCasteSelect");
+                document.getElementById("c_local").textContent = optText("local");
+                document.getElementById("c_phc").textContent = yesNo("phc");
+                document.getElementById("c_pwd").textContent = optText("pwdCategory") || 'None';
+                document.getElementById("c_exs").textContent = yesNo("exs");
+                document.getElementById("c_qual").textContent = optText("ssc");
+                document.getElementById("c_ews").textContent = yesNo("ews");
+                document.getElementById("c_langs").textContent = (document.getElementById("sub2") && document.getElementById("sub2").checked) ? 'Three' : 'Two';
                 document.getElementById("c_ssctype").textContent = gpa ? 'GPA' : 'Marks';
                 document.getElementById("c_mogpa").textContent = gpa ? 'GPA' : 'Marks';
                 var p = gpa
@@ -820,11 +957,26 @@
                 <tr><td>Hall Ticket Number</td><td>: <span id="c_sscregno"></span></td></tr>
                 <tr><td>Board</td><td>: <span id="c_board"></span></td></tr>
                 <tr><td>Year of Pass</td><td>: <span id="c_year"></span></td></tr>
-                <tr><td>Applicant's Name</td><td>: <span id="c_name"></span></td></tr>
-                <tr><td>Date of Birth</td><td>: <span id="c_dob"></span></td></tr>
-                <tr><td>Category</td><td>: <span id="c_caste"></span></td></tr>
                 <tr><td>Month of Pass</td><td>: <span id="c_sscmonth"></span></td></tr>
+                <tr><td>Applicant's Name</td><td>: <span id="c_name"></span></td></tr>
+                <tr><td>Father Name</td><td>: <span id="c_fname"></span></td></tr>
+                <tr><td>Mother Name</td><td>: <span id="c_mname"></span></td></tr>
+                <tr><td>Gender</td><td>: <span id="c_gender"></span></td></tr>
+                <tr><td>Date of Birth</td><td>: <span id="c_dob"></span></td></tr>
+                <tr><td>Aadhaar Number</td><td>: <span id="c_adarno"></span></td></tr>
+                <tr><td>Mobile Number</td><td>: <span id="c_phno"></span></td></tr>
+                <tr><td>Email</td><td>: <span id="c_email"></span></td></tr>
+                <tr><td>Address</td><td>: <span id="c_addr"></span></td></tr>
+                <tr><td>Pincode</td><td>: <span id="c_pincode"></span></td></tr>
+                <tr><td>Caste</td><td>: <span id="c_caste"></span></td></tr>
+                <tr><td>Sub Caste</td><td>: <span id="c_subcaste"></span></td></tr>
+                <tr><td>Local / Non-Local</td><td>: <span id="c_local"></span></td></tr>
+                <tr><td>Physically Challenged</td><td>: <span id="c_phc"></span></td></tr>
+                <tr><td>PWD Category</td><td>: <span id="c_pwd"></span></td></tr>
+                <tr><td>Ex-Servicemen</td><td>: <span id="c_exs"></span></td></tr>
                 <tr><td>Qualification</td><td>: <span id="c_qual"></span></td></tr>
+                <tr><td>Economic Weaker Section</td><td>: <span id="c_ews"></span></td></tr>
+                <tr><td>Number of Languages</td><td>: <span id="c_langs"></span></td></tr>
                 <tr><td>SSC Type</td><td>: <span id="c_ssctype"></span></td></tr>
             </table>
             <br>

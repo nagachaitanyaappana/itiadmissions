@@ -10,7 +10,5 @@ public class ShiftUnitPermittedResponseDto {
     private String itiCode;
     private String tradeCode;
     private Boolean availableYear;
-    /** Sanctioned strength from Add Trade (ititrade.strength); read-only on the page. */
-    private Integer tradeStrength;
     private List<ShiftUnitEntryDto> entries;
 }
