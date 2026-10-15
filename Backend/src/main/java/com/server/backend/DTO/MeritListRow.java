@@ -10,5 +10,6 @@ public record MeritListRow(
     String dob,
     String ssc_passed,
     String phc,
-    String exservice
+    String exservice,
+    String ssc_tot_gpa
 ) {}

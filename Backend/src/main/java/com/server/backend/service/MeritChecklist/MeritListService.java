@@ -243,9 +243,11 @@ public class MeritListService {
             "    to_char(b.dob, 'DD-MM-YYYY') as dob, \n" +
             "    CASE WHEN b.ssc_passed = 't' THEN 'Pass' ELSE 'Fail' END as ssc_passed,\n" +
             "    CASE WHEN b.phc = 't' THEN 'Yes' ELSE 'No' END as phc,\n" +
-            "    CASE WHEN b.exservice = 't' THEN 'Yes' ELSE 'No' END as exservice\n" +
+            "    CASE WHEN b.exservice = 't' THEN 'Yes' ELSE 'No' END as exservice,\n" +
+            "    COALESCE(cm.ssc_tot_gpa, '') as ssc_tot_gpa\n" +
             "FROM final_set r\n" +
             "JOIN application b ON r.regid::text = b.regid::text\n" +
+            "LEFT JOIN (SELECT DISTINCT regid, ssc_tot_gpa FROM cand_marks) cm ON cm.regid = r.regid::text\n" +
             "ORDER BY r.rank::integer;",
             dbTablename, codeColumn, codeColumn, dbTablename, insertColumns, selectValues, dbTablename, codeColumn
         );
@@ -269,7 +271,8 @@ public class MeritListService {
                 rs.getString("dob"),
                 rs.getString("ssc_passed"),
                 rs.getString("phc"),
-                rs.getString("exservice")
+                rs.getString("exservice"),
+                rs.getString("ssc_tot_gpa")
         ));
 
         if(results.isEmpty())

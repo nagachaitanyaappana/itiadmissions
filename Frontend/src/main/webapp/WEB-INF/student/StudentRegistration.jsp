@@ -470,6 +470,7 @@
                     var el = document.getElementById(map[i][0]);
                     if (el && m[map[i][1]] !== null && m[map[i][1]] !== undefined) { el.value = m[map[i][1]]; }
                 }
+                if (typeof recalcTotal === 'function') { recalcTotal(); }
             }
 
             function validateDetails() {
@@ -690,6 +691,53 @@
                 document.getElementById("confirmModal").style.display = "none";
                 return false;
             }
+
+            // ================= SSC total auto-computation =================
+            // Marks total = sum of the six subject marks.
+            // GPA total   = average of the subject GPAs (5 subjects when "two" languages,
+            //               else 6), rounded to one decimal. Port of the legacy
+            //               add()/addtotalmarks() in web/js/applicationScript.js, which is
+            //               what the merit ranking reads (ssc_tot_gpa / ssc_tot_marks).
+            function recalcTotal() {
+                function num(id) {
+                    var el = document.getElementById(id);
+                    if (!el) { return null; }
+                    var v = parseFloat(el.value);
+                    return isNaN(v) ? null : v;
+                }
+                var twoLang = !!(document.getElementById("sub1") && document.getElementById("sub1").checked);
+
+                var gpaIds = twoLang
+                    ? ["g_firstlang", "g_english", "g_math", "g_science", "g_social"]
+                    : ["g_firstlang", "g_secondlang", "g_english", "g_math", "g_science", "g_social"];
+                var anyGpa = false, gpaSum = 0, i;
+                for (i = 0; i < gpaIds.length; i++) { var g = num(gpaIds[i]); if (g !== null) { anyGpa = true; gpaSum += g; } }
+                var gTotal = document.getElementById("g_total");
+                if (gTotal) { gTotal.value = anyGpa ? (Math.round((gpaSum / gpaIds.length) * 10) / 10) : ""; }
+
+                var markIds = ["m_firstlang", "m_secondlang", "m_english", "m_math", "m_science", "m_social"];
+                var anyMark = false, markSum = 0;
+                for (i = 0; i < markIds.length; i++) { var m = num(markIds[i]); if (m !== null) { anyMark = true; markSum += m; } }
+                var mTotal = document.getElementById("m_total");
+                if (mTotal) { mTotal.value = anyMark ? markSum : ""; }
+            }
+
+            $(function () {
+                var subjectIds = ["g_firstlang", "g_secondlang", "g_english", "g_math", "g_science", "g_social",
+                                  "m_firstlang", "m_secondlang", "m_english", "m_math", "m_science", "m_social"];
+                subjectIds.forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.addEventListener("input", recalcTotal); el.addEventListener("change", recalcTotal); }
+                });
+                ["sub1", "sub2"].forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.addEventListener("change", recalcTotal); }
+                });
+                ["g_total", "m_total"].forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.readOnly = true; el.style.backgroundColor = "silver"; }
+                });
+            });
 
             $(document).on('change', '#casteSelect', loadSubCastes);
         </script>

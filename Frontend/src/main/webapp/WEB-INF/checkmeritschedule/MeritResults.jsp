@@ -89,6 +89,7 @@
                                 <th style="width: 100px;">SSC Status</th>
                                 <th style="width: 70px;">PH</th>
                                 <th style="width: 100px;">Ex-Service</th>
+                                <th style="width: 80px;">GPA</th>
                             </tr>
                         </thead>
                         <tbody id="meritBody">
@@ -128,7 +129,7 @@
                     renderTable(allData);
                 }
             } else {
-                document.getElementById('meritBody').innerHTML = '<tr><td colspan="12" class="text-center text-danger py-5 fw-bold"><i class="fas fa-exclamation-circle me-2"></i> No session data found. Redirecting...</td></tr>';
+                document.getElementById('meritBody').innerHTML = '<tr><td colspan="13" class="text-center text-danger py-5 fw-bold"><i class="fas fa-exclamation-circle me-2"></i> No session data found. Redirecting...</td></tr>';
                 setTimeout(() => window.location.href = "<%= request.getContextPath() %>/MeritList", 2000);
             }
         });
@@ -162,6 +163,7 @@
                     </td>
                     <td class="text-center">${row.phc || row.ph || 'No'}</td>
                     <td class="text-center">${row.exservice || 'No'}</td>
+                    <td class="text-center fw-bold">${(row.ssc_tot_gpa !== undefined && row.ssc_tot_gpa !== null && row.ssc_tot_gpa !== '') ? row.ssc_tot_gpa : 'N/A'}</td>
                 `;
                 body.appendChild(tr);
             });
