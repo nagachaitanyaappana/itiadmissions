@@ -111,6 +111,20 @@ public class StudentApplicationDto {
     private String phChallenge;
     private String exService;
 
+    // SSC / Inter marks submitted together with the application on the single-transaction
+    // registration call (legacy open_Application_InterfaceAction_Student wrote
+    // student_application + student_cand_marks + img_cand_photos in one transaction).
+    // Not a persisted column on student_application.
+    private com.server.backend.DTO.StudentCandMarksDto marks;
+
+    public com.server.backend.DTO.StudentCandMarksDto getMarks() {
+        return marks;
+    }
+
+    public void setMarks(com.server.backend.DTO.StudentCandMarksDto marks) {
+        this.marks = marks;
+    }
+
     public String getPhChallenge() {
         return phChallenge;
     }

@@ -294,24 +294,24 @@
                         data: JSON.stringify(payload),
                         success: function (student) {
                             var resumed = student && student.resumed === true;
-                            var heading = resumed
-                                ? 'Already Registered for this SSC Hall Ticket'
-                                : 'Registration Successful!';
-                            var regLine = resumed
-                                ? '<p style="font-size:18px;color:#155724;">An application already exists for this SSC Hall Ticket Number and the details match. '
-                                  + 'Your existing Registration ID is: <b>' + student.regid + '</b></p>'
-                                : '<p style="font-size:18px;color:#155724;">Your Registration ID is: <b>' + student.regid + '</b></p>';
-                            var note = resumed
-                                ? '<p style="color:#155724;">Your earlier registration details are loaded below. Please verify/complete the personal details and SSC marks, then click <b>APPLY NOW</b> to continue.</p>'
-                                : '<p style="color:#155724;">Please note down your Registration ID. Now complete your application details below.</p>';
-                            $('#regResult').html(
-                                '<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:60%;">'
-                                + '<h3 style="color:#155724;">' + heading + '</h3>'
-                                + regLine + note
-                                + '</div>');
                             document.getElementById("regFormDiv").style.display = "none";
-                            if (resumed) { resumeExisting(student.regid); }
-                            else { showStep2(student.regid, document.getElementById("ssc_type").value); }
+                            if (resumed) {
+                                $('#regResult').html(
+                                    '<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:60%;">'
+                                    + '<h3 style="color:#155724;">Already Registered for this SSC Hall Ticket</h3>'
+                                    + '<p style="font-size:18px;color:#155724;">An application already exists for this SSC Hall Ticket Number and the details match. '
+                                    + 'Your existing Registration ID is: <b>' + student.regid + '</b></p>'
+                                    + '<p style="color:#155724;">Your earlier registration details are loaded below. Please verify/complete the personal details and SSC marks, then click <b>APPLY NOW</b> to continue.</p>'
+                                    + '</div>');
+                                resumeExisting(student.regid);
+                            } else {
+                                $('#regResult').html(
+                                    '<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:60%;">'
+                                    + '<h3 style="color:#155724;">SSC Details Verified!</h3>'
+                                    + '<p style="color:#155724;">Now complete your application details and SSC marks below, then click <b>APPLY NOW</b> to get your Registration ID.</p>'
+                                    + '</div>');
+                                showStep2(null, document.getElementById("ssc_type").value);
+                            }
                             window.scrollTo(0, 0);
                         },
                         error: function (xhr) {
@@ -538,85 +538,75 @@
             }
 
             function doSubmitDetailsAndMarks() {
-                if (!CURRENT_REGID) { alert("Registration Id missing. Please restart registration."); return false; }
                 if (!validateDetails()) return false;
                 var btn = document.getElementById("regSaveBtn");
                 btn.disabled = true; btn.value = "Saving...";
 
+                var payload = {
+                    regid: CURRENT_REGID,
+                    sscRegNo: document.getElementById("ssc_regno").value.trim(),
+                    sscBoard: document.getElementById("ssc_board").value,
+                    sscYear: document.getElementById("passed_year").value,
+                    sscType: CURRENT_SSC_TYPE || document.getElementById("ssc_type").value,
+                    name: document.getElementById("name").value.trim(),
+                    fname: document.getElementById("fname").value.trim(),
+                    mname: document.getElementById("mname").value.trim(),
+                    gender: radioVal("gender"),
+                    dob: document.getElementById("appdob").value,
+                    adarno: document.getElementById("adarno").value.trim(),
+                    phno: document.getElementById("phno").value.trim(),
+                    email: document.getElementById("email").value.trim(),
+                    addr: document.getElementById("addr").value.trim(),
+                    pincode: document.getElementById("pincode").value.trim(),
+                    caste: document.getElementById("casteSelect").value,
+                    subCaste: document.getElementById("subCasteSelect").value,
+                    local: document.getElementById("local").value,
+                    sscMonth: document.getElementById("ssc_month").value,
+                    pwdCategory: document.getElementById("pwdCategory").value,
+                    sscPassed: document.getElementById("ssc").value === "" ? null : document.getElementById("ssc").value === 'yes',
+                    economicWeakerSection: radioVal("ews") === "yes",
+                    phc: radioVal("phc") === "yes",
+                    exservice: radioVal("exs") === "yes",
+                    year: SESSION_YEAR
+                };
+
+                var m = {};
+                if (CURRENT_SSC_TYPE === 'sscm') {
+                    m.sscFirstLangMarks = regVal("m_firstlang"); m.sscSecondLangMarks = regVal("m_secondlang");
+                    m.sscEngMarks = regVal("m_english"); m.sscMathMarks = regVal("m_math");
+                    m.sscSciMarks = regVal("m_science"); m.sscSocialMarks = regVal("m_social");
+                    m.sscTotMarks = regVal("m_total");
+                } else {
+                    m.sscFirstLangGpa = regVal("g_firstlang"); m.sscSecondLangGpa = regVal("g_secondlang");
+                    m.sscEngGpa = regVal("g_english"); m.sscMathGpa = regVal("g_math");
+                    m.sscSciGpa = regVal("g_science"); m.sscSocialGpa = regVal("g_social");
+                    m.sscTotGpa = regVal("g_total");
+                }
+
                 var fd = new FormData();
+                fd.append("application", new Blob([JSON.stringify(payload)], { type: "application/json" }));
+                fd.append("marks", new Blob([JSON.stringify(m)], { type: "application/json" }));
                 var fileInput = document.getElementById("photo");
                 if (fileInput && fileInput.files && fileInput.files.length > 0) { fd.append("photo", fileInput.files[0]); }
+
                 $.ajax({
-                    url: '${backendBaseUrl}/api/student/photo/' + CURRENT_REGID,
+                    url: '${backendBaseUrl}/api/student/register',
                     type: 'POST', data: fd, processData: false, contentType: false,
-                    success: function () {
-                        var payload = {
-                            name: document.getElementById("name").value.trim(),
-                            fname: document.getElementById("fname").value.trim(),
-                            mname: document.getElementById("mname").value.trim(),
-                            gender: radioVal("gender"),
-                            dob: document.getElementById("appdob").value,
-                            adarno: document.getElementById("adarno").value.trim(),
-                            phno: document.getElementById("phno").value.trim(),
-                            email: document.getElementById("email").value.trim(),
-                            addr: document.getElementById("addr").value.trim(),
-                            pincode: document.getElementById("pincode").value.trim(),
-                            caste: document.getElementById("casteSelect").value,
-                            subCaste: document.getElementById("subCasteSelect").value,
-                            local: document.getElementById("local").value,
-                            sscMonth: document.getElementById("ssc_month").value,
-                            pwdCategory: document.getElementById("pwdCategory").value,
-                            sscPassed: document.getElementById("ssc").value === "" ? null : document.getElementById("ssc").value === 'yes',
-                            economicWeakerSection: radioVal("ews") === "yes",
-                            phc: radioVal("phc") === "yes",
-                            exservice: radioVal("exs") === "yes"
-                        };
-                        $.ajax({
-                            url: '${backendBaseUrl}/api/student/update/' + CURRENT_REGID,
-                            type: 'PUT', contentType: 'application/json',
-                            data: JSON.stringify(payload),
-                            success: function () {
-                                var m = { regid: CURRENT_REGID, year: SESSION_YEAR };
-                                if (CURRENT_SSC_TYPE === 'sscm') {
-                                    m.sscFirstLangMarks = regVal("m_firstlang"); m.sscSecondLangMarks = regVal("m_secondlang");
-                                    m.sscEngMarks = regVal("m_english"); m.sscMathMarks = regVal("m_math");
-                                    m.sscSciMarks = regVal("m_science"); m.sscSocialMarks = regVal("m_social");
-                                    m.sscTotMarks = regVal("m_total");
-                                } else {
-                                    m.sscFirstLangGpa = regVal("g_firstlang"); m.sscSecondLangGpa = regVal("g_secondlang");
-                                    m.sscEngGpa = regVal("g_english"); m.sscMathGpa = regVal("g_math");
-                                    m.sscSciGpa = regVal("g_science"); m.sscSocialGpa = regVal("g_social");
-                                    m.sscTotGpa = regVal("g_total");
-                                }
-                                $.ajax({
-                                    url: '${backendBaseUrl}/api/student/marks/save',
-                                    type: 'POST', contentType: 'application/json',
-                                    data: JSON.stringify(m),
-                                    success: function () {
-                                        document.getElementById("step2Div").style.display = "none";
-                                        $('#step2Result').html(
-                                            '<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:70%;">'
-                                            + '<h3 style="color:#155724;">Details and Marks Saved!</h3>'
-                                            + '<p style="color:#155724;">Your application details and SSC marks are saved for Registration Id <b>'
-                                            + CURRENT_REGID + '</b>.</p>'
-                                            + '<p><a href="${pageContext.request.contextPath}/student-apply">Click here to continue to Step 2 - Apply for ITI (select your districts)</a></p></div>');
-                                        window.scrollTo(0, 0);
-                                    },
-                                    error: function () { btn.disabled = false; btn.value = "APPLY NOW"; alert("Details saved but marks could not be saved. Please retry from Edit Registration."); }
-                                });
-                            },
-                            error: function (xhr) {
-                                btn.disabled = false; btn.value = "APPLY NOW";
-                                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message
-                                    : "Failed to save application details. Please check the values and try again.";
-                                alert(msg);
-                            }
-                        });
+                    success: function (saved) {
+                        if (saved && saved.regid) { CURRENT_REGID = saved.regid; }
+                        document.getElementById("step2Div").style.display = "none";
+                        $('#step2Result').html(
+                            '<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:70%;">'
+                            + '<h3 style="color:#155724;">Registration Successful!</h3>'
+                            + '<p style="color:#155724;">Your application details and SSC marks are saved. Please note down your Registration ID: <b>'
+                            + CURRENT_REGID + '</b></p>'
+                            + '<p><a href="${pageContext.request.contextPath}/student-apply">Click here to continue to Step 2 - Apply for ITI (select your districts)</a></p></div>');
+                        window.scrollTo(0, 0);
                     },
                     error: function (xhr) {
                         btn.disabled = false; btn.value = "APPLY NOW";
-                        var msg = "Failed to upload the photograph. Please try again.";
-                        if (xhr.responseJSON && xhr.responseJSON.error) { msg = xhr.responseJSON.error; }
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message
+                            : "Failed to save application details. Please check the values and try again.";
                         alert(msg);
                     }
                 });

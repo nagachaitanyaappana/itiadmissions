@@ -675,6 +675,7 @@
 
         let currentStudent = null;
         let seatMatrixData = [];
+        let seatMatrixLayout = [];
         let shiftUnitOptions = [];
         let shiftUnitMatrix = [];
         let meritFrom = null;
@@ -913,6 +914,7 @@
                     currentStudent = result.data;
                     showStudentDetails(result.data, rank);
                     seatMatrixData = result.seat_matrix || [];
+                    seatMatrixLayout = result.layout || [];
                     shiftUnitMatrix = result.shift_units || [];
                     renderSeatMatrix();
                 } else if (result.code === 'ALREADY_ADMITTED' && result.admission_details) {
@@ -1009,10 +1011,16 @@
             tbody.innerHTML = '';
 
             // Header: a category group (3 columns each) per the candidate's layout branch.
+            const layout = seatMatrixLayout.length ? seatMatrixLayout : [
+                { label: 'General', strength: 'general_strength', fill: 'general_fill', vacant: 'general_vacant' },
+                { label: 'IM', strength: 'reservation_strength', fill: 'reservation_fill', vacant: 'reservation_vacant' },
+                { label: 'PH', strength: 'phc_strength', fill: 'phc_fill', vacant: 'phc_vacant' },
+                { label: 'EX-S', strength: 'exservice_strength', fill: 'exservice_fill', vacant: 'exservice_vacant' }
+            ];
             if (thead) {
-                const groups = seatMatrixLayout.map(c =>
+                const groups = layout.map(c =>
                     `<th colspan="3" class="category-header">\${c.label}</th>`).join('');
-                const subs = seatMatrixLayout.map(() =>
+                const subs = layout.map(() =>
                     `<th class="tfv-header">T</th><th class="tfv-header">F</th><th class="tfv-header">V</th>`).join('');
                 thead.innerHTML = `
                     <tr>
@@ -1036,7 +1044,7 @@
                 const check = item.check != null ? item.check : 0;
                 const disabled = check === 0;
                 const value = \`\${item.iti_name}+\${item.iti_code}+\${item.trade_code}+\${check}\`;
-                const cells = seatMatrixLayout.map(c =>
+                const cells = layout.map(c =>
                     `<td class="text-center">\${item[c.strength]}</td>
                      <td class="text-center">\${item[c.fill]}</td>
                      <td class="text-center">\${item[c.vacant]}</td>`).join('');

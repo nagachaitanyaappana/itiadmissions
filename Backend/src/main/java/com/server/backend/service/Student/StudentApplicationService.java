@@ -8,6 +8,15 @@ public interface StudentApplicationService {
 
     StudentApplicationDto saveStudent(StudentApplicationDto dto);
 
+    /**
+     * Single-transaction registration mirroring
+     * open_Application_InterfaceAction_Student: writes student_application, student_cand_marks and
+     * img_cand_photos atomically and returns the minted (or resumed) regid. When {@code dto.regid}
+     * is set the existing application is updated (legacy "update" branch, app_status='A'),
+     * otherwise a new application is inserted (legacy "insert ... returning regid").
+     */
+    StudentApplicationDto register(StudentApplicationDto dto, byte[] photo, String photoContentType);
+
     StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto dto);
 
     StudentApplicationDto getStudentById(Integer regid);

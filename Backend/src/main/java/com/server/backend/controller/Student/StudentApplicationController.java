@@ -1,11 +1,14 @@
 package com.server.backend.controller.Student;
 
 import com.server.backend.DTO.StudentApplicationDto;
+import com.server.backend.DTO.StudentCandMarksDto;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.server.backend.service.Student.StudentApplicationService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import com.server.backend.entity.CasteMasterPublic;
@@ -36,6 +39,21 @@ public class StudentApplicationController {
         return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }
 
+    // Single-transaction registration (application + marks + photo), mirroring
+    // open_Application_InterfaceAction_Student. Sent as multipart: "application" (JSON),
+    // optional "marks" (JSON) and optional "photo" (file).
+    @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<StudentApplicationDto> register(
+            @RequestPart("application") StudentApplicationDto dto,
+            @RequestPart(value = "marks", required = false) StudentCandMarksDto marks,
+            @RequestPart(value = "photo", required = false) MultipartFile photo) throws Exception {
+
+        dto.setMarks(marks);
+        byte[] bytes = (photo != null && !photo.isEmpty()) ? photo.getBytes() : null;
+        String contentType = photo == null ? null : photo.getContentType();
+
+        return ResponseEntity.ok(service.register(dto, bytes, contentType));
+    }
     // Get Student By RegId
     @GetMapping("/{regid}")
     public ResponseEntity<StudentApplicationDto> getStudentById(

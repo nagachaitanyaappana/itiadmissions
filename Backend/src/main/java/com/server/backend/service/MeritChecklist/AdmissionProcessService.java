@@ -258,7 +258,7 @@ public class AdmissionProcessService {
 
         // Candidate profile + general-pool override (DistrictAdmissionProcessOptimiseAction lines 105-144).
         String casteCode = text(candidate.get("caste"));
-        boolean female = "female".equalsIgnoreCase(text(candidate.get("gender")));
+        boolean female = isFemale(candidate.get("gender"));
         boolean phc = isYes(candidate.get("phc"));
         boolean exService = isYes(candidate.get("exservice"));
         Map<String, Object> pool = generalPool(distCode, year);
@@ -1290,6 +1290,11 @@ public class AdmissionProcessService {
 
     private static boolean blank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private static boolean isFemale(Object gender) {
+        String value = text(gender);
+        return value != null && value.equalsIgnoreCase("female");
     }
 
     private static boolean isYes(Object value) {

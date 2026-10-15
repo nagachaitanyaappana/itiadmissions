@@ -17,6 +17,12 @@ import com.server.backend.entity.SubCasteMasterPublic;
 import com.server.backend.Repository.MeritChecklist.CasteMasterRepository;
 import com.server.backend.Repository.Student.SubCasteMasterPublicRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import jakarta.servlet.http.HttpServletRequest;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -57,10 +63,11 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
     @Override
     public StudentApplicationDto saveStudent(StudentApplicationDto dto) {
 
-        // ssc_regno de-duplication (legacy open_Application_Step1Action /
-        // open_Application_InterfaceAction_Student): if an application already exists for this
-        // hall ticket, resume it when the entered board/year/type match, otherwise block the
-        // duplicate outright. No new regid is ever issued for an already-used hall ticket.
+        // Step 1 is validation-only, matching open_Application_Step1Action: the application row is
+        // NOT created here. If the hall ticket already has an application and the entered
+        // board/year/type match, the existing regid is returned so the page resumes it; if they
+        // do not match the duplicate is blocked. A new hall ticket simply returns the entered
+        // step-1 values with a null regid so the final submit (register) can insert the row.
         String sscRegNo = dto.getSscRegNo() == null ? null : dto.getSscRegNo().trim();
         if (sscRegNo != null && !sscRegNo.isEmpty()) {
             List<Map<String, Object>> existing = jdbcTemplate.queryForList(
@@ -84,24 +91,13 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
             }
         }
 
-        StudentApplication entity = new StudentApplication();
-
-        // Copy request fields
-        BeanUtils.copyProperties(dto, entity);
-
-        // Default values
-entity.setEntryDate(LocalDateTime.now());
-
-entity.setAppStatus("N");     // 1 character only
-entity.setDataFlag("A");      // 1 character only
-entity.setPwdCategory("N");   // 1 character only
-
-entity.setPhase(resolveCurrentPhase());
-entity.setSscPassed(true);
-
-        StudentApplication saved = repository.save(entity);
-
-        return toDto(saved);
+        StudentApplicationDto pending = new StudentApplicationDto();
+        pending.setSscRegNo(sscRegNo);
+        pending.setSscBoard(dto.getSscBoard());
+        pending.setSscYear(dto.getSscYear());
+        pending.setSscType(dto.getSscType());
+        pending.setResumed(false);
+        return pending;
     }
 
     /** Null-safe, trim- and case-insensitive comparison of a submitted vs. stored value. */
@@ -135,6 +131,242 @@ entity.setSscPassed(true);
         BeanUtils.copyProperties(entity, dto);
         dto.setRegid(toIntegerId(entity.getRegid()));
         return dto;
+    }
+
+    /**
+     * Single-transaction registration mirroring open_Application_InterfaceAction_Student:
+     * student_application + student_cand_marks + img_cand_photos are written atomically (the
+     * legacy action set autoCommit(false) and committed once at the end). A non-null
+     * {@code dto.regid} selects the legacy "update" branch (UPDATE student_application ...,
+     * app_status='A'); otherwise a new application is inserted.
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public StudentApplicationDto register(StudentApplicationDto dto, byte[] photo, String photoContentType) {
+        boolean isUpdate = dto.getRegid() != null;
+
+        // Reference to the submitting client, equivalent to the legacy logTrace + request.getRemoteAddr().
+        String ip = null;
+        String referer = null;
+        String sessionId = "";
+        String userId = "";
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs != null) {
+            HttpServletRequest req = attrs.getRequest();
+            ip = req.getRemoteAddr();
+            referer = req.getHeader("referer");
+            sessionId = req.getSession().getId();
+            Object uname = req.getSession().getAttribute("userName");
+            userId = uname == null ? "" : String.valueOf(uname);
+        }
+
+        // Duplicate checks (legacy open_Application_InterfaceAction_Student lines 48-67). The
+        // second set (lines 153-159) is redundant; a single check per column is sufficient.
+        assertUnique("phno", dto.getPhno(), dto.getRegid(),
+                "Given Phone is already available for another candidate.");
+        assertUnique("email", filterBad(dto.getEmail()), dto.getRegid(),
+                "Given Email is already available for another candidate.");
+        assertUnique("adarno", filterBad(dto.getAdarno()), dto.getRegid(),
+                "Given Aadhaar Number is already available for another candidate.");
+
+        // trno audit row (legacy generic.logTrace -> public.logtr); returns the trace number.
+        Integer trno = jdbcTemplate.queryForObject(
+                "INSERT INTO public.logtr (ip, userid, referal, tablename, transaction_type, sessionid, ts) "
+                        + "VALUES (?, ?, ?, 'application & cand_marks', ?, ?, ?) RETURNING trno",
+                Integer.class,
+                ip == null ? "" : ip, userId, referer == null ? "" : referer,
+                isUpdate ? "Update" : "Insert", sessionId, new Timestamp(System.currentTimeMillis()).toString());
+
+        String year = firstOrNull(jdbcTemplate.queryForList(
+                "SELECT value FROM public.iti_params WHERE code = CAST(? AS integer)", String.class, "7"));
+        String phase = null;
+        if (year != null) {
+            phase = firstOrNull(jdbcTemplate.queryForList(
+                    "SELECT phase::text FROM admissions.admission_phase WHERE year = ? AND current = 'true'",
+                    String.class, year));
+        }
+        if (phase == null) {
+            phase = resolveCurrentPhase();
+        }
+
+        StudentApplication entity = isUpdate
+                ? repository.findById(String.valueOf(dto.getRegid()))
+                        .orElseThrow(() -> new RuntimeException("Student Not Found"))
+                : new StudentApplication();
+
+        entity.setName(filterBad(dto.getName()));
+        entity.setFname(filterBad(dto.getFname()));
+        entity.setAddr(filterBad(dto.getAddr()));
+        entity.setMname(filterBad(dto.getMname()));
+        entity.setPincode(dto.getPincode() == null ? 0 : dto.getPincode());
+        entity.setPhno(dto.getPhno() == null ? 0L : dto.getPhno());
+        entity.setAdarno(filterBad(dto.getAdarno()));
+        entity.setDob(dto.getDob());
+        entity.setGender(filterBad(dto.getGender()));
+        entity.setCaste(filterBad(dto.getCaste()));
+        entity.setPhc(Boolean.TRUE.equals(dto.getPhc()));
+        entity.setExservice(Boolean.TRUE.equals(dto.getExservice()));
+        entity.setSscPassed(Boolean.TRUE.equals(dto.getSscPassed()));
+        entity.setInterPassed(Boolean.TRUE.equals(dto.getInterPassed()));
+        entity.setInterMarks(Boolean.TRUE.equals(dto.getInterPassed())
+                ? (dto.getInterMarks() == null ? 0 : dto.getInterMarks()) : 0);
+        entity.setLocal(filterBad(dto.getLocal()));
+        entity.setTrno(trno == null ? null : trno.longValue());
+        entity.setSscRegNo(filterBad(dto.getSscRegNo()));
+        entity.setSscBoard(filterBad(dto.getSscBoard()));
+        entity.setSscYear(filterBad(dto.getSscYear()));
+        entity.setSscMonth(filterBad(dto.getSscMonth()));
+
+        if (isUpdate) {
+            // Legacy update branch sets only these columns plus app_status='A'.
+            entity.setAppStatus("A");
+        } else {
+            entity.setSscType(filterBad(dto.getSscType()));
+            entity.setEmail(filterBad(dto.getEmail()));
+            entity.setPwdCategory(filterBad(dto.getPwdCategory()));
+            entity.setEconomicWeakerSection(Boolean.TRUE.equals(dto.getEconomicWeakerSection()));
+            entity.setSubCaste(filterBad(dto.getSubCaste()));
+            entity.setYear(year);
+            entity.setPhase(phase);
+            entity.setEntryDate(LocalDateTime.now());
+            entity.setIp(ip);
+            entity.setAppStatus("N");
+            entity.setDataFlag("A");
+        }
+
+        StudentApplication saved = repository.save(entity);
+        Integer regid = toIntegerId(saved.getRegid());
+
+        writeCandMarks(regid, dto, trno, isUpdate);
+        writePhoto(regid, photo, photoContentType);
+
+        StudentApplicationDto result = toDto(saved);
+        result.setResumed(isUpdate);
+        return result;
+    }
+
+    /** student_cand_marks insert/update, matching open_Application_InterfaceAction_Student lines 319-434. */
+    private void writeCandMarks(Integer regid, StudentApplicationDto dto, Integer trno, boolean isUpdate) {
+        com.server.backend.DTO.StudentCandMarksDto m = dto.getMarks();
+        boolean sscg = "sscg".equalsIgnoreCase(filterBad(dto.getSscType()));
+        boolean firstLangBlank = m == null || m.getSscFirstLangMarks() == null;
+
+        Integer first = intOr0(m, MField.FIRST);
+        Integer second = intOr0(m, MField.SECOND);
+        Integer eng = intOr0(m, MField.ENG);
+        Integer math = intOr0(m, MField.MATH);
+        Integer sci = intOr0(m, MField.SCI);
+        Integer social = intOr0(m, MField.SOCIAL);
+        Integer tot = m == null ? 0 : (m.getSscTotMarks() == null ? 0 : m.getSscTotMarks());
+        if (sscg || firstLangBlank) {
+            first = 0; second = 0; eng = 0; math = 0; sci = 0; social = 0; tot = 0;
+        }
+
+        String firstGpa = m == null ? null : m.getSscFirstLangGpa();
+        String secondGpa = m == null ? null : m.getSscSecondLangGpa();
+        String engGpa = m == null ? null : m.getSscEngGpa();
+        String mathGpa = m == null ? null : m.getSscMathGpa();
+        String sciGpa = m == null ? null : m.getSscSciGpa();
+        String socialGpa = m == null ? null : m.getSscSocialGpa();
+        String totGpa = m == null ? null : m.getSscTotGpa();
+        String firstGrade = m == null ? null : m.getSscFirstLangGrade();
+        String secondGrade = m == null ? null : m.getSscSecondLangGrade();
+        String engGrade = m == null ? null : m.getSscEngGrade();
+        String mathGrade = m == null ? null : m.getSscMathGrade();
+        String sciGrade = m == null ? null : m.getSscSciGrade();
+        String socialGrade = m == null ? null : m.getSscSocialGrade();
+        String groupName = m == null ? null : m.getGroupName();
+        String interFirstSub = m == null ? null : m.getInterFirstSub();
+        Integer interFirstMarks = m == null ? null : m.getInterFirstMarks();
+        String interSecondSub = m == null ? null : m.getInterSecondSub();
+        Integer interSecondMarks = m == null ? null : m.getInterSecondMarks();
+        String interThirdSub = m == null ? null : m.getInterThirdSub();
+        Integer interThirdMarks = m == null ? null : m.getInterThirdMarks();
+
+        if (isUpdate) {
+            jdbcTemplate.update(
+                    "UPDATE public.student_cand_marks SET ssc_first_lang_marks=?, ssc_first_lang_gpa=?, "
+                            + "ssc_first_lang_grade=?, ssc_second_lang_marks=?, ssc_second_lang_gpa=?, "
+                            + "ssc_second_lang_grade=?, ssc_eng_marks=?, ssc_eng_gpa=?, ssc_eng_grade=?, "
+                            + "ssc_math_marks=?, ssc_math_gpa=?, ssc_math_grade=?, ssc_sci_marks=?, "
+                            + "ssc_sci_gpa=?, ssc_sci_grade=?, ssc_social_marks=?, ssc_social_gpa=?, "
+                            + "ssc_social_grade=?, inter_first_sub=?, inter_first_marks=?, inter_second_sub=?, "
+                            + "inter_second_marks=?, inter_third_sub=?, inter_third_marks=?, ssc_tot_marks=?, "
+                            + "ssc_tot_gpa=?, groupname=?, trno=? WHERE regid=?",
+                    first, firstGpa, firstGrade, second, secondGpa, secondGrade, eng, engGpa, engGrade,
+                    math, mathGpa, mathGrade, sci, sciGpa, sciGrade, social, socialGpa, socialGrade,
+                    interFirstSub, interFirstMarks, interSecondSub, interSecondMarks, interThirdSub,
+                    interThirdMarks, tot, totGpa, groupName, trno, String.valueOf(regid));
+        } else {
+            jdbcTemplate.update(
+                    "INSERT INTO public.student_cand_marks (regid, ssc_first_lang_marks, ssc_first_lang_gpa, "
+                            + "ssc_first_lang_grade, ssc_second_lang_marks, ssc_second_lang_gpa, "
+                            + "ssc_second_lang_grade, ssc_eng_marks, ssc_eng_gpa, ssc_eng_grade, "
+                            + "ssc_math_marks, ssc_math_gpa, ssc_math_grade, ssc_sci_marks, ssc_sci_gpa, "
+                            + "ssc_sci_grade, ssc_social_marks, ssc_social_gpa, ssc_social_grade, "
+                            + "inter_first_sub, inter_first_marks, inter_second_sub, inter_second_marks, "
+                            + "inter_third_sub, inter_third_marks, ssc_tot_marks, ssc_tot_gpa, groupname, "
+                            + "trno, entry_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    String.valueOf(regid), first, firstGpa, firstGrade, second, secondGpa, secondGrade,
+                    eng, engGpa, engGrade, math, mathGpa, mathGrade, sci, sciGpa, sciGrade, social,
+                    socialGpa, socialGrade, interFirstSub, interFirstMarks, interSecondSub,
+                    interSecondMarks, interThirdSub, interThirdMarks, tot, totGpa, groupName, trno,
+                    Timestamp.valueOf(LocalDateTime.now()));
+        }
+    }
+
+    private enum MField { FIRST, SECOND, ENG, MATH, SCI, SOCIAL }
+
+    private static Integer intOr0(com.server.backend.DTO.StudentCandMarksDto m, MField field) {
+        if (m == null) {
+            return 0;
+        }
+        Integer value = switch (field) {
+            case FIRST -> m.getSscFirstLangMarks();
+            case SECOND -> m.getSscSecondLangMarks();
+            case ENG -> m.getSscEngMarks();
+            case MATH -> m.getSscMathMarks();
+            case SCI -> m.getSscSciMarks();
+            case SOCIAL -> m.getSscSocialMarks();
+        };
+        return value == null ? 0 : value;
+    }
+
+    /** img_cand_photos insert/replace, matching open_Application_InterfaceAction_Student lines 328-353. */
+    private void writePhoto(Integer regid, byte[] photo, String contentType) {
+        if (regid == null || photo == null || photo.length == 0) {
+            return;
+        }
+        boolean isPng = "image/png".equalsIgnoreCase(contentType);
+        boolean isJpeg = "image/jpeg".equalsIgnoreCase(contentType);
+        if (!isPng && !isJpeg) {
+            throw new IllegalArgumentException("Photograph must be a PNG or JPEG image");
+        }
+        Integer existing = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM public.img_cand_photos WHERE regid = ?", Integer.class, regid);
+        if (existing != null && existing > 0) {
+            jdbcTemplate.update("UPDATE public.img_cand_photos SET pic = ? WHERE regid = ?", photo, regid);
+        } else {
+            jdbcTemplate.update("INSERT INTO public.img_cand_photos (regid, pic) VALUES (?, ?)", regid, photo);
+        }
+    }
+
+    private static String firstOrNull(List<String> values) {
+        return (values == null || values.isEmpty()) ? null : values.get(0);
+    }
+
+    /** Port of beans.MyUtil.filterBad (strips SQL keywords and quote/operator characters). */
+    private static String filterBad(String str) {
+        if (str == null) {
+            return "";
+        }
+        String s = str;
+        for (String token : new String[] { "delete ", "select ", "update ", "drop ", "alter ", "insert ",
+                "truncate ", "revoke ", "union ", "create ", "grant ", "script", "'", "\"", ">", "<",
+                "&", "%", "limit", ";", "*", "=", "(", ")" }) {
+            s = s.replace(token, "");
+        }
+        return s;
     }
 
 
