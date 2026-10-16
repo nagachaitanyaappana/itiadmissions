@@ -16,8 +16,6 @@ public class ShiftUnitPermittedRequestDto {
     @NotBlank(message = "Trade code is required")
     private String tradeCode;
 
-    private Boolean availableYear;
-
     @Valid
     @NotEmpty(message = "At least one entry is required")
     private List<ShiftUnitEntryDto> entries;
