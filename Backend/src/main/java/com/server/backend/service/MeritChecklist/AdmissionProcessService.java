@@ -155,17 +155,28 @@ public class AdmissionProcessService {
                     "Seat matrix is not generated for some ITIs; complete trade approval first.");
         }
 
-        // 3. Merit window from admission_timings for the scope and today.
+        // 3. Merit window from admission_timings for the scope, today and the selected
+        //    caste/qualification. Legacy startAdmissionAction builds
+        //    " and caste='<caste>' and minqul='<qual>' and cal_time='<time>'" before looking the
+        //    row up, so honour those filters (cal_time only when the operator supplied one).
         Map<String, Object> config = currentPhaseConfig();
         String today = java.time.LocalDate.now().toString();
         String column = "3".equals(user.roleid()) ? "dist_code" : "iti_code";
         String value = "3".equals(user.roleid()) ? user.distCode() : user.itiCode();
-        List<Map<String, Object>> rows = jdbc.queryForList(
+        StringBuilder sql = new StringBuilder(
                 "SELECT merit_from, merit_to, cal_time FROM public.admission_timings "
-                        + "WHERE " + column + " = :value AND cal_date = CAST(:calDate AS date)",
-                new MapSqlParameterSource()
-                        .addValue("value", value)
-                        .addValue("calDate", today));
+                        + "WHERE " + column + " = :value AND cal_date = CAST(:calDate AS date) "
+                        + "AND caste = :caste AND minqul = :qual");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("value", value)
+                .addValue("calDate", today)
+                .addValue("caste", blank(request.castePerform()) ? "all" : request.castePerform().trim())
+                .addValue("qual", blank(request.qualPerform()) ? "all" : request.qualPerform().trim());
+        if (!blank(request.admPerform())) {
+            sql.append(" AND cal_time = CAST(:calTime AS time)");
+            params.addValue("calTime", request.admPerform().trim());
+        }
+        List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params);
         if (rows.isEmpty()) {
             return status("NO_COUNCIL", "No counselling window is configured for today.");
         }
@@ -223,14 +234,26 @@ public class AdmissionProcessService {
         String year = currentYear(config);
         int phase = currentPhase(config);
 
-        // Resolve regid from the rank (getRegistrationDetails): ranks join application on regid.
-        List<Map<String, Object>> regRows = jdbc.queryForList(
+        // Resolve regid from the rank (getRegistrationDetails). Legacy
+        // DistrictAdmissionProcessOptimiseAction builds the predicate
+        // "a.phase='<phase>' and qual='<qual>' and dist_code" (with a leading
+        // "b.caste='<caste>' and " when a specific caste was chosen).
+        StringBuilder regSql = new StringBuilder(
                 "SELECT a.regid, b.caste FROM public.ranks a JOIN public.application b "
                         + "ON a.regid::integer = b.regid WHERE a.dist_code = :distCode "
-                        + "AND a.rank::text = :rank LIMIT 1",
-                new MapSqlParameterSource()
-                        .addValue("distCode", distCode)
-                        .addValue("rank", rank));
+                        + "AND a.rank::text = :rank AND a.phase = :phase AND a.qual = :qual");
+        MapSqlParameterSource regParams = new MapSqlParameterSource()
+                .addValue("distCode", distCode)
+                .addValue("rank", rank)
+                .addValue("phase", String.valueOf(phase))
+                .addValue("qual", blank(request.qualPerform()) ? "all" : request.qualPerform().trim());
+        String casteFilter = request.castePerform() == null ? "" : request.castePerform().trim();
+        if (!casteFilter.isEmpty() && !"all".equalsIgnoreCase(casteFilter)) {
+            regSql.append(" AND b.caste = :caste");
+            regParams.addValue("caste", casteFilter);
+        }
+        regSql.append(" LIMIT 1");
+        List<Map<String, Object>> regRows = jdbc.queryForList(regSql.toString(), regParams);
         if (regRows.isEmpty()) {
             return status("RANK_NOT_FOUND", "No candidate holds rank " + rank + " in district " + distCode);
         }

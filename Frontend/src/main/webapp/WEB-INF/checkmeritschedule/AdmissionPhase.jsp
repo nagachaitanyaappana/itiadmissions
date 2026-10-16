@@ -366,14 +366,14 @@
                             <label class="form-label-custom">Caste:</label>
                             <select id="casteSelect" class="form-select form-select-custom">
                                 <option value="all">All</option>
+                                <option value="w">Women</option>
                             </select>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label-custom">Qualification:</label>
                             <select id="qualSelect" class="form-select form-select-custom">
                                 <option value="all">All</option>
-                                <option value="8th pass">8th pass</option>
-                                <option value="SSC pass">SSC pass</option>
+                                <option value="assc">Intermediate</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -602,7 +602,7 @@
     <!-- Section 5: Hidden Print Document -->
     <div id="printSection">
         <div class="print-header text-center">
-            <img src="/assets/img/gov_logo.png" style="height: 60px;" alt="" onerror="this.style.display='none'">
+            <img src="${pageContext.request.contextPath}/images/ap.png" style="height: 60px;" alt="" onerror="this.style.display='none'">
             <h3 class="mt-2 text-uppercase">Government of Andhra Pradesh</h3>
             <h5>Department of Employment and Training</h5>
             <h4 class="mt-3">ITI ADMISSION RECEIPT - 2026</h4>
@@ -641,6 +641,7 @@
     </div>
 
     <script>
+        function validateFreeSpace(){ return true; }
         // Global error handling for debugging
         window.onerror = function(msg, url, line, col, error) {
             console.error("Global JS Error: " + msg + " at " + line + ":" + col);
@@ -840,7 +841,7 @@
                         `Date: \${result.data.current_date}`;
                     renderTimings([{
                         date: result.data.current_date,
-                        meritRange: \`\${meritFrom} to \${meritTo}\`,
+                        meritRange: `\${meritFrom} to \${meritTo}`,
                         caste: caste,
                         qualification: qual,
                         calTime: result.data.cal_time || time
@@ -889,7 +890,7 @@
             if (meritFrom != null && meritTo != null) {
                 const val = Number(rank);
                 if (val < meritFrom || val > meritTo) {
-                    alert(\`Please Enter valid Rank and It should between '\${meritFrom}' and '\${meritTo}'\`);
+                    alert(`Please Enter valid Rank and It should between '\${meritFrom}' and '\${meritTo}'`);
                     document.getElementById('rankInput').value = '';
                     document.getElementById('rankInput').focus();
                     return;
@@ -932,7 +933,7 @@
             document.getElementById('admissionSection').style.display = 'none';
             document.getElementById('alreadyAdmittedSection').style.display = 'block';
             document.getElementById('admNoticeText').innerHTML =
-                \`Student was admitted in <strong class="text-primary">\${adm.iti_name}</strong> for <strong class="text-primary">\${adm.trade_name}</strong> on <strong>\${new Date(adm.date_of_admission).toLocaleDateString('en-GB')}</strong>.\`;
+                `Student was admitted in <strong class="text-primary">\${adm.iti_name}</strong> for <strong class="text-primary">\${adm.trade_name}</strong> on <strong>\${new Date(adm.date_of_admission).toLocaleDateString('en-GB')}</strong>.`;
         }
 
         function showStudentDetails(s, rank) {
@@ -1043,7 +1044,7 @@
                 // (radio disabled). The check code is what decides res_category on submit.
                 const check = item.check != null ? item.check : 0;
                 const disabled = check === 0;
-                const value = \`\${item.iti_name}+\${item.iti_code}+\${item.trade_code}+\${check}\`;
+                const value = `\${item.iti_name}+\${item.iti_code}+\${item.trade_code}+\${check}`;
                 const cells = layout.map(c =>
                     `<td class="text-center">\${item[c.strength]}</td>
                      <td class="text-center">\${item[c.fill]}</td>
@@ -1153,7 +1154,7 @@
                 document.getElementById('admissionError').style.display = 'none';
 
                 const selectedRadio = shiftUnit
-                    ? \`\${shiftUnit.dataset.shift}|\${shiftUnit.dataset.unit}|\${shiftUnit.dataset.strength}\`
+                    ? `\${shiftUnit.dataset.shift}|\${shiftUnit.dataset.unit}|\${shiftUnit.dataset.strength}`
                     : null;
                 const payload = {
                     regid: currentStudent.regid,
