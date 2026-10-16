@@ -158,6 +158,18 @@ function submit1() {
     // Send the password as-is; the backend handles authentication.
 }
 
+// Ported from itiap_new/web/js/validations_image.js. The captcha field's onblur calls this,
+// and the legacy login included that file; without it every blur threw a ReferenceError.
+function validateFreeSpace(value, obj, message) {
+    var user_name = value;
+    if (user_name === '') {
+        alert(message);
+        obj.focus();
+        return false;
+    }
+    return true;
+}
+
 function blinker() {
     $('.blinking').fadeOut(500);
     $('.blinking').fadeIn(500);

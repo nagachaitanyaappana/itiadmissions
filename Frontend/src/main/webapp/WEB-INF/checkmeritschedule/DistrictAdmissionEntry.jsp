@@ -37,7 +37,7 @@
         </script>
     </head>
     <body>
-        <form action="districtAdmissionProcessOptimise" method="post" onsubmit="return err(this); ">
+        <form action="${pageContext.request.contextPath}/AdmissionPhase/districtAdmissionProcessOptimise" method="post">
 
         <center><h1>Admission Counseling</h1><font color="red">${errorMsg}</font></center>
         <table width="400" border="0" align="center" >

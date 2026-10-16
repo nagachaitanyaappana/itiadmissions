@@ -116,6 +116,16 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
 
+            <!-- Pin to the locally cached 3.4.0: the parent-managed 3.5.1 is not in the
+                 local repo and we build offline, so war:war would fail to resolve it.
+                 This plugin copies src/main/webapp into target, which spring-boot:run
+                 needs to serve the JSPs. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.4.0</version>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

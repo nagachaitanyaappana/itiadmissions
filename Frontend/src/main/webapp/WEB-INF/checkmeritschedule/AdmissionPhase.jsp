@@ -6,7 +6,7 @@
     <body>
         <%@include file='/WEB-INF/legacy/banner.jsp' %>
         <%@include file='/WEB-INF/legacy/nav-login2.jsp' %>
-        <form action="itiAdmissionEntry" method="post" id="startForm">
+        <form action="${pageContext.request.contextPath}/AdmissionPhase/itiAdmissionEntry" method="post" id="startForm">
             <c:choose>
                 <c:when test="${phase == '1'}">
             <p align="center">
