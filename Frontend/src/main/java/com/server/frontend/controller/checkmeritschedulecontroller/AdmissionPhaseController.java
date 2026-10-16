@@ -65,7 +65,11 @@ public class AdmissionPhaseController {
                     new HttpEntity<>(new HttpHeaders()), Map.class).getBody();
             Object b64 = resp == null ? null : resp.get("photo");
             if (b64 == null || !(b64 instanceof String s) || s.isBlank()) {
-                return ResponseEntity.notFound().build();
+                // Legacy imageRetrival.jsp emits an empty image/jpg body when no photo
+                // is stored (browser shows the broken-image icon, HTTP 200, no console error).
+                return ResponseEntity.ok()
+                        .contentType(MediaType.IMAGE_JPEG)
+                        .body(new byte[0]);
             }
             byte[] bytes = java.util.Base64.getDecoder().decode(s);
             return ResponseEntity.ok()
@@ -317,8 +321,6 @@ public class AdmissionPhaseController {
         if (s != null) {
             Object role = s.getAttribute("roleId");
             Object ins = s.getAttribute("insCode");
-            System.err.println("[HDRDEBUG] path=" + request.getRequestURI() + " sessionId="
-                    + (s == null ? "null" : s.getId()) + " roleId=" + role + " insCode=" + ins);
             if (role != null) h.set("X-Role-Id", String.valueOf(role));
             if (ins != null) h.set("X-Ins-Code", String.valueOf(ins));
         }
