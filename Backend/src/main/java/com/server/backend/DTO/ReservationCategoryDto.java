@@ -11,6 +11,9 @@ public class ReservationCategoryDto {
     private Integer strengthFill;
     private Integer strengthVacant;
 
+    /** Actual admitted count (admissions.iti_admissions, by res_category); Seat Correction only. */
+    private Integer admitted;
+
     public ReservationCategoryDto() {
     }
 

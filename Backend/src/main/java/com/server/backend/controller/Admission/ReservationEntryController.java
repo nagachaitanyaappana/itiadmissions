@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.server.backend.DTO.ReservationEntryRequest;
 import com.server.backend.DTO.ReservationEntryResponse;
 import com.server.backend.DTO.ReservationTradeDto;
+import com.server.backend.DTO.SeatCorrectionRequest;
 import com.server.backend.service.Admission.ReservationEntryService;
 
 import java.util.List;
@@ -57,5 +58,19 @@ public class ReservationEntryController {
     public ReservationEntryResponse saveReservation(
             @Valid @RequestBody ReservationEntryRequest request) {
         return service.saveReservation(request);
+    }
+
+    /** Seat Correction: same screen plus the admitted count; "Already Fill" is operator-editable. */
+    @GetMapping("/seat-correction")
+    public ReservationEntryResponse getSeatCorrection(
+            @RequestParam String itiCode,
+            @RequestParam Integer tradeCode) {
+        return service.getSeatCorrection(itiCode, tradeCode);
+    }
+
+    @PutMapping("/seat-correction")
+    public ReservationEntryResponse saveSeatCorrection(
+            @Valid @RequestBody SeatCorrectionRequest request) {
+        return service.saveSeatCorrection(request);
     }
 }
