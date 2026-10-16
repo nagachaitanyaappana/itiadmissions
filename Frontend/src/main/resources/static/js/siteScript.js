@@ -1,8 +1,11 @@
 /**
  * 
  */
-// API_BASE_URL is injected by the JSP before this script loads via window.API_BASE_URL
-const API_BASE_URL = window.API_BASE_URL;
+// API_BASE_URL is injected by the JSP before this script loads via window.API_BASE_URL.
+// distVerificationJs.js (loaded first on verification pages) already declares
+// `const API_BASE_URL` — redeclaring it here threw "already been declared" and
+// killed this whole file. Reuse it when present, otherwise fall back to window.
+var API_BASE_URL = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : window.API_BASE_URL;
 
 
 function checkValue(errorId) {

@@ -22,8 +22,8 @@
 <link rel="stylesheet" href="./css/style.css">
 <title>Dist Verification</title>
 <script type="text/javascript" src="./js/jquery.min.js"></script>
-<script type="text/javascript" src="./js/customJs/distVerificationJs.js"></script>
                     <jsp:include page="/WEB-INF/jsp/_api_base_url.jsp"/>
+<script type="text/javascript" src="./js/customJs/distVerificationJs.js"></script>
 <%-- Session scope for distVerificationJs.js#getReady (LoginController stores both);
      EL resolves to '' when there is no session and the JS keeps the form closed. --%>
 <script type="text/javascript">
