@@ -101,14 +101,6 @@ public class HomeController {
         return "checkmeritschedule/MeritResults";
     }
 
-    @GetMapping("/AdmissionPhase")
-    public String admissionPhase(HttpServletRequest request) {
-        if (notLoggedIn(request)) {
-            return "redirect:/?error=session";
-        }
-        return "checkmeritschedule/AdmissionPhase";
-    }
-
     @GetMapping("/DgtPermittedShift")
     public String dgtPermittedShift(HttpServletRequest request) {
         if (notLoggedIn(request)) {

@@ -111,6 +111,17 @@ public class AdmissionProcessController {
         });
     }
 
+    @Operation(summary = "Today's admission timings (cal_time) for the district/ITI dropdown")
+    @GetMapping("/today-timings")
+    public ResponseEntity<Map<String, Object>> todayTimings(
+            @RequestHeader(name = "X-Role-Id", required = false) String roleId,
+            @RequestHeader(name = "X-Ins-Code", required = false) String insCode,
+            @RequestHeader(name = "X-Iti-Code", required = false) String itiCode,
+            @RequestHeader(name = "X-Dist-Code", required = false) String distCode) {
+        return handle(() -> admissionProcessService.todayTimings(
+                resolveUser(roleId, insCode, itiCode, distCode)));
+    }
+
     @Operation(summary = "Start admission: validate rank generation and resolve the merit window")
     @PostMapping("/council-merits")
     public ResponseEntity<Map<String, Object>> councilMerits(

@@ -194,6 +194,32 @@ public class AdmissionProcessService {
         return response;
     }
 
+    /**
+     * Today's admission timings ({@code cal_time}) for the logged-in district/ITI, mirroring the
+     * legacy {@code putOptions("admission_timings","cal_time",...)} used by
+     * {@code startAdmission_ConvvinerLevel.jsp} to fill the "Admission Timings" dropdown.
+     */
+    public Map<String, Object> todayTimings(UserPrincipal user) {
+        String today = java.time.LocalDate.now().toString();
+        String column = "3".equals(user.roleid()) ? "dist_code" : "iti_code";
+        String value = "3".equals(user.roleid()) ? user.distCode() : user.itiCode();
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT DISTINCT cal_time FROM public.admission_timings "
+                        + "WHERE " + column + " = :value AND cal_date = CAST(:calDate AS date) "
+                        + "ORDER BY cal_time",
+                new MapSqlParameterSource()
+                        .addValue("value", value)
+                        .addValue("calDate", today));
+        List<String> times = new java.util.ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            times.add(text(row.get("cal_time")));
+        }
+        Map<String, Object> response = new java.util.LinkedHashMap<>();
+        response.put("success", true);
+        response.put("data", times);
+        return response;
+    }
+
     private String scopeLike(UserPrincipal user) {
         if ("3".equals(user.roleid()) && !blank(user.distCode())) {
             return user.distCode() + "%";
@@ -387,35 +413,37 @@ public class AdmissionProcessService {
     private static List<Map<String, Object>> columnLayout(boolean isOc, boolean female, boolean phc,
             boolean exService) {
         List<Map<String, Object>> columns = new ArrayList<>();
-        columns.add(column("General", "general_strength", "general_fill", "general_vacant"));
+        columns.add(column("General", 1, "general_strength", "general_fill", "general_vacant"));
         if (female) {
-            columns.add(column("General-W", "general_w_strength", "general_w_fill", "general_w_vacant"));
+            columns.add(column("General-W", 2, "general_w_strength", "general_w_fill", "general_w_vacant"));
         }
         if (!isOc) {
-            columns.add(column("Reservation", "reservation_strength", "reservation_fill", "reservation_vacant"));
+            columns.add(column("Reservation", 3, "reservation_strength", "reservation_fill", "reservation_vacant"));
             if (female) {
-                columns.add(column("Reservation-W", "reservation_w_strength", "reservation_w_fill",
+                columns.add(column("Reservation-W", 4, "reservation_w_strength", "reservation_w_fill",
                         "reservation_w_vacant"));
             }
         }
         if (phc) {
-            columns.add(column("PH", "phc_strength", "phc_fill", "phc_vacant"));
+            columns.add(column("PH", 5, "phc_strength", "phc_fill", "phc_vacant"));
             if (female) {
-                columns.add(column("PH-W", "phc_w_strength", "phc_w_fill", "phc_w_vacant"));
+                columns.add(column("PH-W", 6, "phc_w_strength", "phc_w_fill", "phc_w_vacant"));
             }
         }
         if (exService) {
-            columns.add(column("EX-S", "exservice_strength", "exservice_fill", "exservice_vacant"));
+            columns.add(column("EX-S", 7, "exservice_strength", "exservice_fill", "exservice_vacant"));
             if (female) {
-                columns.add(column("EX-SW", "exservice_w_strength", "exservice_w_fill", "exservice_w_vacant"));
+                columns.add(column("EX-SW", 8, "exservice_w_strength", "exservice_w_fill", "exservice_w_vacant"));
             }
         }
         return columns;
     }
 
-    private static Map<String, Object> column(String label, String strength, String fill, String vacant) {
+    private static Map<String, Object> column(String label, int checkCode, String strength, String fill,
+            String vacant) {
         Map<String, Object> column = new LinkedHashMap<>();
         column.put("label", label);
+        column.put("check_code", checkCode);
         column.put("strength", strength);
         column.put("fill", fill);
         column.put("vacant", vacant);
