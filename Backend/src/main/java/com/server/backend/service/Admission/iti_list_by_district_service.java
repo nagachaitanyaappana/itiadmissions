@@ -19,9 +19,18 @@ public class iti_list_by_district_service {
     }
 
     public List<iti_list_by_district_dto> getItisByDistrict(String distCode) {
+        return mapRows(repository.getItisByDistrict(distCode));
+    }
 
-        List<Object[]> rows = repository.getItisByDistrict(distCode);
+    /**
+     * Same as {@link #getItisByDistrict(String)} but restricted to ITIs with
+     * {@code admission_permission = true} (legacy Add Trade ITI list).
+     */
+    public List<iti_list_by_district_dto> getItisByDistrictPermitted(String distCode) {
+        return mapRows(repository.getItisByDistrictPermitted(distCode));
+    }
 
+    private List<iti_list_by_district_dto> mapRows(List<Object[]> rows) {
         List<iti_list_by_district_dto> result = new ArrayList<>();
 
         for (Object[] row : rows) {

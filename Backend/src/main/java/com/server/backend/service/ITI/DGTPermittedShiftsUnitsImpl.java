@@ -1,8 +1,10 @@
 package com.server.backend.service.ITI;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -32,15 +34,32 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
         // 1. Validate all entries together (including duplicate check)
         validateEntries(dto.getEntries());
 
-        // 2. Delete all existing records for this ITI + Trade
+        // 2. Snapshot the existing availability flag per shift/unit. In the legacy
+        //    application available_year is toggled only on the Edit Trade screen
+        //    (Master.Trade.EditTrade_InterfaceAction); this screen must not touch it,
+        //    so carry the existing value over instead of writing the request.
+        Map<String, Boolean> existingAvailability = new HashMap<>();
+        for (ShiftUnitPermitted existing
+                : repository.findByItiCodeAndTradeCode(dto.getItiCode(), dto.getTradeCode())) {
+            existingAvailability.put(
+                    existing.getShiftAllowed() + "-" + existing.getUnitAllowed(),
+                    existing.getAvailableYear());
+        }
+
+        // 3. Delete all existing records for this ITI + Trade
         repository.deleteByItiCodeAndTradeCode(dto.getItiCode(), dto.getTradeCode());
 
-        // 3. Save each entry
+        // 4. Save each entry
         List<ShiftUnitEntryDto> savedEntries = new ArrayList<>();
 
         List<ShiftUnitPermitted> entitiesToSave = new ArrayList<>();
         for (ShiftUnitEntryDto entryDto : dto.getEntries()) {
             ShiftUnitPermitted entity = mapToEntity(dto, entryDto);
+            // Never write available_year here: reuse the previous value when the
+            // shift/unit existed (so Edit Trade toggles are preserved), else leave
+            // it null exactly like the legacy SaveShiftUnitAction insert.
+            String key = entryDto.getShiftAllowed() + "-" + entryDto.getUnitAllowed();
+            entity.setAvailableYear(existingAvailability.get(key));
             entitiesToSave.add(entity);
         }
         
@@ -170,7 +189,6 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
         entity.setItiCode(requestDto.getItiCode());
         entity.setTradeCode(requestDto.getTradeCode());
-        entity.setAvailableYear(requestDto.getAvailableYear());
 
         entity.setShiftAllowed(String.valueOf(entryDto.getShiftAllowed()));
         entity.setUnitAllowed(String.valueOf(entryDto.getUnitAllowed()));
@@ -204,7 +222,6 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
         response.setItiCode(requestDto.getItiCode());
         response.setTradeCode(requestDto.getTradeCode());
-        response.setAvailableYear(requestDto.getAvailableYear());
         response.setEntries(entries);
 
         return response;

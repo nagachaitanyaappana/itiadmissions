@@ -160,17 +160,6 @@
                     <i class="fas fa-cogs"></i> Configuration
                 </div>
                 <div class="details-card-body">
-                    <!-- Available for Year -->
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="detail-label">Available for Year</label>
-                            <select class="form-select" id="availableYear">
-                                <option value="true" selected>Yes</option>
-                                <option value="false">No</option>
-                            </select>
-                        </div>
-                    </div>
-
                     <!-- Entries Table -->
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0" style="color: #444;">Shift & Unit Entries</h5>
@@ -255,7 +244,6 @@
             const selectedItiName = document.getElementById("selectedItiName");
             const selectedTradeCode = document.getElementById("selectedTradeCode");
             const selectedTradeShort = document.getElementById("selectedTradeShort");
-            const availableYearSelect = document.getElementById("availableYear");
             const entriesTableBody = document.getElementById("entriesTableBody");
             const emptyRow = document.getElementById("emptyRow");
             const addEntryBtn = document.getElementById("addEntryBtn");
@@ -325,7 +313,6 @@
                     .then(data => {
                         if (data && data.entries) {
                             // Populate existing configuration
-                            availableYearSelect.value = String(data.availableYear);
                             hadExistingConfig = data.entries.length > 0;
                             entries = data.entries.map(entry => ({
                                 strength: entry.strength,
@@ -505,7 +492,6 @@
                 return {
                     itiCode: String(itiCode),
                     tradeCode: String(tradeCode),
-                    availableYear: availableYearSelect.value === "true",
                     entries: updatedEntries
                 };
             }

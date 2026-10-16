@@ -39,10 +39,11 @@ public class AddTradeController {
         return "admission/addTrade";
     }
 
+    /** ITIs of the district permitted for admission ({@code admission_permission = true}). */
     @GetMapping("/api/district/{distCode}/itis")
     @ResponseBody
     public ResponseEntity<Object> itis(@PathVariable("distCode") String d) {
-        return proxyGet(backendBaseUrl + "/admission/district/" + d.trim() + "/itis");
+        return proxyGet(backendBaseUrl + "/admission/district/" + d.trim() + "/itis?permitted=true");
     }
 
     @GetMapping("/api/itis/{distCode}")

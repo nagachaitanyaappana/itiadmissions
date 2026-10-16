@@ -21,4 +21,20 @@ public interface iti_list_by_district_repository extends JpaRepository<Iti, Stri
         """, nativeQuery = true)
     List<Object[]> getItisByDistrict(@Param("distCode") String distCode);
 
+    /**
+     * Legacy Add Trade ({@code Master.Trade.TradeAction} role 3) only lists ITIs of the
+     * district that have {@code admission_permission = true}.
+     */
+    @Query(value = """
+        SELECT
+            iti_code,
+            iti_name,
+            govt
+        FROM iti
+        WHERE dist_code = :distCode
+          AND admission_permission = true
+        ORDER BY iti_name
+        """, nativeQuery = true)
+    List<Object[]> getItisByDistrictPermitted(@Param("distCode") String distCode);
+
 }

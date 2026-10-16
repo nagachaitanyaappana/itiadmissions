@@ -19,8 +19,11 @@ public class iti_list_by_district_controller {
     }
 
     @GetMapping("/district/{distCode}/itis")
-    public List<iti_list_by_district_dto> getItisByDistrict(@PathVariable String distCode) {
+    public List<iti_list_by_district_dto> getItisByDistrict(
+            @PathVariable String distCode,
+            @RequestParam(name = "permitted", required = false, defaultValue = "false") boolean permitted) {
 
-        return service.getItisByDistrict(distCode);
+        return permitted ? service.getItisByDistrictPermitted(distCode)
+                : service.getItisByDistrict(distCode);
     }
 }
