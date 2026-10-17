@@ -8,56 +8,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <title>ITI TRADE SELECTION</title>
     <style>
-        .page-title {
-            color: #330033;
-            font-size: 28px;
-            font-weight: 600;
+        /* ---- Vibrant royal-blue palette (solid, modern portal look) ---- */
+        .page-header-custom {
+            background: linear-gradient(135deg, #2a65b8 0%, #1b4f9c 100%);
+            color: #ffffff;
+            padding: 20px 0;
+            margin-top: 15px;
+            margin-bottom: 30px;
+            border-bottom: 4px solid #123a75;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        }
+        .page-header-custom h2 {
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
         }
         .breadcrumb-text {
-            color: #888;
+            color: #cfe2f7;
             font-size: 14px;
         }
+        .form-card {
+            border: 1px solid #bcd3ee;
+            border-radius: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            overflow: hidden;
+            margin-bottom: 30px;
+            background: #fff;
+        }
+        .card-header-primary {
+            background: linear-gradient(135deg, #2a65b8 0%, #1b4f9c 100%);
+            color: #ffffff;
+            font-weight: 700;
+            padding: 15px 25px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: none;
+        }
+        .card-body-custom {
+            padding: 30px;
+            background-color: #fff;
+        }
+        .form-label-custom {
+            font-weight: 600;
+            color: #123a75;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        .form-select {
+            border: 1.5px solid #a9c6e8;
+            border-radius: 8px;
+        }
+        .form-select:focus {
+            border-color: #2a65b8 !important;
+            box-shadow: 0 0 0 0.25rem rgba(42, 101, 184, 0.25) !important;
+        }
+        .form-select option:hover {
+            background-color: #2a65b8 !important;
+            color: #ffffff !important;
+        }
         .table th {
-            background-color: #4ab131 !important;
+            background-color: #1b4f9c !important;
             color: white !important;
             padding: 12px;
             font-weight: bold;
             font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .table td {
             padding: 10px;
             vertical-align: middle;
             font-size: 13px;
         }
-        .table, .table th, .table td { border: 1px solid #000 !important; }
+        .table, .table th, .table td { border: 1px solid #bcd3ee !important; }
         .table-striped > tbody > tr:nth-child(odd) > td,
-        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #ffffff !important; }
-        .selection-area {
-            background-color: #cbd6b2;
-            padding: 0;
-            border-radius: 0;
-            margin-bottom: 25px;
-            border: 2px solid #000;
-        }
-        .selection-area h5 {
-            background-color: #4ab131;
-            color: #fff;
-            margin: 0 0 15px;
-            padding: 10px;
-            text-align: center;
-            font-weight: bold;
-        }
-        .selection-area .row { padding: 0 20px 18px; }
-        .details-area {
-            background-color: #cbd6b2;
-            padding: 20px;
-            border-radius: 0;
-            margin-bottom: 25px;
-            border: 2px solid #000;
-        }
+        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #f2f7fc !important; }
+        .table-striped > tbody > tr:nth-child(even) > td,
+        .table-striped > tbody > tr:nth-child(even) > th { background-color: #ffffff !important; }
         .loading-message {
             text-align: center;
             padding: 40px;
@@ -74,80 +107,112 @@
             text-align: center;
             width: 60px;
         }
+        .btn-success-custom {
+            background-color: #1b4f9c;
+            border: none;
+            color: white;
+            font-weight: 700;
+            padding: 10px 30px;
+            border-radius: 50px;
+            transition: all 0.3s;
+        }
+        .btn-success-custom:hover {
+            background-color: #16417f;
+            transform: translateY(-1px);
+            color: #fff;
+        }
         .btn-continue {
             min-width: 150px;
-            background-color: green;
-            border-color: green;
         }
-        .btn-continue:hover { background-color: #056b05; border-color: #056b05; }
         .btn-continue:disabled { opacity: .55; }
+        /* Navbar dropdown items: royal-blue palette hover */
+        body .dropdown-menu .dropdown-item:hover {
+            background-color: #2a65b8 !important;
+            color: #ffffff !important;
+            padding-left: 25px;
+        }
+        /* Footer: solid navy blue with white text */
+        .lower-footer {
+            background-color: #123a75 !important;
+            color: #ffffff !important;
+        }
     </style>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
 </head>
 
 <body>
     <!-- Global Header -->
-    <header>
-        <jsp:include page="/WEB-INF/reports/header.jsp" />
-    </header>
+    <jsp:include page="/WEB-INF/reports/header.jsp" />
 
-    <div class="container-fluid px-5 mt-4 mb-5 lg-page" style="min-height: 50vh;">
-        <!-- Page Header & Breadcrumbs -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="page-title text-uppercase">ITI TRADE SELECTION</h2>
+    <!-- Portal page heading -->
+    <div class="page-header-custom text-center">
+        <div class="container">
+            <h2 class="text-uppercase">ITI Trade Selection</h2>
             <div class="breadcrumb-text">Home / ITI Trade Selection</div>
         </div>
+    </div>
 
+    <div class="container-fluid px-5 mb-5" style="min-height: 50vh;">
         <!-- ITI Selection Area -->
-        <div class="selection-area">
-            <h5 class="mb-3" style="color: #444;">Select ITI</h5>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label for="itiSelect" class="form-label fw-bold">ITI:</label>
-                    <select class="form-select" id="itiSelect">
-                        <option value="">-- Select ITI --</option>
-                    </select>
+        <div class="card form-card">
+            <div class="card-header-primary">
+                <i class="fas fa-building"></i> Select ITI
+            </div>
+            <div class="card-body-custom">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="itiSelect" class="form-label-custom">ITI:</label>
+                        <select class="form-select" id="itiSelect">
+                            <option value="">-- Select ITI --</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Selected ITI Details -->
-        <div class="details-area" id="itiDetails" style="display: none;">
-            <h5 class="mb-3" style="color: #444;">Selected ITI Details</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <p class="mb-1"><strong>ITI Code:</strong> <span id="selectedItiCode"></span></p>
-                    <p class="mb-0"><strong>ITI Name:</strong> <span id="selectedItiName"></span></p>
+        <div class="card form-card" id="itiDetails" style="display: none;">
+            <div class="card-header-primary">
+                <i class="fas fa-info-circle"></i> Selected ITI Details
+            </div>
+            <div class="card-body-custom">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>ITI Code:</strong> <span id="selectedItiCode"></span></p>
+                        <p class="mb-0"><strong>ITI Name:</strong> <span id="selectedItiName"></span></p>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Trades Table Area -->
-        <div id="tradesArea" style="display: none;">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="m-0" style="color: #444;">Trades Available in This ITI</h4>
-                <div class="text-muted" id="tradeCount">Showing 0 entries</div>
+        <div class="card form-card" id="tradesArea" style="display: none;">
+            <div class="card-header-primary">
+                <i class="fas fa-tools"></i> Trades Available in This ITI
             </div>
-
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped">
-                    <thead>
-                        <tr>
-                            <th class="radio-cell">Select</th>
-                            <th>Trade Code</th>
-                            <th>Trade</th>
-                            <th>Strength</th>
-                            <th>Duration (Months)</th>
-                            <th>Available</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tradeTableBody">
-                        <tr>
-                            <td colspan="6" class="text-center">Please select an ITI to load trades.</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="card-body-custom">
+                <div class="d-flex justify-content-end mb-2">
+                    <div class="text-muted" id="tradeCount">Showing 0 entries</div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th class="radio-cell">Select</th>
+                                <th>Trade Code</th>
+                                <th>Trade</th>
+                                <th>Strength</th>
+                                <th>Duration (Months)</th>
+                                <th>Available</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tradeTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center">Please select an ITI to load trades.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -169,16 +234,14 @@
 
         <!-- Continue Button -->
         <div class="d-flex justify-content-end mt-4">
-            <button class="btn btn-primary btn-continue" id="continueBtn" disabled>
+            <button class="btn btn-success-custom btn-continue" id="continueBtn" disabled>
                 Continue <i class="fas fa-arrow-right ms-2"></i>
             </button>
         </div>
     </div>
 
     <!-- Global Footer -->
-    <footer>
-        <%@ include file="../footer.jsp" %>
-    </footer>
+    <%@ include file="../footer.jsp" %>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -327,7 +390,8 @@
 tradeTableBody.appendChild(tr);
                 });
 
-                tradeCount.textContent = `Showing ${trades.length} entries`;
+                // \${...} escaped so JSP EL leaves the literal for the browser.
+                tradeCount.textContent = `Showing \${trades.length} entries`;
 
                 // Add event listeners to radio buttons
                 const radioButtons = document.querySelectorAll('.trade-radio');

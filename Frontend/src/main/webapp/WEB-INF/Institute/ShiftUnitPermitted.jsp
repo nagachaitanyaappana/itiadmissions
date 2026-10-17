@@ -7,54 +7,88 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <title>Shift & Unit Permitted Configuration</title>
     <style>
-        .page-title {
-            color: #330033;
-            font-size: 28px;
-            font-weight: 600;
+        /* ---- Vibrant royal-blue palette (solid, modern portal look) ---- */
+        .page-header-custom {
+            background: linear-gradient(135deg, #2a65b8 0%, #1b4f9c 100%);
+            color: #ffffff;
+            padding: 20px 0;
+            margin-top: 15px;
+            margin-bottom: 30px;
+            border-bottom: 4px solid #123a75;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        }
+        .page-header-custom h2 {
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
         }
         .breadcrumb-text {
-            color: #888;
+            color: #cfe2f7;
             font-size: 14px;
         }
-        .details-card {
-            border: 2px solid #000;
-            border-radius: 0;
-            margin-bottom: 25px;
-            background-color: #cbd6b2;
+        .form-card {
+            border: 1px solid #bcd3ee;
+            border-radius: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            overflow: hidden;
+            margin-bottom: 30px;
+            background: #fff;
         }
-        .details-card-header {
-            background-color: #4ab131;
-            color: white;
-            padding: 12px 18px;
-            font-size: 18px;
-            font-weight: 600;
+        .card-header-primary {
+            background: linear-gradient(135deg, #2a65b8 0%, #1b4f9c 100%);
+            color: #ffffff;
+            font-weight: 700;
+            padding: 15px 25px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: none;
         }
-        .details-card-body {
-            padding: 20px;
+        .card-body-custom {
+            padding: 30px;
+            background-color: #fff;
         }
         .detail-label {
             font-weight: 600;
-            color: #165500;
-            font-size: 14px;
+            color: #123a75;
+            font-size: 0.95rem;
         }
         .table th {
-            background-color: #4ab131 !important;
+            background-color: #1b4f9c !important;
             color: white !important;
             padding: 12px;
             font-weight: bold;
             font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .table td {
             padding: 10px;
             vertical-align: middle;
             font-size: 13px;
         }
-        .table, .table th, .table td { border: 1px solid #000 !important; }
+        .table, .table th, .table td { border: 1px solid #bcd3ee !important; }
         .table-striped > tbody > tr:nth-child(odd) > td,
-        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #ffffff !important; }
+        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #f2f7fc !important; }
+        .table-striped > tbody > tr:nth-child(even) > td,
+        .table-striped > tbody > tr:nth-child(even) > th { background-color: #ffffff !important; }
+        .form-control-sm, .form-select-sm {
+            border: 1.5px solid #a9c6e8;
+            border-radius: 8px;
+        }
+        .form-control-sm:focus, .form-select-sm:focus {
+            border-color: #2a65b8 !important;
+            box-shadow: 0 0 0 0.25rem rgba(42, 101, 184, 0.25) !important;
+        }
+        .form-select option:hover {
+            background-color: #2a65b8 !important;
+            color: #ffffff !important;
+        }
         .loading-message {
             text-align: center;
             padding: 40px;
@@ -70,54 +104,98 @@
         .success-message {
             text-align: center;
             padding: 15px;
-            color: #155724;
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            border-radius: 5px;
+            color: #123a75;
+            background-color: #eaf2fb;
+            border: 1px solid #a9c6e8;
+            border-radius: 10px;
             margin-bottom: 20px;
             font-size: 16px;
         }
         .validation-error {
-            color: #dc3545;
+            color: #c41818;
             font-size: 14px;
             margin-top: 5px;
             font-weight: 600;
         }
+        .btn-success-custom {
+            background-color: #1b4f9c;
+            border: none;
+            color: white;
+            font-weight: 700;
+            padding: 10px 30px;
+            border-radius: 50px;
+            transition: all 0.3s;
+        }
+        .btn-success-custom:hover {
+            background-color: #16417f;
+            transform: translateY(-1px);
+            color: #fff;
+        }
+        .btn-danger-custom {
+            background-color: #c41818;
+            border: none;
+            color: #ffffff;
+            font-weight: 700;
+            border-radius: 50px;
+            transition: all 0.3s;
+        }
+        .btn-danger-custom:hover {
+            background-color: #cb342c;
+            transform: translateY(-1px);
+            color: #fff;
+        }
         .btn-save {
             min-width: 180px;
-            background-color: blue;
-            border-color: blue;
         }
-        .btn-save:hover { background-color: #0000b3; border-color: #0000b3; }
         .btn-back {
             min-width: 180px;
+            border-radius: 50px;
+            font-weight: 700;
         }
-        #addEntryBtn { background-color: green; border-color: green; }
-        #addEntryBtn:hover { background-color: #056b05; border-color: #056b05; }
+        #addEntryBtn {
+            padding: 8px 20px;
+        }
+        .remove-entry-btn {
+            background-color: #c41818;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+        }
+        .remove-entry-btn:hover { background-color: #cb342c; }
+        /* Navbar dropdown items: royal-blue palette hover */
+        body .dropdown-menu .dropdown-item:hover {
+            background-color: #2a65b8 !important;
+            color: #ffffff !important;
+            padding-left: 25px;
+        }
+        /* Footer: solid navy blue with white text */
+        .lower-footer {
+            background-color: #123a75 !important;
+            color: #ffffff !important;
+        }
     </style>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
 </head>
 
 <body>
     <!-- Global Header -->
-    <header>
-        <jsp:include page="/WEB-INF/reports/header.jsp" />
-    </header>
+    <jsp:include page="/WEB-INF/reports/header.jsp" />
 
-    <div class="container-fluid px-5 mt-4 mb-5 lg-page" style="min-height: 50vh;">
-        <!-- Page Header & Breadcrumbs -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="page-title text-uppercase">Shift & Unit Permitted Configuration</h2>
+    <!-- Portal page heading -->
+    <div class="page-header-custom text-center">
+        <div class="container">
+            <h2 class="text-uppercase">Shift &amp; Unit Permitted Configuration</h2>
             <div class="breadcrumb-text">Home / Shift Unit Permitted</div>
         </div>
+    </div>
 
+    <div class="container-fluid px-5 mb-5" style="min-height: 50vh;">
         <!-- Missing ITI/Trade Message -->
         <div id="missingInfoMessage" class="error-message" style="display: none;">
             <i class="fas fa-exclamation-triangle me-2"></i>
             <span id="missingInfoText"></span>
             <br><br>
-            <a href="${pageContext.request.contextPath}/iti-trade-selection" class="btn btn-primary">
+            <a href="${pageContext.request.contextPath}/iti-trade-selection" class="btn btn-success-custom">
                 <i class="fas fa-arrow-left me-2"></i>Back to Trade Selection
             </a>
         </div>
@@ -125,11 +203,11 @@
         <!-- Main Content -->
         <div id="mainContent" style="display: none;">
             <!-- Selected ITI Card -->
-            <div class="details-card">
-                <div class="details-card-header">
+            <div class="card form-card">
+                <div class="card-header-primary">
                     <i class="fas fa-building"></i> Selected ITI
                 </div>
-                <div class="details-card-body">
+                <div class="card-body-custom">
                     <div class="row">
                         <div class="col-md-6">
                             <p class="mb-1"><strong>ITI Code:</strong> <span id="selectedItiCode"></span></p>
@@ -140,11 +218,11 @@
             </div>
 
             <!-- Selected Trade Card -->
-            <div class="details-card">
-                <div class="details-card-header">
+            <div class="card form-card">
+                <div class="card-header-primary">
                     <i class="fas fa-tools"></i> Selected Trade
                 </div>
-                <div class="details-card-body">
+                <div class="card-body-custom">
                     <div class="row">
                         <div class="col-md-6">
                             <p class="mb-1"><strong>Trade Code:</strong> <span id="selectedTradeCode"></span></p>
@@ -155,15 +233,15 @@
             </div>
 
             <!-- Configuration Section -->
-            <div class="details-card">
-                <div class="details-card-header">
+            <div class="card form-card">
+                <div class="card-header-primary">
                     <i class="fas fa-cogs"></i> Configuration
                 </div>
-                <div class="details-card-body">
+                <div class="card-body-custom">
                     <!-- Entries Table -->
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0" style="color: #444;">Shift & Unit Entries</h5>
-                        <button class="btn btn-success" id="addEntryBtn">
+                        <h5 class="mb-0" style="color: #123a75;">Shift &amp; Unit Entries</h5>
+                        <button class="btn btn-success-custom" id="addEntryBtn">
                             <i class="fas fa-plus me-2"></i>Add Entry
                         </button>
                     </div>
@@ -196,7 +274,7 @@
                 <a href="${pageContext.request.contextPath}/iti-trade-selection" class="btn btn-secondary btn-back">
                     <i class="fas fa-arrow-left me-2"></i>Back to Trade Selection
                 </a>
-                <button class="btn btn-primary btn-save" id="saveBtn">
+                <button class="btn btn-success-custom btn-save" id="saveBtn">
                     <i class="fas fa-save me-2"></i>Save Configuration
                 </button>
             </div>
@@ -221,9 +299,7 @@
     </div>
 
     <!-- Global Footer -->
-    <footer>
-        <%@ include file="../footer.jsp" %>
-    </footer>
+    <%@ include file="../footer.jsp" %>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -438,30 +514,35 @@
                     const unit = parseInt(unitSelects[i].value);
                     const vacant = parseInt(vacantInputs[i].value) || 0;
 
+                    // Template literals are backslash-escaped (\${) so JSP EL
+                    // leaves them for the browser: without the escape the
+                    // server evaluates ${i + 1} to 1 and ${shift}/${unit} to
+                    // empty, mislabelling every duplicate as "Entry 1" and
+                    // colliding every row on the same empty key.
                     // Strength is entered here (permitted capacity for the shift/unit).
                     if (!(strength > 0)) {
-                        errors.push(`Entry ${i + 1}: Strength is required and must be greater than 0.`);
+                        errors.push(`Entry \${i + 1}: Strength is required and must be greater than 0.`);
                     }
 
                     // Validate shift
                     if (shift < 1 || shift > 3) {
-                        errors.push(`Entry ${i + 1}: Shift must be between 1 and 3.`);
+                        errors.push(`Entry \${i + 1}: Shift must be between 1 and 3.`);
                     }
 
                     // Validate unit
                     if (unit < 1 || unit > 12) {
-                        errors.push(`Entry ${i + 1}: Unit must be between 1 and 12.`);
+                        errors.push(`Entry \${i + 1}: Unit must be between 1 and 12.`);
                     }
 
                     // Validate strength vacant
                     if (vacant < 0) {
-                        errors.push(`Entry ${i + 1}: Strength vacant cannot be negative.`);
+                        errors.push(`Entry \${i + 1}: Strength vacant cannot be negative.`);
                     }
 
                     // Check for duplicate shift + unit combinations
-                    const shiftUnitKey = `${shift}-${unit}`;
+                    const shiftUnitKey = `\${shift}-\${unit}`;
                     if (shiftUnitMap.has(shiftUnitKey)) {
-                        errors.push(`Entry ${i + 1}: Shift ${shift} and Unit ${unit} are already configured.`);
+                        errors.push(`Entry \${i + 1}: Shift \${shift} and Unit \${unit} are already configured.`);
                     } else {
                         shiftUnitMap.set(shiftUnitKey, true);
                     }
