@@ -438,30 +438,35 @@
                     const unit = parseInt(unitSelects[i].value);
                     const vacant = parseInt(vacantInputs[i].value) || 0;
 
+                    // Template literals are backslash-escaped (\${) so JSP EL
+                    // leaves them for the browser: without the escape the
+                    // server evaluates ${i + 1} to 1 and ${shift}/${unit} to
+                    // empty, mislabelling every duplicate as "Entry 1" and
+                    // colliding every row on the same empty key.
                     // Strength is entered here (permitted capacity for the shift/unit).
                     if (!(strength > 0)) {
-                        errors.push(`Entry ${i + 1}: Strength is required and must be greater than 0.`);
+                        errors.push(`Entry \${i + 1}: Strength is required and must be greater than 0.`);
                     }
 
                     // Validate shift
                     if (shift < 1 || shift > 3) {
-                        errors.push(`Entry ${i + 1}: Shift must be between 1 and 3.`);
+                        errors.push(`Entry \${i + 1}: Shift must be between 1 and 3.`);
                     }
 
                     // Validate unit
                     if (unit < 1 || unit > 12) {
-                        errors.push(`Entry ${i + 1}: Unit must be between 1 and 12.`);
+                        errors.push(`Entry \${i + 1}: Unit must be between 1 and 12.`);
                     }
 
                     // Validate strength vacant
                     if (vacant < 0) {
-                        errors.push(`Entry ${i + 1}: Strength vacant cannot be negative.`);
+                        errors.push(`Entry \${i + 1}: Strength vacant cannot be negative.`);
                     }
 
                     // Check for duplicate shift + unit combinations
-                    const shiftUnitKey = `${shift}-${unit}`;
+                    const shiftUnitKey = `\${shift}-\${unit}`;
                     if (shiftUnitMap.has(shiftUnitKey)) {
-                        errors.push(`Entry ${i + 1}: Shift ${shift} and Unit ${unit} are already configured.`);
+                        errors.push(`Entry \${i + 1}: Shift \${shift} and Unit \${unit} are already configured.`);
                     } else {
                         shiftUnitMap.set(shiftUnitKey, true);
                     }

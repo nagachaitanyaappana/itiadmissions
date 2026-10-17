@@ -327,7 +327,8 @@
 tradeTableBody.appendChild(tr);
                 });
 
-                tradeCount.textContent = `Showing ${trades.length} entries`;
+                // \${...} escaped so JSP EL leaves the literal for the browser.
+                tradeCount.textContent = `Showing \${trades.length} entries`;
 
                 // Add event listeners to radio buttons
                 const radioButtons = document.querySelectorAll('.trade-radio');
