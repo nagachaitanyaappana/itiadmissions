@@ -1,8 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" %>
 <!DOCTYPE html>
 <%@include file='/WEB-INF/legacy/header.jsp' %>
-<%@include file='/WEB-INF/legacy/banner.jsp' %>
-<%@include file='/WEB-INF/legacy/nav-login2.jsp' %>
+<jsp:include page="/WEB-INF/reports/header.jsp" />
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">

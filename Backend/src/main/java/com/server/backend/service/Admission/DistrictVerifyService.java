@@ -219,14 +219,17 @@ public class DistrictVerifyService {
             """;
         jdbcTemplate.getJdbcTemplate().update(marksInsert, rid);
 
-        // 4. Copy to trade_sel
-        jdbcTemplate.getJdbcTemplate().update("DELETE FROM trade_sel WHERE regid::text = ?", rid);
+        // 4. Copy to trade_sel — district-scoped: only the trades for the district this
+        // officer is approving (mirrors DistrictVerifyService.list which scopes by
+        // regid+dist_code). Each district approves/rejects independently, so multiple
+        // districts per regid must be able to coexist in trade_sel.
+        jdbcTemplate.getJdbcTemplate().update("DELETE FROM trade_sel WHERE regid::text = ? AND dist_code = ?", rid, distCode);
         String tradeInsert = """
             INSERT INTO trade_sel (regid, iti_code, dist_code, temp, freezee, temp_code, trno, phase, year)
             SELECT regid, iti_code, dist_code, temp, freezee, temp_code, trno, phase, year
-            FROM student_trade_sel WHERE regid::character varying = ?
+            FROM student_trade_sel WHERE regid::character varying = ? AND dist_code = ?
             """;
-        jdbcTemplate.getJdbcTemplate().update(tradeInsert, rid);
+        jdbcTemplate.getJdbcTemplate().update(tradeInsert, rid, distCode);
 
         // Count rows copied
         int appCount = jdbcTemplate.getJdbcTemplate().queryForObject(

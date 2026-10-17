@@ -84,7 +84,7 @@ public class AdmissionPhaseController {
     public String start(HttpServletRequest request, Model model,
                         @RequestParam("caste_perform") String caste,
                         @RequestParam("qual_perform") String qual,
-                        @RequestParam("adm_perform") String time) {
+                        @RequestParam(value = "adm_perform", required = false, defaultValue = "") String time) {
         if (notLoggedIn(request)) {
             return "redirect:/?error=session";
         }
@@ -126,7 +126,7 @@ public class AdmissionPhaseController {
                            @RequestParam("merit_to") String meritTo,
                            @RequestParam("caste_perform") String caste,
                            @RequestParam("qual_perform") String qual,
-                           @RequestParam("adm_perform") String time) {
+                           @RequestParam(value = "adm_perform", required = false, defaultValue = "") String time) {
         if (notLoggedIn(request)) {
             return "redirect:/?error=session";
         }

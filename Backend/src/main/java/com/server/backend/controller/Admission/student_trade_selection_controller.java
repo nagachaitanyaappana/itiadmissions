@@ -69,6 +69,13 @@ public class student_trade_selection_controller {
         return ResponseEntity.ok(service.removeSelection(regId, itiCode));
     }
 
+    @DeleteMapping("/{regId}/dist/{distCode}")
+    public ResponseEntity<Map<String, Object>> removeDistrict(
+            @PathVariable Integer regId,
+            @PathVariable String distCode) {
+        return ResponseEntity.ok(service.removeSelectionByDist(regId, distCode));
+    }
+
     @Operation(summary = "Clear a candidate's ITI selections")
     @DeleteMapping("/{regId}")
     public ResponseEntity<Map<String, Object>> clear(@PathVariable Integer regId) {

@@ -269,13 +269,13 @@
                 }
 
                 // Fetch Caste List
-                const response = await fetch(NODE_API_BASE + '/api/dsc/caste-list', { credentials: 'include', credentials: 'include' }, { credentials: 'include' });
+                const response = await fetch(NODE_API_BASE + '/api/dsc/caste-list', { credentials: 'include' });
                 const result = await response.json();
                 if (result.success && result.data) {
                     const select = document.getElementById('casteSelect');
                     result.data.forEach(item => {
                         const opt = document.createElement('option');
-                        opt.value = opt.textContent = item.caste_code;
+                        opt.value = opt.textContent = item.casteCode;
                         select.appendChild(opt);
                     });
                 }

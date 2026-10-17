@@ -180,6 +180,8 @@
                                 <label class="form-label-custom">Qualification:</label>
                                 <select id="qualSelect" class="form-select form-control-custom">
                                     <option value="all">-All-</option>
+                                    <option value="SSC Passed">SSC Passed</option>
+                                    <option value="8th Passed">8th Passed</option>
                                 </select>
                             </div>
                             <div class="col-12 text-center mt-4 border-top pt-4">
@@ -321,8 +323,7 @@
         }
         let currentInitData = null;
 
-        // Load the running phase for the header. The reservation list is the fixed legacy pair
-        // (General / Women -> all / w), so no caste lookup is made.
+        // Load the running phase for the header and the reservation list from the backend API.
         async function initPage() {
             try {
                 const statusResp = await fetch(`${NODE_API_BASE}/api/status`, { 
@@ -336,6 +337,22 @@
                 }
             } catch (err) {
                 console.error("Initialization error:", err);
+            }
+            try {
+                const response = await fetch(`${NODE_API_BASE}/api/dsc/caste-list`, { credentials: 'include' });
+                const result = await response.json();
+                const select = document.getElementById('casteSelect');
+                if (result.success && result.data) {
+                    select.innerHTML = '<option value="all">All Categories</option>';
+                    result.data.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.casteCode;
+                        opt.textContent = item.casteName;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error("Caste list error:", err);
             }
         }
 

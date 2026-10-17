@@ -146,6 +146,42 @@ public class AdmissionProcessController {
                 request, resolveUser(roleId, insCode, itiCode, distCode)));
     }
 
+    @Operation(summary = "Open general pool for a district (district login only)")
+    @PostMapping("/general-pool/district")
+    public ResponseEntity<Map<String, Object>> openDistrictGeneralPool(
+            @RequestBody Map<String, String> body,
+            @RequestHeader(name = "X-Role-Id", required = false) String roleId,
+            @RequestHeader(name = "X-Ins-Code", required = false) String insCode) {
+        return handle(() -> {
+            if (!"3".equals(roleId)) {
+                throw new IllegalArgumentException(
+                        "General pool district activation requires district login");
+            }
+            if (insCode == null || insCode.isBlank()) {
+                throw new IllegalArgumentException("X-Ins-Code (district code) is required");
+            }
+            return admissionProcessService.updateDistrictGeneralPool(insCode.trim(), body.get("caste"));
+        });
+    }
+
+    @Operation(summary = "Open general pool for an ITI (ITI login only)")
+    @PostMapping("/general-pool/iti")
+    public ResponseEntity<Map<String, Object>> openItiGeneralPool(
+            @RequestBody Map<String, String> body,
+            @RequestHeader(name = "X-Role-Id", required = false) String roleId,
+            @RequestHeader(name = "X-Ins-Code", required = false) String insCode) {
+        return handle(() -> {
+            if (!"4".equals(roleId)) {
+                throw new IllegalArgumentException(
+                        "General pool ITI activation requires ITI login");
+            }
+            if (insCode == null || insCode.isBlank()) {
+                throw new IllegalArgumentException("X-Ins-Code (ITI code) is required");
+            }
+            return admissionProcessService.updateItiGeneralPool(insCode.trim(), body.get("caste"));
+        });
+    }
+
     /** Keeps every endpoint's error shape identical: {@code {success:false, error:"..."}} at 400. */
     private ResponseEntity<Map<String, Object>> handle(
             java.util.function.Supplier<Map<String, Object>> action) {

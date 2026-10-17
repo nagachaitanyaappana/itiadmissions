@@ -47,11 +47,14 @@ import com.server.backend.service.ITI.TradeSelectionService;
  *       column back.</li>
  * </ul>
  *
- * <p>Deliberate deviation from legacy: {@code open_Application_InterfaceAction} only ever appended,
- * so re-submitting would hit the primary key {@code (iti_code, regid)} and abort the form post —
- * which is why the legacy edit screens re-render saved rows instead of letting a candidate
- * re-save. The port replaces the candidate's rows inside one transaction, making the save
- * idempotent.
+ * <p>Legacy parity for re-saves: {@code open_Application_InterfaceAction} and the edit-screen
+ * actions ({@code OpeneditviewPageAction}, {@code OpeneditviewPageAction_phase2}) only ever
+ * INSERTED — re-submitting appends the new choices and leaves the stored ones alone. Per-row
+ * removal is a separate action ({@code deletedist.jsp} / {@code deleteiti.jsp}), ported as
+ * {@link #removeSelectionByDist} / {@link #removeSelection}. The legacy primary key
+ * {@code (iti_code, regid)} is gone from this schema (dropped while fixing the district-only
+ * rows, which all carry {@code iti_code = ''}), so the port enforces the same shape by skipping
+ * codes already stored instead of relying on a constraint.
  */
 @Service
 public class student_trade_selection_service {
@@ -134,10 +137,10 @@ public class student_trade_selection_service {
     }
 
     /**
-     * Replaces the candidate's choices with the posted list.
+     * Appends the posted choices to the candidate's saved list (legacy INSERT-only parity).
      *
      * <p>Order of operations (all in one transaction): validate the candidate and every ITI,
-     * delete the candidate's existing rows, insert the new ones.
+     * skip codes already stored ({@code dist_code|iti_code}), insert the remaining rows.
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> saveSelections(Integer regId,
@@ -177,9 +180,27 @@ public class student_trade_selection_service {
                 ? resolveDistrictChoices(choices)
                 : resolveItiChoices(choices);
 
-        // Replace, so a re-submission is idempotent (see the class javadoc).
-        int cleared = jdbcTemplate.update("DELETE FROM student_trade_sel WHERE regid = :regid",
-                new MapSqlParameterSource("regid", String.valueOf(regid)));
+        // Legacy parity: re-saving in the edit flow is INSERT-ONLY (OpeneditviewPageAction /
+        // OpeneditviewPageAction_phase2). Existing rows survive; per-row removal goes through
+        // removeSelection (deletedist.jsp / deleteiti.jsp). Only skip codes already stored so
+        // a re-submit cannot produce duplicate rows.
+        Set<String> existingCodes = new LinkedHashSet<>();
+        jdbcTemplate.query("SELECT dist_code, iti_code FROM student_trade_sel WHERE regid = :regid",
+                new MapSqlParameterSource("regid", String.valueOf(regid)),
+                (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
+                    existingCodes.add(rs.getString("dist_code") + "|" + rs.getString("iti_code"));
+                });
+
+        List<Row> newRows = new ArrayList<>(rows.size());
+        for (Row row : rows) {
+            String key = row.distCode() + "|" + row.itiCode();
+            if (existingCodes.contains(key)) {
+                continue;
+            }
+            existingCodes.add(key);
+            newRows.add(row);
+        }
+        rows = newRows;
 
         insertRows(regid, year, phase, rows, request.getFreezee());
 
@@ -189,8 +210,8 @@ public class student_trade_selection_service {
                 "UPDATE student_application SET entry_date = now() WHERE regid = :regid",
                 new MapSqlParameterSource("regid", String.valueOf(regid)));
 
-        logger.info("Saved {} {}selection(s) for regid {} (year {}, phase {}, {} replaced)",
-                rows.size(), districtOnly ? "district " : "ITI ", regid, year, phase, cleared);
+        logger.info("Saved {} {}selection(s) for regid {} (year {}, phase {}, {} already present)",
+                rows.size(), districtOnly ? "district " : "ITI ", regid, year, phase, request.getChoices().size() - rows.size());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
@@ -198,7 +219,6 @@ public class student_trade_selection_service {
         result.put("year", year);
         result.put("phase", phase);
         result.put("districtOnly", districtOnly);
-        result.put("cleared", cleared);
         result.put("saved", rows.size());
         result.put("codes", rows.stream()
                 .map(row -> districtOnly ? row.distCode() : row.itiCode()).toList());
@@ -268,7 +288,11 @@ public class student_trade_selection_service {
         return rows;
     }
 
-    /** Trims the codes and rejects blanks and duplicates — the PK includes {@code iti_code}. */
+    /**
+     * Trims the codes and rejects blanks and duplicates — the legacy PK {@code (iti_code, regid)}
+     * kept a candidate from picking the same ITI twice; since the dropped PK no longer does, the
+     * rule is enforced here in code.
+     */
     private static Set<String> collectItiCodes(
             List<student_trade_selection_request_dto.Choice> choices) {
 
@@ -364,6 +388,24 @@ public class student_trade_selection_service {
         result.put("success", true);
         result.put("regid", regid);
         result.put("itiCode", itiCode.trim());
+        result.put("rowsAffected", rows);
+        return result;
+    }
+
+    /** Removes all rows for a candidate+district (phase 1 / legacy deletedist.jsp). */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> removeSelectionByDist(Integer regid, String distCode) {
+        requireRegid(regid);
+        if (distCode == null || distCode.isBlank()) {
+            throw new IllegalArgumentException("distCode is required");
+        }
+        int rows = jdbcTemplate.update(
+                "DELETE FROM student_trade_sel WHERE regid = :regid AND dist_code = :distCode",
+                new MapSqlParameterSource("regid", String.valueOf(regid)).addValue("distCode", distCode.trim()));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        result.put("regid", regid);
+        result.put("distCode", distCode.trim());
         result.put("rowsAffected", rows);
         return result;
     }

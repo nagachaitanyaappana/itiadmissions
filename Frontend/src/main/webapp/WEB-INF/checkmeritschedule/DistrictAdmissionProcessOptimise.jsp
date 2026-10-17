@@ -2,8 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
 <%@include file='/WEB-INF/legacy/header.jsp' %>
-<%@include file='/WEB-INF/legacy/banner.jsp' %>
-<%@include file='/WEB-INF/legacy/nav-login2.jsp' %>
+<jsp:include page="/WEB-INF/reports/header.jsp" />
 
 <html>
     <head>

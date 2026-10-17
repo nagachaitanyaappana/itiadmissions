@@ -278,10 +278,23 @@
             // Selections need the phase first, so chain them after phase is known.
             loadStudent().always(function () {
                 loadPhoto();
-                // Legacy Application_print_student.jsp auto-prints on load (window.print()).
-                $.when(loadMarks(), loadSelections()).always(function () {
-                    window.print();
-                });
+            // Legacy Application_print_student.jsp auto-prints on load (window.print()).
+            // body-onload semantics: print only after ALL resources finish — the candidate
+            // photo is loaded async (outside the $.when chain), so wait for it or the
+            // print preview fires half-rendered on the first open of the tab.
+            $.when(loadMarks(), loadSelections()).always(function () {
+                var img = document.getElementById('paPhoto');
+                var printed = false;
+                function printOnce() { if (!printed) { printed = true; window.print(); } }
+                if (img && img.src && !img.complete) {
+                    img.addEventListener('load', printOnce);
+                    img.addEventListener('error', printOnce);
+                    // safety net: never block printing if the image stalls
+                    setTimeout(printOnce, 3000);
+                } else {
+                    printOnce();
+                }
+            });
             });
         });
     });

@@ -196,6 +196,7 @@
             </script>
             <script type="text/javascript">
                 var CURRENT_REGID = null;
+                var APPLIED_CODES = [];
                 var CURRENT_SSC_TYPE = null;
                 var CURRENT_YEAR = '';
                 var CURRENT_PHASE = '';
@@ -437,6 +438,11 @@
                         itiSelect.style.width = "320px";
                         itiSelect.innerHTML = '<option value="">--Select ITI--</option>';
                         itiSelect.onchange = function () {
+                            if (isAlreadyAppliedIti(this.value)) {
+                                alert("you have already Applied for this District");
+                                this.value = "";
+                                return;
+                            }
                             updateGovtCell(this);
                             showTrades(this.value);
                         };
@@ -502,7 +508,10 @@
                     for (var i = 0; i < all.length; i++) {
                         if (all[i] !== select && all[i].value === value) { return true; }
                     }
-                    return false;
+                    return APPLIED_CODES.indexOf(value) !== -1;
+                }
+                function isAlreadyAppliedIti(value) {
+                    return !!value && APPLIED_CODES.indexOf(value) !== -1;
                 }
                 // Same information the legacy getTrade_info.jsp showed for the chosen ITI.
                 function showTrades(itiCode) {
@@ -589,6 +598,13 @@
                     var phaseOne = isPhaseOne();
                     $.get('${backendBaseUrl}/admission/student-trade-selection/' + CURRENT_REGID,
                         function (list) {
+                            // Legacy keeps the already-applied codes in a hidden "iticodes"
+                            // field and blocks re-choosing them (Editviewpage.jsp abcd()).
+                            APPLIED_CODES = [];
+                            (list || []).forEach(function (r) {
+                                var code = phaseOne ? (r.distCode || '') : (r.itiCode || '');
+                                if (code && APPLIED_CODES.indexOf(code) === -1) { APPLIED_CODES.push(code); }
+                            });
                             var box = document.getElementById("savedSelections");
                             if (!list || list.length === 0) {
                                 box.innerHTML = '<p align="center">' + (phaseOne ? 'No district selection saved yet.' : 'No ITI selection saved yet.') + '</p>';
@@ -597,7 +613,8 @@
                             var html = '<b>Saved ' + (phaseOne ? 'district' : 'ITI') + ' selections (' + list.length + ')</b>'
                                 + '<table border="1" align="center" style="margin:6px auto;">'
                                 + '<tr><th>S.No</th><th>District Name</th>'
-                                + (phaseOne ? '' : '<th>Government/Private</th><th>College Name</th>') + '</tr>';
+                                + (phaseOne ? '' : '<th>Government/Private</th><th>College Name</th>')
+                                + '<th>Action</th></tr>';
                             list.forEach(function (r, idx) {
                                 html += '<tr><td align="center">' + (idx + 1) + '</td><td>'
                                     + (r.distName || r.distCode) + '</td>';
@@ -605,10 +622,35 @@
                                     var govt = (r.govt === 'G') ? 'Government' : (r.govt === 'P' ? 'Private' : '');
                                     html += '<td>' + govt + '</td><td>' + (r.itiName || r.itiCode) + '</td>';
                                 }
+                                var delCode = phaseOne ? r.distCode : r.itiCode;
+                                var delType = phaseOne ? 'dist' : 'iti';
+                                html += '<td align="center"><a href="javascript:void(0)" '
+                                    + 'onclick="deleteSavedSelection(\'' + delType + '\',\'' + delCode + '\')">Delete</a></td>';
                                 html += '</tr>';
                             });
                             box.innerHTML = html + '</table>';
                         });
+                }
+
+                function deleteSavedSelection(type, code) {
+                    if (!CURRENT_REGID) { return; }
+                    var url = '${backendBaseUrl}/admission/student-trade-selection/' + CURRENT_REGID;
+                    if (type === 'dist') {
+                        url += '/dist/' + encodeURIComponent(code);
+                    } else {
+                        url += '/' + encodeURIComponent(code);
+                    }
+                    $.ajax({
+                        url: url, type: 'DELETE',
+                        success: function () {
+                            loadSavedSelections();
+                        },
+                        error: function (xhr) {
+                            var msg = "Could not delete selection.";
+                            if (xhr.responseJSON && xhr.responseJSON.error) { msg = xhr.responseJSON.error; }
+                            alert(msg);
+                        }
+                    });
                 }
 
                 function showSelectMessage(ok, msg) {

@@ -647,6 +647,116 @@ public class AdmissionProcessService {
         }
     }
 
+    /**
+     * District-level general-pool activation, ported from legacy {@code open_pool_dist_level.jsp}:
+     * the year comes from {@code iti_params code 7} and the phase from the current
+     * {@code admissions.admission_phase} row, the district from the caller's {@code ins_code}.
+     * An existing row is updated in place; otherwise a new row is inserted with
+     * {@code permission = true} — the flag {@link #generalPool} later reads.
+     */
+    public Map<String, Object> updateDistrictGeneralPool(String distCode, String caste) {
+        requireNonNull(distCode, "district code");
+        requireNonNull(caste, "caste");
+        requireTable();
+
+        Map<String, Object> config = currentPhaseConfig();
+        String year = currentYear(config);
+        String phase = text(config.get("phase"));
+        logger.info("open general pool: dist_code={} caste={} year={} phase={}", distCode, caste, year,
+                phase);
+
+        int updated = jdbc.update(
+                "UPDATE generalpool.open_general_pool SET caste = :caste, gender = 'male', year = :year, "
+                        + "phase = :phase, permission = true WHERE dist_code = :distCode",
+                new MapSqlParameterSource()
+                        .addValue("distCode", distCode).addValue("caste", caste)
+                        .addValue("year", year).addValue("phase", phase));
+        if (updated == 0) {
+            jdbc.update(
+                    "INSERT INTO generalpool.open_general_pool "
+                            + "(dist_code, caste, gender, year, phase, permission) "
+                            + "VALUES (:distCode, :caste, 'male', :year, :phase, true)",
+                    new MapSqlParameterSource()
+                            .addValue("distCode", distCode).addValue("caste", caste)
+                            .addValue("year", year).addValue("phase", phase));
+        }
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("success", true);
+        result.put("message", "General Pool is Opened for the caste" + caste);
+        result.put("rowsAffected", updated == 0 ? 1 : updated);
+        result.put("year", year);
+        result.put("phase", phase);
+        return result;
+    }
+
+    /**
+     * ITI-level general-pool activation, ported from legacy {@code open_pool_iti_level.jsp}. The
+     * legacy page wrote to a {@code generalpool} table our schema does not carry; the port keeps the
+     * same row shape in {@code generalpool.open_general_pool} keyed by {@code iti_code} (with the
+     * district derived from the first two digits, as legacy did) so both levels live in one table.
+     */
+    public Map<String, Object> updateItiGeneralPool(String itiCode, String caste) {
+        requireNonNull(itiCode, "ITI code");
+        requireNonNull(caste, "caste");
+        requireTable();
+
+        Map<String, Object> config = currentPhaseConfig();
+        String year = currentYear(config);
+        String phase = text(config.get("phase"));
+        String distCode = itiCode.length() >= 2 ? itiCode.substring(0, 2) : itiCode;
+        long trno = jdbc.getJdbcTemplate().queryForObject("SELECT nextval('trno_seq')", Long.class);
+        logger.info("open general pool (ITI): iti_code={} caste={} year={} phase={} trno={}", itiCode,
+                caste, year, phase, trno);
+
+        int updated = jdbc.update(
+                "UPDATE generalpool.open_general_pool SET caste = :caste, gender = 'male', year = :year, "
+                        + "phase = :phase, permission = true, trno = :trno WHERE iti_code = :itiCode",
+                new MapSqlParameterSource()
+                        .addValue("itiCode", itiCode).addValue("caste", caste)
+                        .addValue("year", year).addValue("phase", phase).addValue("trno", trno));
+        if (updated == 0) {
+            jdbc.update(
+                    "INSERT INTO generalpool.open_general_pool "
+                            + "(dist_code, caste, gender, year, phase, permission, trno, iti_code) "
+                            + "VALUES (:distCode, :caste, 'male', :year, :phase, true, :trno, :itiCode)",
+                    new MapSqlParameterSource()
+                            .addValue("distCode", distCode).addValue("caste", caste)
+                            .addValue("year", year).addValue("phase", phase)
+                            .addValue("trno", trno).addValue("itiCode", itiCode));
+        }
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("success", true);
+        result.put("message", "General Pool is Opened for the caste" + caste);
+        result.put("rowsAffected", updated == 0 ? 1 : updated);
+        result.put("year", year);
+        result.put("phase", phase);
+        return result;
+    }
+
+    /** The general-pool table is optional in some schema snapshots; fail with a readable error. */
+    private void requireTable() {
+        try {
+            String present = jdbc.getJdbcTemplate().queryForObject(
+                    "SELECT to_regclass('generalpool.open_general_pool')::text", String.class);
+            if (present == null) {
+                throw new IllegalStateException(
+                        "general pool table not available in this database");
+            }
+        } catch (IllegalStateException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalStateException("general pool table not available: " + ex.getMessage());
+        }
+    }
+
+    private static void requireNonNull(String value, String name) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(name + " is required");
+        }
+    }
+
     // ------------------------------------------------------------------ seat matrix (raw grid)
 
     private static final String SEAT_MATRIX_SQL = """

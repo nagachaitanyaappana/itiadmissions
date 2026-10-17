@@ -4,8 +4,7 @@
 <%@include file='/WEB-INF/legacy/header.jsp' %>
 <html>
     <body>
-        <%@include file='/WEB-INF/legacy/banner.jsp' %>
-        <%@include file='/WEB-INF/legacy/nav-login2.jsp' %>
+        <jsp:include page="/WEB-INF/reports/header.jsp" />
         <form action="${pageContext.request.contextPath}/AdmissionPhase/itiAdmissionEntry" method="post" id="startForm">
             <c:choose>
                 <c:when test="${phase == '1'}">
@@ -25,7 +24,7 @@
                                 <c:forEach var="c" items="${casteOptions}">
                                     <option value="${c.casteCode}">${c.casteName}</option>
                                 </c:forEach>
-                                <option value="all">all</option>
+                                <option value="all" selected>all</option>
                                 <option value="w">Women</option>
                             </select>
                         </td>
