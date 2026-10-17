@@ -90,6 +90,41 @@
         }
         #selectedItiCode, #selectedTradeCode { color: #17549e; font-weight: 700; }
         #selectedItiName, #selectedTradeShort { color: #0f172a; font-weight: 600; }
+        .stat-strip {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: 140px;
+            border-radius: 10px;
+            padding: 10px 14px;
+            border: 1px solid transparent;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 2px;
+        }
+        .stat-value {
+            font-size: 1.35rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.2;
+        }
+        .stat-entries { background-color: #eef4fc; border-color: #d8e6f8; }
+        .stat-entries .stat-label { color: #17549e; }
+        .stat-entries .stat-value { color: #123c74; }
+        .stat-strength { background-color: #f0f7f5; border-color: #d7ebe6; }
+        .stat-strength .stat-label { color: #0f766e; }
+        .stat-strength .stat-value { color: #0b534d; }
+        .stat-vacant { background-color: #f0f9f2; border-color: #d9eedd; }
+        .stat-vacant .stat-label { color: #15803d; }
+        .stat-vacant .stat-value { color: #14532d; }
         .table th {
             background-color: #eef2f7 !important;
             color: #475569 !important;
@@ -287,6 +322,22 @@
                         </button>
                     </div>
 
+                    <!-- Live summary stats -->
+                    <div class="stat-strip">
+                        <div class="stat-card stat-entries">
+                            <div class="stat-label"><i class="fas fa-list-ol me-1"></i>Entries</div>
+                            <div class="stat-value" id="statEntries">0</div>
+                        </div>
+                        <div class="stat-card stat-strength">
+                            <div class="stat-label"><i class="fas fa-users me-1"></i>Total Strength</div>
+                            <div class="stat-value" id="statStrength">0</div>
+                        </div>
+                        <div class="stat-card stat-vacant">
+                            <div class="stat-label"><i class="fas fa-circle-check me-1"></i>Total Vacant</div>
+                            <div class="stat-value" id="statVacant">0</div>
+                        </div>
+                    </div>
+
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped" id="entriesTable">
                             <thead>
@@ -372,6 +423,9 @@
             const errorMessage = document.getElementById("errorMessage");
             const errorText = document.getElementById("errorText");
             const entriesValidationError = document.getElementById("entriesValidationError");
+            const statEntries = document.getElementById("statEntries");
+            const statStrength = document.getElementById("statStrength");
+            const statVacant = document.getElementById("statVacant");
 
             let entries = [];
             let isSaving = false;
@@ -408,6 +462,7 @@
                 // Add event listeners
                 addEntryBtn.addEventListener("click", addEntry);
                 saveBtn.addEventListener("click", saveConfiguration);
+                entriesTableBody.addEventListener("input", updateStats);
             }
 
             function loadExistingConfiguration() {
@@ -462,6 +517,7 @@
                     emptyRowClone.id = "emptyRow";
                     emptyRowClone.innerHTML = '<td colspan="5" class="text-center">No entries configured. Click "Add Entry" to add one.</td>';
                     entriesTableBody.appendChild(emptyRowClone);
+                    updateStats();
                     return;
                 }
 
@@ -504,6 +560,27 @@
                         removeEntry(index);
                     });
                 });
+
+                updateStats();
+            }
+
+            function updateStats() {
+                const strengthInputs = entriesTableBody.querySelectorAll('.strength-input');
+                const vacantInputs = entriesTableBody.querySelectorAll('.strength-vacant-input');
+                let totalStrength = 0;
+                let totalVacant = 0;
+
+                strengthInputs.forEach((input, i) => {
+                    const strength = parseInt(input.value) || 0;
+                    totalStrength += strength;
+                    // Blank vacant means the backend defaults it to the strength.
+                    const vacantRaw = vacantInputs[i] ? vacantInputs[i].value : '';
+                    totalVacant += vacantRaw === '' ? strength : (parseInt(vacantRaw) || 0);
+                });
+
+                statEntries.textContent = strengthInputs.length;
+                statStrength.textContent = totalStrength;
+                statVacant.textContent = totalVacant;
             }
 
             function generateUnitOptions(selectedValue) {
