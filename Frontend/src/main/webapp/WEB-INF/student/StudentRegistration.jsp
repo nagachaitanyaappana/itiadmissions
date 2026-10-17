@@ -170,6 +170,53 @@
                 return true;
             }
 
+            // Port of legacy web/js/Verhoeff.js (Avraham Plotnitzky) — String.verhoeffCheck.
+            function verhoeffCheck(str) {
+                var d = [[0,1,2,3,4,5,6,7,8,9],
+                         [1,2,3,4,0,6,7,8,9,5],
+                         [2,3,4,0,1,7,8,9,5,6],
+                         [3,4,0,1,2,8,9,5,6,7],
+                         [4,0,1,2,3,9,5,6,7,8],
+                         [5,9,8,7,6,0,4,3,2,1],
+                         [6,5,9,8,7,1,0,4,3,2],
+                         [7,6,5,9,8,2,1,0,4,3],
+                         [8,7,6,5,9,3,2,1,0,4],
+                         [9,8,7,6,5,4,3,2,1,0]];
+                var p = [[0,1,2,3,4,5,6,7,8,9],
+                         [1,5,7,6,2,8,3,0,9,4],
+                         [5,8,0,3,7,9,6,1,4,2],
+                         [8,9,1,6,0,4,3,5,2,7],
+                         [9,4,5,3,1,2,6,8,7,0],
+                         [4,2,8,6,5,7,3,9,0,1],
+                         [2,7,9,3,8,0,6,4,1,5],
+                         [7,0,4,6,9,1,3,2,5,8]];
+                var c = 0;
+                String(str).replace(/\D+/g, "").split("").reverse().join("").replace(/[\d]/g, function (u, i) {
+                    c = d[c][p[i & 7][parseInt(u, 10)]];
+                });
+                return (c === 0);
+            }
+
+            // Port of legacy validAadhar()/duplicate_adar() verhoeff branch
+            // (open_Application_Interface_Student.jsp:433). Wired to #adarno onchange;
+            // the duplicate-Aadhaar AJAX is covered server-side by /api/student/save.
+            function validAadhar() {
+                var value = document.getElementById("adarno").value.trim();
+                if (value.length !== 12) {
+                    alert("Please enter a valid Aadhar number");
+                    document.getElementById("adarno").value = "";
+                    document.getElementById("adarno").focus();
+                    return false;
+                }
+                if (!verhoeffCheck(value)) {
+                    alert("Adhar is invalid");
+                    document.getElementById("adarno").value = "";
+                    document.getElementById("adarno").focus();
+                    return false;
+                }
+                return true;
+            }
+
             function limitText(el, n) { if (el.value.length > n) el.value = el.value.substring(0, n); }
 
             function validate() {
@@ -343,16 +390,30 @@
 
             function regPreviewPhoto(input) {
                 var img = document.getElementById("uploadPreview");
-                if (!img) { return; }
-                img.src = "";
-                if (!input || !input.files || input.files.length === 0) { return; }
-                var file = input.files[0];
-                if (file.type !== "image/png" && file.type !== "image/jpeg") {
-                    input.value = "";
-                    alert("Please select a PNG or JPEG image.");
-                    return;
+                var file = (input && input.files && input.files.length > 0) ? input.files[0] : null;
+                // Legacy photoValidations (open_Application_Interface_Student.jsp:446):
+                // size window 10KB-200KB then extension whitelist gif/jpg/jpeg/png.
+                if (file) {
+                    var filesize = file.size;
+                    if (filesize < 10000 || filesize > 200000) {
+                        alert("File Not Less Than 10KB And Greater Than 200KB");
+                        input.value = '';
+                        input.focus();
+                        file = null;
+                    }
                 }
-                img.src = URL.createObjectURL(file);
+                if (file) {
+                    var fileName = input.value;
+                    var ext = fileName.substring(fileName.lastIndexOf('.') + 1);
+                    if (!(ext === "gif" || ext === "GIF" || ext === "JPEG" || ext === "jpeg" || ext === "jpg" || ext === "JPG" || ext === "png" || ext === "PNG")) {
+                        alert("Upload gif,jpg,png,jpeg images only");
+                        input.value = '';
+                        input.focus();
+                        file = null;
+                    }
+                }
+                if (!img) { return; }
+                img.src = file ? URL.createObjectURL(file) : "";
             }
 
             function loadCastes() {
@@ -373,9 +434,11 @@
                 $.get('${backendBaseUrl}/api/student/subcastes/' + encodeURIComponent(code))
                     .done(function (list) {
                         (list || []).forEach(function (r) {
+                            // Legacy option label is sub_caste (getSubCaste.jsp); the restored
+                            // DB has empty names, so fall back to "Sub-caste <id>".
                             var label = (r.subCasteName && r.subCasteName !== '') ? r.subCasteName : ('Sub-caste ' + r.subCasteId);
                             var opt = document.createElement('option');
-                            opt.value = r.subCasteId; opt.textContent = label + ' (' + r.subCasteId + ')';
+                            opt.value = r.subCasteId; opt.textContent = label;
                             sel.appendChild(opt);
                         });
                     });
@@ -728,6 +791,25 @@
                 if (mTotal) { mTotal.value = anyMark ? markSum : ""; }
             }
 
+            // Port of legacy web/js/applicationScript.js ossc_fun() (Number of Languages = "two").
+            // Second language becomes read-only and zeroed; totals recompute without it.
+            // The legacy prompt()/ossc branch is dead code (no #ossc element exists anywhere).
+            function ossc_fun() {
+                var slm = document.getElementById("m_secondlang");
+                var slg = document.getElementById("g_secondlang");
+                if (slm) { slm.readOnly = true; slm.value = 0; }
+                if (slg) { slg.readOnly = true; slg.value = 0; }
+                recalcTotal();
+            }
+
+            // Port of ossc_fun2() (Number of Languages = "three"): second language editable again.
+            function ossc_fun2() {
+                var slm = document.getElementById("m_secondlang");
+                var slg = document.getElementById("g_secondlang");
+                if (slm) { slm.readOnly = false; }
+                if (slg) { slg.readOnly = false; }
+            }
+
             // Port of the legacy web/js/conversionLogic.js convert(secondLang, source, target).
             // Derives a subject GPA from its marks. The second language uses a different scale.
             // In legacy the "sscm" (marks) branch wired each marks input's onchange to this, so
@@ -938,14 +1020,14 @@
                 <td><font color="#d42424"><b>Date of Birth(dd-mm-yyyy):*</b></font></td>
                 <td><input type="date" id="appdob"></td>
                 <td><font color="#d42424"><b>Aadhar Card Number:*</b></font></td>
-                <td><input type="text" id="adarno" maxlength="12" onkeypress="return NumericsOnly(event);"></td>
+                <td><input type="text" id="adarno" maxlength="12" onkeypress="return NumericsOnly(event);" onchange="return validAadhar();" autocomplete="off"></td>
             </tr>
             <tr>
                 <td><font color="#d42424"><b>Gender:*</b></font></td>
                 <td>Male:<input type="radio" name="gender" value="male"> Female:<input type="radio" name="gender" value="female"></td>
                 <td><font color="#d42424"><b>Category:*</b></font></td>
                 <td>
-                    <select id="casteSelect"><option value="">--Select Caste--</option></select>
+                    <select id="casteSelect" onchange="loadSubCastes();"><option value="">--Select Caste--</option></select>
                     <font color="#d42424"><b>Sub Category:*</b></font>
                     <select id="subCasteSelect"><option value="">-- Select Sub Category --</option></select>
                 </td>
@@ -987,8 +1069,8 @@
             <tr>
                 <td colspan="4" align="center">
                     <font><b>Number of Languages*</b></font>
-                    <input type="radio" id="sub1" name="subjects" value="sub1"> <label for="sub1">two</label>
-                    <input type="radio" id="sub2" name="subjects" value="sub2" checked="checked"> <label for="sub2">three</label><br>
+                    <input type="radio" id="sub1" name="subjects" value="sub1" onclick="return ossc_fun();"> <label for="sub1">two</label>
+                    <input type="radio" id="sub2" name="subjects" value="sub2" checked="checked" onclick="return ossc_fun2();"> <label for="sub2">three</label><br>
 
                     <table align="center" bgcolor="#b7e2f3" id="gpaRow">
                         <tr><td colspan="3"></td></tr>

@@ -286,8 +286,19 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
         entity.setSscMonth(filterBad(dto.getSscMonth()));
 
         if (isUpdate) {
-            // Legacy update branch sets only these columns plus app_status='A'.
+            // Legacy update branch sets app_status='A'. The two-step resume flow loses the
+            // sub-category/EWS entries otherwise (they are only collected in the final form),
+            // so those two columns are set here as well; the rest of the insert-only columns
+            // (year/phase/entryDate/ip/dataFlag) stay untouched on resume.
             entity.setAppStatus("A");
+            entity.setSubCaste(filterBad(dto.getSubCaste()));
+            entity.setEconomicWeakerSection(Boolean.TRUE.equals(dto.getEconomicWeakerSection()));
+            if (dto.getPwdCategory() != null && !dto.getPwdCategory().isBlank()) {
+                entity.setPwdCategory(filterBad(dto.getPwdCategory()));
+            }
+            if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+                entity.setEmail(filterBad(dto.getEmail()));
+            }
         } else {
             entity.setSscType(filterBad(dto.getSscType()));
             entity.setEmail(filterBad(dto.getEmail()));
