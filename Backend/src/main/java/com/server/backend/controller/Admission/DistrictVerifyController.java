@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import java.util.Map;
 
 @Tag(name = "District Verification")
@@ -23,6 +24,11 @@ public class DistrictVerifyController {
     public Map<String, Object> lookup(@RequestParam String regid,
                                        @RequestParam(required = false) String distCode) {
         return service.lookup(regid, distCode);
+    }
+
+    @GetMapping("/list")
+    public List<Map<String, Object>> list(@RequestParam(required = false) String distCode) {
+        return service.list(distCode);
     }
 
     @PostMapping("/approve")

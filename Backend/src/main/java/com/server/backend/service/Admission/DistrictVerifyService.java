@@ -296,4 +296,23 @@ public class DistrictVerifyService {
         res.put("appStatus", "R");
         return res;
     }
+
+    /**
+     * Lists applications that selected this district (via student_trade_sel),
+     * newest first. Shape matches what distVerificationJs.js renders:
+     * regid, name, fname, user_id, verified_date, app_status, ssc_regno, dob.
+     */
+    public List<Map<String, Object>> list(String distCode) {
+        if (distCode == null || distCode.isBlank()) {
+            return List.of();
+        }
+        return jdbcTemplate.getJdbcTemplate().queryForList(
+                "SELECT a.regid, a.name, a.fname, a.user_id, a.verified_date, " +
+                "       a.app_status, a.ssc_regno, a.dob " +
+                "FROM student_application a " +
+                "WHERE EXISTS (SELECT 1 FROM student_trade_sel s " +
+                "              WHERE s.regid::text = a.regid::text AND s.dist_code = ?) " +
+                "ORDER BY a.regid DESC",
+                distCode.trim());
+    }
 }

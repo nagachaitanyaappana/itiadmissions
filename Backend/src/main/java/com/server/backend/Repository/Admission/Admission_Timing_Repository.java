@@ -25,12 +25,21 @@ public interface Admission_Timing_Repository
      * string "all" (which never exists in admission_timings and always came back
      * empty). Comparisons are case-insensitive because the UI sends "10th"/"inter"
      * while legacy rows may store "10TH"/"Inter".
+     *
+     * <p>Built as a constructor projection, not an entity {@code SELECT a}: the
+     * district-level rows Hibernate used to materialise as {@code null} (their
+     * {@code iti_code} — an {@code @Id} column — is NULL), and
+     * {@code Schedule_Entry_ServiceImpl.convertToDTO} NPEd on every result,
+     * 500ing GET /admission/schedule-entry and leaving ScheduleEntryView empty.
      */
-    @Query("SELECT a FROM AdmissionTiming a "
+    @Query("SELECT new com.server.backend.DTO.Schedule_Entry_DTO("
+            + "a.itiCode, a.minqul, a.meritFrom, a.meritTo, a.calDate, a.calTime, "
+            + "a.distCode, a.caste, a.trno, a.tempPk, a.phase, a.year) "
+            + "FROM AdmissionTiming a "
             + "WHERE (:minqul = 'all' OR LOWER(a.minqul) = LOWER(:minqul)) "
             + "AND (:caste = 'all' OR LOWER(a.caste) = LOWER(:caste)) "
             + "AND a.phase = :phase AND a.year = :year")
-    List<AdmissionTiming> findFilteredScheduleEntries(
+    List<com.server.backend.DTO.Schedule_Entry_DTO> findFilteredScheduleEntries(
             @Param("minqul") String minqul,
             @Param("caste") String caste,
             @Param("phase") String phase,

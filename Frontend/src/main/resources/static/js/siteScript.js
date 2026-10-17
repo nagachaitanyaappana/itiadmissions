@@ -2,10 +2,9 @@
  * 
  */
 // API_BASE_URL is injected by the JSP before this script loads via window.API_BASE_URL.
-// distVerificationJs.js (loaded first on verification pages) already declares
-// `const API_BASE_URL` — redeclaring it here threw "already been declared" and
-// killed this whole file. Reuse it when present, otherwise fall back to window.
-var API_BASE_URL = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : window.API_BASE_URL;
+// NOTE: do NOT declare const/var API_BASE_URL here — distVerificationJs.js already
+// declares `const API_BASE_URL` globally and any redeclaration (even var) throws
+// "already been declared" and kills this whole file. Always read window directly.
 
 
 function checkValue(errorId) {
@@ -44,7 +43,7 @@ function generateCaptcha() {
 }
 
 function getAllCastes(callback) {
-    var url = API_BASE_URL + '/api/student/castes';
+    var url = window.API_BASE_URL + '/api/student/castes';
 	$.ajax({
 		type: 'GET',
 		url: url,

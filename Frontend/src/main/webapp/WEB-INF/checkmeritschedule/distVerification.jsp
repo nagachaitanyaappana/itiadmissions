@@ -29,6 +29,7 @@
 <script type="text/javascript">
     const SESSION_ROLE_ID = '${sessionScope.roleId}';
     const SESSION_INS_CODE = '${sessionScope.insCode}';
+    const SESSION_USERNAME = '${sessionScope.username}';
 </script>
 <script type="text/javascript" src="./js/siteScript.js"></script>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
@@ -170,7 +171,7 @@
 				<label class="form-label">Date of Birth(mm-dd-yyyy):</label> <input
 					type="date" name="dob" id="dob" class="form-control"
 					onchange="return checkValue('dobError')" /><span id="dobError"></span>
-				<input type="hidden" id="dob" />
+				<input type="hidden" id="dobHidden" />
 			</div>
 			<div class="col-lg-4 col-md-6">
 				<label class="form-label">Aadhar Card Number </label> <input

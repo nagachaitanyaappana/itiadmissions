@@ -7,5 +7,8 @@
     </div>
 </footer>
 
-<script src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
-<script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
+<%-- Scriptlet (not EL): this footer is statically included (<%@ include %>) by pages
+     with isELIgnored="true" (e.g. checkmeritschedule/ScheduleEntry.jsp), where EL would
+     stay literal and the browser would request /$%7BpageContext...%7D/js/... (404). --%>
+<script src="<%= request.getContextPath() %>/js/jquery.min.js"></script>
+<script src="<%= request.getContextPath() %>/js/bootstrap.bundle.min.js"></script>

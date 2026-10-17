@@ -9,6 +9,21 @@ let getCastes = null;
 
 let admissionPhaseData = null;
 
+// District code -> name lookup (cached). getCandidateAppliedDetails renders
+// district names via getDistName(), which legacy defined per-page.
+let __distCache = null;
+function getDistName(distcode) {
+	if (__distCache === null) {
+		__distCache = {};
+		$.ajax({ type: 'get', url: API_BASE_URL + '/api/districts', async: false,
+			success: function (list) {
+				(list || []).forEach(function (d) { __distCache[d.code] = d.name; });
+			}
+		});
+	}
+	return __distCache[distcode] || distcode;
+}
+
 
 function getReady(){
 	//alert("getReady");
@@ -50,7 +65,7 @@ function getDistVerificationList(insCode){
 	
 	$.ajax({
 		type: 'get',
-		url: API_BASE_URL + '/masterdata/getDistVerificationList?dist_code='+insCode,
+		url: API_BASE_URL + '/api/dv/list?distCode='+insCode,
 		contentType: 'application/json',
 		cache: false,
 		timeout: 600000,
@@ -69,7 +84,8 @@ function getDistVerificationList(insCode){
 				
 				var app_statuss = bean.app_status;
 				var reverify = '';
-				if(app_statuss == null || app_statuss == ""){ 
+				// Unverified covers legacy NULL/'' as well as 'N' (staging default).
+				if(app_statuss == null || app_statuss == "" || app_statuss == 'N'){
 					app_statuss = '<a href="javascript:editApplication(\''+bean.ssc_regno+'\',\''+bean.regid+'\',\''+bean.dob+'\')">VERIFY</a>'; 
 				}
 				if(app_statuss == 'A'){ 
@@ -113,8 +129,8 @@ function getDistVerificationList(insCode){
 
 function getCandidateAppliedDetails(a){
 	$.ajax({
-		type: 'post',
-				url: API_BASE_URL + '/api/student/' + a,  // Backend: StudentApplicationController @GetMapping("/{regid}")
+		type: 'get',
+				url: API_BASE_URL + '/admission/student-trade-selection/' + a,
 		contentType: 'application/json',
 		cache: false,
 		timeout: 600000,
@@ -147,6 +163,8 @@ function editApplication(ssc_regno,regid,dob){
 	//alert("editApplication=>regid=>"+regid);
 	//alert("editApplication=>dob=>"+dob);
 	$("#formthree").hide();
+	$("#approveButton").show();
+	$("#rejectButton").show();
 	
 	
 	var convertedDate = changeDateFormat(dob);
@@ -158,18 +176,43 @@ function editApplication(ssc_regno,regid,dob){
 	// Best available: fetch the student by regid — the legacy
 	// /itiapi/std/checkRegOrNot call has no backend endpoint at all.
 	$.ajax({
-		type: 'post',
+		type: 'get',
 		url: API_BASE_URL + '/api/student/' + regid,
 		cache: false,
 		timeout: 6000000,
 		success:function(resp){
 			//alert("resp=>"+JSON.stringify(resp));
+			// Backend GET /api/student/{regid} returns the flat DTO; the form
+			// below reads resp.studentApplication.*, so nest it here.
+			resp = { studentApplication: resp };
+			// Legacy returned studentCandMarksEntity inside the same response;
+			// ours lives at GET /api/student/marks/{regid} (flat camelCase),
+			// so fetch it and adapt to the snake_case shape the fill code reads.
+			resp.studentCandMarksEntity = {};
+			$.ajax({ type: 'get', url: API_BASE_URL + '/api/student/marks/' + regid,
+				async: false,
+				success: function (m) {
+					m = m || {};
+					resp.studentCandMarksEntity = {
+						ssc_first_lang_marks: m.sscFirstLangMarks, ssc_first_lang_gpa: m.sscFirstLangGpa,
+						ssc_second_lang_marks: m.sscSecondLangMarks, ssc_second_lang_gpa: m.sscSecondLangGpa,
+						ssc_eng_marks: m.sscEngMarks, ssc_eng_gpa: m.sscEngGpa,
+						ssc_math_marks: m.sscMathMarks, ssc_math_gpa: m.sscMathGpa,
+						ssc_sci_marks: m.sscSciMarks, ssc_sci_gpa: m.sscSciGpa,
+						ssc_social_marks: m.sscSocialMarks, ssc_social_gpa: m.sscSocialGpa
+					};
+				}
+			});
 			
 			$("#regidd").val(resp.studentApplication.regid);
 			$("#dobPrint").val(convertedDate);
-			$("#ssc_regnoPrint").val(resp.studentApplication.sscRegno);
+			// Backend DTO key is sscRegNo (capital N).
+			$("#ssc_regnoPrint").val(resp.studentApplication.sscRegNo);
 			
-			document.getElementById('admYearPhase').innerHTML = admissionPhaseData.admYear+' & Phase-'+admissionPhaseData.currentPhase;
+			// Backend /api/reports/current-admission-phase returns {year, phase}.
+			var admYear = admissionPhaseData ? (admissionPhaseData.admYear || admissionPhaseData.year || '') : '';
+			var curPhase = admissionPhaseData ? (admissionPhaseData.currentPhase || admissionPhaseData.phase || '') : '';
+			document.getElementById('admYearPhase').innerHTML = admYear+' & Phase-'+curPhase;
 			
 			$("#imageContainer").empty();
 			$("#contentDiv").hide();
@@ -185,10 +228,22 @@ function editApplication(ssc_regno,regid,dob){
 			}
 			
 			
-			document.getElementById('ssc_regno').value = resp.studentApplication.sscRegno;
-			$('#ssc_board').val(resp.studentApplication.sscBoard);
+			document.getElementById('ssc_regno').value = resp.studentApplication.sscRegNo;
+			// No SSC-board master endpoint exists, so the dropdown only holds
+			// "-select-". Keep the stored board selectable or approve validation
+			// ("Board is required") can never pass.
+			var boardCode = resp.studentApplication.sscBoard;
+			if(boardCode && $("#ssc_board option[value='"+boardCode+"']").length === 0){
+				$("#ssc_board").append('<option value="'+boardCode+'">'+boardCode+'</option>');
+			}
+			$('#ssc_board').val(boardCode);
 			document.getElementById('ssc_year').value = resp.studentApplication.sscYear;
-			$('#ssc_month').val(resp.studentApplication.sscMonth);
+			// Stored months may be zero-padded ("03") while options are "3"/"4".
+			var storedMonth = resp.studentApplication.sscMonth;
+			if(storedMonth !== null && storedMonth !== undefined && String(storedMonth) !== ''){
+				storedMonth = String(storedMonth).replace(/^0/, '');
+			}
+			$('#ssc_month').val(storedMonth);
 			document.getElementById('name').value = resp.studentApplication.name;
 			document.getElementById('phno').value = resp.studentApplication.phno;
 			$('#dob').val(resp.studentApplication.dob);
@@ -215,7 +270,17 @@ function editApplication(ssc_regno,regid,dob){
 			document.getElementById('ews').value = resp.studentApplication.economicWeakerSection;
 			
 			$("#ssc_type").val(resp.studentApplication.sscType);
-			$("#noOfLangs").val(resp.studentApplication.noOfLangs);
+			// Backend has no noOfLangs field: reuse the stored value when valid,
+			// otherwise derive from second-language marks (present => THREE).
+			var storedLangs = resp.studentApplication.noOfLangs;
+			if(storedLangs != '2' && storedLangs != '3'){
+				var slm = resp.studentCandMarksEntity.ssc_second_lang_marks;
+				var slg = resp.studentCandMarksEntity.ssc_second_lang_gpa;
+				var hasSecond = (slm !== null && slm !== undefined && String(slm) !== '' && String(slm) !== '0')
+					|| (slg !== null && slg !== undefined && String(slg) !== '' && String(slg) !== '0');
+				storedLangs = hasSecond ? '3' : '2';
+			}
+			$("#noOfLangs").val(storedLangs);
 			
 			var sscType = $("#ssc_type").val();
 			var noOfLangs = $("#noOfLangs").val();
@@ -240,10 +305,17 @@ function editApplication(ssc_regno,regid,dob){
 				document.getElementById('science').value = resp.studentCandMarksEntity.ssc_sci_gpa;
 				document.getElementById('social').value = resp.studentCandMarksEntity.ssc_social_gpa;
 			}
+			// Legacy carried the photo inside the same response; ours lives at
+			// GET /api/student/photo/{regid} as {photo: base64}.
+			resp.imageCandPhotosEntity = { image: '' };
+			$.ajax({ type: 'get', url: API_BASE_URL + '/api/student/photo/' + regid,
+				async: false,
+				success: function (ph) { if (ph && ph.photo) { resp.imageCandPhotosEntity.image = ph.photo; } }
+			});
 			$("#oldImage").val(resp.imageCandPhotosEntity.image);
 			// Create an img element
 		    var imgElement = document.createElement("img");
-		    imgElement.src = 'data:image/png;base64,'+resp.imageCandPhotosEntity.image;
+		    imgElement.src = 'data:image/png;base64,'+(resp.imageCandPhotosEntity.image || '');
 
 		    // Set other attributes as needed (e.g., width, height)
 		    imgElement.width = 300;
@@ -475,52 +547,50 @@ function rejectData(){
 	}else{
 		//alert("else");
 		var data = {};
-		
-		data['sscRegno'] = ssc_regno;
-		data['rejectedBy'] = insCode;
-		data['rejectedReason'] =  rejectReason;
-		data['action'] = 'reject';
-		
-		// TODO(backend): verification REJECTION has no backend endpoint.
-		// ChecklistController (/api/checklist) exposes only GET /{regid},
-		// /district/{dist_code}, /phase/{phase}, /iti/{iti_code}, /status/{app_status},
-		// POST (create) and PUT /{regid} (update Checklist body) - none of which
-		// accept a verification-rejection payload. Re-enable once implemented.
-//		$.ajax({
-//			type: 'post',
-//			contentType: 'application/json',
-//			data: JSON.stringify(data),
-//			headers:{
-//	       		'Authorization': jwtToken
-//	       	},
-//		url: API_BASE_URL + "/api/checklist/verification-rejection",
-//			cache: false,
-//			timeout: 600000,
-//			success:function(resp){
-//				//alert("success=>"+resp);
-//				
-//				 document.getElementById("verificationSuccessMsg").innerHTML=resp;
-//				 $("#verificationSuccessMsg").css({'color': 'green'});
-//				 $("#404Msg").hide(); 
-//					$("#navbar").show(); 
-//					$("#formTwo").hide(); 
-//					$("#admYearPhaseDiv").hide(); 
-//					$("#contentDiv").show(); 
-//					$("#approveButton").show(); 
-//					
-//					getSSCBoards = getAllSSCBoards();
-//					getCastes = getAllCastes();
-//					getDistVerificationList(insCode);
-//					
-//					valuesAsNull();
-//			},
-//			error:function(resp){
-//				//alert("error=>"+JSON.stringify(resp));
-//				$("#serverResponse").html(resp.responseText);
-//				$("#serverResponse").css({'color': 'red'});
-//				return false;
-//			}
-//		});
+
+		// Backend: DistrictVerifyController POST /api/dv/reject
+		// {regid, distCode, username, reason}.
+		data['regid'] = $("#regidd").val();
+		data['distCode'] = insCode;
+		data['username'] = (typeof SESSION_USERNAME !== 'undefined') ? SESSION_USERNAME : '';
+		data['reason'] = rejectReason;
+
+		$.ajax({
+			type: 'post',
+			contentType: 'application/json',
+			data: JSON.stringify(data),
+			url: API_BASE_URL + "/api/dv/reject",
+			cache: false,
+			timeout: 600000,
+			success:function(resp){
+				if (!resp || resp.success !== true) {
+					$("#serverResponse").html((resp && resp.message) || "Rejection failed. Please try again.");
+					$("#serverResponse").css({'color': 'red'});
+					return;
+				}
+				document.getElementById("verificationSuccessMsg").innerHTML =
+					(resp && resp.message) || "Application rejected successfully";
+				$("#verificationSuccessMsg").css({'color': 'red'});
+
+				$("#formTwo").hide();
+				$("#admYearPhaseDiv").hide();
+				getDistVerificationList(insCode);
+				$("#approveButton").show();
+				$("#rejectButton").show();
+
+				valuesAsNull();
+			},
+			error:function(xhr){
+				var msg = "Rejection failed. Please try again.";
+				try {
+					var r = JSON.parse(xhr.responseText);
+					if (r && r.message) { msg = r.message; }
+				} catch (e) { /* keep default */ }
+				$("#serverResponse").html(msg);
+				$("#serverResponse").css({'color': 'red'});
+				return false;
+			}
+		});
 	}
 	
 	
@@ -559,6 +629,8 @@ function approveData(){
 	if(ssc_month == "" || ssc_month == null){ 
 		$("#ssc_monthError").html("Month of Pass is required please enter."); $("#ssc_monthError").css({"color": "red"}); 
 		$("#ssc_month").val(''); $("#ssc_month").focus(); return false; }
+	// Tolerate zero-padded legacy values ("03"/"04").
+	ssc_month = String(ssc_month).replace(/^0/, '');
 	if(ssc_month !== "3" && ssc_month !== "4") { 
 		$("#ssc_monthError").html("Month of Pass is in invalid format."); $("#ssc_monthError").css({"color": "red"}); 
 		$("#ssc_month").val(''); $("#ssc_month").focus(); return false; }
@@ -661,7 +733,7 @@ function approveData(){
 	if(email == "" || email == null){ 
 		$("#emailError").html("E-Mail is required please enter."); $("#emailError").css({"color": "red"}); 
 		$("#email").val(''); $("#email").focus(); return false; }
-	 var filter = /^([\w-\.]+@(gmail.com|yahoo.com|hotmail.com|yahoo.co.in|ap.nic.in|nic.in|gov.in|ap.gov.in))?$/;
+	 var filter = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
      if (!filter.test(email)) {
     	 $("#emailError").html("Invalid E-Mail ID format."); $("#emailError").css({"color": "red"}); 
 			$("#email").val(''); $("#email").focus(); return false; 
@@ -1017,12 +1089,12 @@ function approveData(){
 	data["caste"] =  caste; 
 	data["fname"] =  fname; 
 	
-	if(phc==true){ data["phc"] = 'yes'; }else{ data["phc"] = 'no'; }
+	if(phc=='true'){ data["phc"] = 'yes'; }else{ data["phc"] = 'no'; }
 	
 	data["mname"] =  mname;
 	data["pwd_category"] =  pwd_category; 
 	
-	if(exs==true){ data["exs"] = 'yes';
+	if(exs=='true'){ data["exs"] = 'yes';
 	}else{ data["exs"] = 'no'; }
 	
 	data["ssc"] =  ssc; 
@@ -1030,7 +1102,7 @@ function approveData(){
 	data["pincode"] =  pincode;  
 	data["email"] =  email; 
 	
-	if(ews==true){ data["ews"] = 'yes';
+	if(ews=='true'){ data["ews"] = 'yes';
 	}else{ data["ews"] = 'no'; }
 	
 	data["addr"] =  addr; 
@@ -1068,46 +1140,57 @@ function approveData(){
 	//alert(JSON.stringify(data));
 	
 	if(ssc_eq == 'Y'){
-		// TODO(backend): verification APPROVAL has no backend endpoint.
-		// ChecklistController has no approval operation (see note above the
-		// rejection call). Re-enable once implemented.
-//		$.ajax({
-//			type: 'post',
-//		url: API_BASE_URL + "/api/checklist/verification-approval",
-//			contentType: 'application/json',
-//			cache: false,
-//			timeout: 600000,
-//			data: JSON.stringify(data),
-//			headers: {
-//				'Authorization': jwtToken
-//			},
-//			success:function(resp){
-//				//alert("verificationApproval=>success=>resp=>"+JSON.stringify(resp));
-//				
-//				 document.getElementById("verificationSuccessMsg").innerHTML=resp;
-//				 $("#verificationSuccessMsg").css({'color': 'green'});
-//				 
-//				 $("#contentDiv").hide();
-//				 $("#admYearPhaseDiv").hide();
-//				 $("#formTwo").hide();
-//				// getDistVerificationList(insCode);
-//				 $("#rejectButton").hide();
-//				 $("#ssc_eqError").empty();
-//				 
-//				 $("#printOptions").show(); 
-//				 $("#printOptionsRegid").innerHTML=ssc_regno; 
-//				 
-//				 
-//			},
-//			failue:function(resp){
-//				alert("failure=>resp=>"+JSON.stringify(resp));
-//			}
-//			
-//		,
-//        error: function(xhr, status, error) {
-//            console.error('Request failed:', status, error);
-//        }
-//    });
+		// Backend: DistrictVerifyController POST /api/dv/approve
+		// {regid, distCode, username, documents{doc_ssc_eq,...}}.
+		var approveBody = {
+			regid: $("#regidd").val(),
+			distCode: (typeof insCode !== 'undefined' && insCode) ? insCode : '',
+			username: (typeof SESSION_USERNAME !== 'undefined') ? SESSION_USERNAME : '',
+			documents: {
+				doc_ssc_eq: ssc_eq, doc_tc: tc, doc_cc: cc, doc_pc: pc,
+				doc_exsv: exsv, doc_sc: sc, doc_nc: nc, doc_uidv: uidv,
+				doc_ewsv: ewsv,
+				doc_age21: (typeof age21 !== 'undefined') ? age21 : '',
+				doc_exp: (typeof exp !== 'undefined') ? exp : '',
+				doc_est: (typeof est !== 'undefined') ? est : ''
+			}
+		};
+		$.ajax({
+			type: 'post',
+		url: API_BASE_URL + "/api/dv/approve",
+			contentType: 'application/json',
+			cache: false,
+			timeout: 600000,
+			data: JSON.stringify(approveBody),
+			success:function(resp){
+				if (!resp || resp.success !== true) {
+					alert((resp && resp.message) || "Approval failed. Please try again.");
+					return;
+				}
+				//alert("verificationApproval=>success=>resp=>"+JSON.stringify(resp));
+				document.getElementById("verificationSuccessMsg").innerHTML =
+					(resp && resp.message) || "Application approved successfully";
+				$("#verificationSuccessMsg").css({'color': 'green'});
+
+				$("#contentDiv").hide();
+				$("#admYearPhaseDiv").hide();
+				$("#formTwo").hide();
+				getDistVerificationList(insCode);
+				$("#rejectButton").hide();
+				$("#ssc_eqError").empty();
+
+				$("#printOptions").show();
+				$("#printOptionsRegid").html(ssc_regno);
+			},
+			error: function(xhr) {
+				var msg = "Approval failed. Please try again.";
+				try {
+					var r = JSON.parse(xhr.responseText);
+					if (r && r.message) { msg = r.message; }
+				} catch (e) { /* keep default */ }
+				alert(msg);
+			}
+		});
 	}else{
 		 $("#ssc_eqError").html('Document SSC/Equivalent Marks should be checked Yes or No for Approve of this candidate.');
 		 $("#ssc_eqError").css({"color": "red"});

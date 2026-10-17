@@ -165,7 +165,7 @@
 				<label class="form-label">Date of Birth(mm-dd-yyyy):</label> <input
 					type="date" name="dob" id="dob" class="form-control"
 					onchange="return checkValue('dobError')" /><span id="dobError"></span>
-				<input type="hidden" id="dob" />
+				<input type="hidden" id="dobHidden" />
 			</div>
 			<div class="col-lg-4 col-md-6">
 				<label class="form-label">Aadhar Card Number </label> <input

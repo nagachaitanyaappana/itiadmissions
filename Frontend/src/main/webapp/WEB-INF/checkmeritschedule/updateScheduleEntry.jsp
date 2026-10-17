@@ -1,28 +1,32 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isELIgnored="true" %>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="./css/bootstrap.min.css" rel="stylesheet">
-<script src="./js/bootstrap.bundle.min.js"></script>
-<link href="./css/bootstrap.min.css" rel="stylesheet">
-<script src="./js/bootstrap.bundle.min.js"></script>
-<link rel="stylesheet" href="./css/all.min.css">
-<link rel="stylesheet" href="./css/style.css">
 <title> Update Schedule Entry</title>
-<script type="text/javascript" src="./js/jquery.min.js"></script>
-                    <jsp:include page="/WEB-INF/jsp/_api_base_url.jsp"/>
-<script type="text/javascript" src="./js/siteScript.js"></script>
-<script type="text/javascript" src="./js/customJs/updateScheduleEntry.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
+<link rel="stylesheet" href="<%= request.getContextPath() %>/css/bootstrap.min.css">
+<script src="<%= request.getContextPath() %>/js/bootstrap.bundle.min.js"></script>
+<link rel="stylesheet" href="<%= request.getContextPath() %>/css/all.min.css">
+<link rel="stylesheet" href="<%= request.getContextPath() %>/css/style.css">
+<link rel="stylesheet" href="<%= request.getContextPath() %>/css/iti-portal.css">
+<script type="text/javascript" src="<%= request.getContextPath() %>/js/jquery.min.js"></script>
+<jsp:include page="/WEB-INF/jsp/_api_base_url.jsp"/>
+<%-- Session role/institution scope. The old gate read localStorage 'jwtToken', which
+     nothing in this application sets, so every visitor fell into the "not authorized"
+     branch; the other checkmeritschedule pages read the HTTP session instead. --%>
+<%
+    Object sessionRoleId = session.getAttribute("roleId");
+    String jsRoleId = sessionRoleId == null ? "" : String.valueOf(sessionRoleId).replace("'", "\\'");
+%>
+<script type="text/javascript">
+    const SESSION_ROLE_ID = '<%= jsRoleId %>';
+</script>
+<script type="text/javascript" src="<%= request.getContextPath() %>/js/siteScript.js"></script>
+<script type="text/javascript" src="<%= request.getContextPath() %>/js/customJs/updateScheduleEntry.js"></script>
 </head>
 <body onload="generateCaptcha(),getReady();">
-	<div id="404Msg" align="center">
-				<img src="./images/gen.jpg" class="img-fluid" />
+	<div id="404Msg" align="center" style="display:none;">
+				<img src="<%= request.getContextPath() %>/images/gen.jpg" class="img-fluid" />
 				<%@include file="../navbars/openNavbar.jsp"%>
 	</div>
 	<div id="navbar">
@@ -41,7 +45,7 @@
             <div class="container mt-2 mb-4 border font-weight-bolder  shadow-lg"
                  style="background-color: #e6ffff; border-radius: 20px;">
 
-              
+
                     <div class="row align-items-center m-2">
                         <div class="col-12">
                             <h6 class="h6 font-weight-bolder text-primary ">Update Schedule Entry Timings</h6>
@@ -54,11 +58,11 @@
                         </div>
 
                         <div class="col-4">
-                            <select name="addrs_state_p" 
-                                    class="stateclass form-control" 
-                                    id="addrs_state_p" onclick="return Street_name();" >
+                            <select name="addrs_state_p"
+                                    class="stateclass form-control"
+                                    id="addrs_state_p" onchange="return getColleges();">
                                 <option value="all">--SELECT--</option>
-                                
+
                             </select>
                              <span id="districtError" class="text-danger"></span>
                         </div>
@@ -70,10 +74,10 @@
 
                         <div class="col-4">
                             <select name="addrs_district_p" class="distclass form-control" id="addrs_district_p"
-                                    onchange="getColleges('addrs_state_p', 'addrs_district_p', 'addrs_mandal_p', 'mandals');">
+                                    onchange="return getColleges();">
                                 <option value="all">--SELECT--</option>
                                 <option value="G">Government</option>
-                                <option value="P">Private</option> 
+                                <option value="P">Private</option>
                             </select>
                             <span id="adddistrictError" class="text-danger"></span>
                         </div>
@@ -87,15 +91,14 @@
                         </div>
 
                         <div class="col-4">
-                            <select class="mandalsclass form-control" name="addrs_mandal_p" id="addrs_mandal_p"
-                                    onchange="return abc(this.value, this.id), getTradeslist1(this.value, this.id)">
+                            <select class="mandalsclass form-control" name="addrs_mandal_p" id="addrs_mandal_p">
                                 <option value="all">--ALL--</option>
                             </select>
                              <span id="itiError" class="text-danger"></span>
                         </div>
                     </div>
-                        
-                        
+
+
 		<div class="row align-items-center m-2">
 			<div class="col-2">
 				<label class="form-label float-md-right">Captcha&nbsp;&nbsp;</label>
@@ -103,7 +106,7 @@
 			<div class="col-4">
 				<input type="text" id="txtInput" class="form-control" maxlength="4"
 					autocomplete="off" onchange="return checkValue('captchaErr')" />
-			
+
 			</div>
 			<div class="col-2">
 				<input type="text" id="mainCaptcha" readonly="readonly"
@@ -112,36 +115,29 @@
 					<span id="captchaErr"></span>
 			</div>
 			<div class="col-1">
-  					<i class="fas fa-sync fa-2x pt-1" onclick="generateCaptcha();"></i>				 
+  					<i class="fas fa-sync fa-2x pt-1" onclick="generateCaptcha();"></i>
 			</div>
 		</div>
-	
+
 		<div class="row m-1" align="center">
 			<div class="col-md-12">
 
 				<input type="submit" value="Submit" id="submitBtn"class="btn btn-success"
-					onclick="return validate();" /> 
+					onclick="return validate();" />
 
 			</div>
                     </div>
-<!--                     <div class="col-6 m-4"> -->
-<!--                         <button type="submit" -->
-<!--                                 name="submit" class="btn btn-success fw-bolder form-control w-25" value="submit">Submit</button> -->
-<!--                     </div> -->
-                
+
             </div>
-                            
-                            
+
+
                             <div id='response'></div>
         </div>
 	<br>
 
 		<div align="center" id="successMsg">
-			
+
 		</div>
-<!-- 		<div align="center" > -->
-<!-- 			<h6 class="h6" style="color: blueviolet; font-size: 15px;">Already scheduled for the following ranks</h6> -->
-<!-- 		</div> -->
 	<div>
 		<div class="table-responsive">
 			<table border="1" class="table table-striped" id="table">
@@ -153,8 +149,7 @@
 						<th class="text-white">Merit From</th>
 						<th class="text-white">Merit To</th>
 						<th class="text-white">Call Date (YYYY-MM-DD)</th>
-						<th class="text-white">Call Time ()</th>
-						<th class="text-white">Actions</th>
+						<th class="text-white">Call Time</th>
 					</tr>
 				</thead>
 				<tbody id="entryList">
@@ -162,9 +157,6 @@
 				</tbody>
 			</table>
 		</div>
-
-
-
 	</div>
 
 	<br>

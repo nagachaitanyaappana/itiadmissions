@@ -74,7 +74,7 @@
                             <li><a class="dropdown-item"
                                     href="${pageContext.request.contextPath}/AdmissionCounseling/Counseling">Admission Counseling (Rank)</a></li>
                             <li><a class="dropdown-item"
-                                    href="${pageContext.request.contextPath}/PrintAdmissionSlip">Print
+                                    href="${pageContext.request.contextPath}/admissions/print-admission-slip">Print
                                     Admission Slip</a></li>
                             <li><a class="dropdown-item"
                                     href="${pageContext.request.contextPath}/ScheduleEntry">Schedule

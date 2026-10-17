@@ -136,7 +136,7 @@ function renderSlip(x, a){
   h += "<div class='photo-cell'><img id='candPhoto' alt='No photo' /></div>";
   h += "<table class='memo-table'>";
   h += row("1. Name", txt(d.name));
-  h += row("2. Father Name", txt(d.fname));
+  h += row("2. Father Name", txt(d.fatherName !== undefined ? d.fatherName : d.fname));
   h += row("3. Date of Birth", fmtDate(d.dob));
   h += "<tr><th>4. Merit/Registration Number</th><td>: " + merit + "</td></tr>";
   h += "<tr><th>5. Community/Reservation Category</th><td>: " + commCat + "</td></tr>";

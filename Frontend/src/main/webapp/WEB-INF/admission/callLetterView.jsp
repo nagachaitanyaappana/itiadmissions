@@ -208,7 +208,7 @@ function renderLetter(d, L){
   var stateCode = d.stateCode || '';
 
   var feeHtml;
-  if(stateCode === '02' && d.feeUrbanEngg){
+  if(d.feeUrbanEngg){
     feeHtml = '<li>Tuition Fees for PVT ITI Admitted Candidate'
       + '<div class="fee">i) Fee for Engineering Trades in Urban Areas &nbsp; Rs.' + esc(d.feeUrbanEngg) + '</div>'
       + '<div class="fee">ii) Fee for Non Engineering Trades in Urban Areas &nbsp; Rs.' + esc(d.feeUrbanNonEngg) + '</div>'

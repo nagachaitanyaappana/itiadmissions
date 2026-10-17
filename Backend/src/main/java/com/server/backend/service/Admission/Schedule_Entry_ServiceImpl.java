@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import com.server.backend.DTO.Schedule_Entry_DTO;
 import com.server.backend.Repository.Admission.Admission_Timing_Repository;
-import com.server.backend.entity.AdmissionTiming;
 
 @Service
 public class Schedule_Entry_ServiceImpl implements Schedule_Entry_Service {
@@ -32,7 +31,7 @@ public class Schedule_Entry_ServiceImpl implements Schedule_Entry_Service {
         String minqulFilter = normaliseFilter(qualification);
         String casteFilter = normaliseFilter(caste);
 
-        List<AdmissionTiming> timings =
+        List<Schedule_Entry_DTO> timings =
                 repository.findFilteredScheduleEntries(
                         minqulFilter,
                         casteFilter,
@@ -40,7 +39,7 @@ public class Schedule_Entry_ServiceImpl implements Schedule_Entry_Service {
                         year == null ? null : year.trim());
 
         return timings.stream()
-                .map(this::convertToDTO)
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
@@ -53,24 +52,5 @@ public class Schedule_Entry_ServiceImpl implements Schedule_Entry_Service {
             return "all";
         }
         return trimmed;
-    }
-
-    private Schedule_Entry_DTO convertToDTO(
-            AdmissionTiming timing) {
-
-        return new Schedule_Entry_DTO(
-                timing.getItiCode(),
-                timing.getMinqul(),
-                timing.getMeritFrom(),
-                timing.getMeritTo(),
-                timing.getCalDate(),
-                timing.getCalTime(),
-                timing.getDistCode(),
-                timing.getCaste(),
-                timing.getTrno(),
-                timing.getTempPk(),
-                timing.getPhase(),
-                timing.getYear()
-        );
     }
 }
