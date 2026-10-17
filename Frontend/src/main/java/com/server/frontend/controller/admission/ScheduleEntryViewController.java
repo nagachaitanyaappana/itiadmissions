@@ -34,9 +34,8 @@ public class ScheduleEntryViewController {
     private String backendBaseUrl;
 
     /** Screen 1 - Qualification + Reservation + Phase + Year selection form.
-     *  NOTE: @GetMapping("", "/") combos fail to register under the class-level
-     *  @RequestMapping("/AdmissionCounseling") (requests fall through to the
-     *  static-resource handler), so only the explicit "/Interface" path is used. */
+     *  Canonical path: /ScheduleEntryView/Interface. (Bare @GetMapping("")
+     *  under the class-level @RequestMapping does not match reliably.) */
     @GetMapping("/Interface")
     public String scheduleEntryView() {
         return "admission/scheduleEntryView";
