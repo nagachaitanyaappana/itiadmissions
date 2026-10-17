@@ -19,7 +19,7 @@
             padding-bottom: 26px;
         }
         .page-header-custom {
-            background: linear-gradient(135deg, #1d5aa6 0%, #164a86 100%);
+            background: linear-gradient(135deg, #1d4e8f 0%, #173d70 100%);
             color: #ffffff;
             padding: 12px 0 14px;
             margin-top: 15px;
@@ -88,6 +88,8 @@
             color: #334155;
             font-size: 0.9rem;
         }
+        #selectedItiCode, #selectedTradeCode { color: #17549e; font-weight: 700; }
+        #selectedItiName, #selectedTradeShort { color: #0f172a; font-weight: 600; }
         .table th {
             background-color: #eef2f7 !important;
             color: #475569 !important;
@@ -115,6 +117,9 @@
             border: 1px solid #cbd5e1;
             border-radius: 6px;
             font-size: 13px;
+            font-weight: 600;
+            color: #0f172a;
+            font-variant-numeric: tabular-nums;
         }
         .form-control-sm:focus, .form-select-sm:focus {
             border-color: #2f6fc0 !important;

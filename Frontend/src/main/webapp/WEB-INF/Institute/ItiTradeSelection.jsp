@@ -20,7 +20,7 @@
             padding-bottom: 26px;
         }
         .page-header-custom {
-            background: linear-gradient(135deg, #1d5aa6 0%, #164a86 100%);
+            background: linear-gradient(135deg, #1d4e8f 0%, #173d70 100%);
             color: #ffffff;
             padding: 12px 0 14px;
             margin-top: 15px;
@@ -86,6 +86,8 @@
             border: 1px solid #cbd5e1;
             border-radius: 6px;
             font-size: 13px;
+            font-weight: 600;
+            color: #0f172a;
         }
         .form-select:focus {
             border-color: #2f6fc0 !important;
@@ -118,6 +120,37 @@
         .table-striped > tbody > tr:nth-child(even) > td,
         .table-striped > tbody > tr:nth-child(even) > th { background-color: #ffffff !important; }
         .table tbody tr:hover > td { background-color: #eef6ff !important; }
+        .table tbody td:nth-child(2) {
+            color: #17549e;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        .table tbody td:nth-child(3) { color: #0f172a; }
+        .table tbody td:nth-child(4),
+        .table tbody td:nth-child(5) {
+            font-weight: 600;
+            color: #0f172a;
+            font-variant-numeric: tabular-nums;
+        }
+        .table tbody tr:has(.trade-radio:checked) > td { background-color: #e8f1fd !important; }
+        .table tbody tr:has(.trade-radio:checked) > td:first-child { box-shadow: inset 3px 0 0 #17549e; }
+        .trade-radio {
+            accent-color: #17549e;
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+        }
+        #tradeCount {
+            background-color: #eef4fc;
+            color: #17549e !important;
+            font-weight: 600;
+            font-size: 12.5px;
+            padding: 3px 12px;
+            border-radius: 999px;
+            display: inline-block;
+        }
+        #selectedItiCode, #selectedTradeCode { color: #17549e; font-weight: 700; }
+        #selectedItiName, #selectedTradeShort { color: #0f172a; font-weight: 600; }
         .loading-message {
             text-align: center;
             padding: 30px;
