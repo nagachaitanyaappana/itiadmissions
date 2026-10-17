@@ -11,62 +11,64 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <title>ITI TRADE SELECTION</title>
     <style>
-        /* ---- Vibrant royal-blue palette (solid, modern portal look) ---- */
+        /* ---- Professional royal-blue theme (medium scale) ---- */
         .page-header-custom {
             background: linear-gradient(135deg, #2a65b8 0%, #1b4f9c 100%);
             color: #ffffff;
-            padding: 20px 0;
+            padding: 14px 0 16px;
             margin-top: 15px;
-            margin-bottom: 30px;
-            border-bottom: 4px solid #123a75;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+            margin-bottom: 22px;
+            border-bottom: 3px solid #123a75;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
         }
         .page-header-custom h2 {
-            font-weight: 700;
-            letter-spacing: 1px;
-            margin-bottom: 5px;
+            font-size: 1.35rem;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            margin-bottom: 3px;
         }
         .breadcrumb-text {
             color: #cfe2f7;
-            font-size: 14px;
+            font-size: 12.5px;
         }
         .form-card {
-            border: 1px solid #bcd3ee;
-            border-radius: 20px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            border: 1px solid #cfdff2;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(18,58,117,0.06);
             overflow: hidden;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             background: #fff;
         }
         .card-header-primary {
             background: linear-gradient(135deg, #2a65b8 0%, #1b4f9c 100%);
             color: #ffffff;
-            font-weight: 700;
-            padding: 15px 25px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            padding: 10px 20px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.6px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             border: none;
         }
         .card-body-custom {
-            padding: 30px;
+            padding: 22px 20px;
             background-color: #fff;
         }
         .form-label-custom {
             font-weight: 600;
             color: #123a75;
-            margin-bottom: 8px;
-            font-size: 0.95rem;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
         }
         .form-select {
-            border: 1.5px solid #a9c6e8;
-            border-radius: 8px;
+            border: 1px solid #b9cfe8;
+            border-radius: 6px;
         }
         .form-select:focus {
             border-color: #2a65b8 !important;
-            box-shadow: 0 0 0 0.25rem rgba(42, 101, 184, 0.25) !important;
+            box-shadow: 0 0 0 0.2rem rgba(42, 101, 184, 0.18) !important;
         }
         .form-select option:hover {
             background-color: #2a65b8 !important;
@@ -75,33 +77,33 @@
         .table th {
             background-color: #1b4f9c !important;
             color: white !important;
-            padding: 12px;
-            font-weight: bold;
-            font-size: 13px;
+            padding: 9px 12px;
+            font-weight: 600;
+            font-size: 12px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
         }
         .table td {
-            padding: 10px;
+            padding: 8px 12px;
             vertical-align: middle;
             font-size: 13px;
         }
-        .table, .table th, .table td { border: 1px solid #bcd3ee !important; }
+        .table, .table th, .table td { border: 1px solid #cfdff2 !important; }
         .table-striped > tbody > tr:nth-child(odd) > td,
         .table-striped > tbody > tr:nth-child(odd) > th { background-color: #f2f7fc !important; }
         .table-striped > tbody > tr:nth-child(even) > td,
         .table-striped > tbody > tr:nth-child(even) > th { background-color: #ffffff !important; }
         .loading-message {
             text-align: center;
-            padding: 40px;
+            padding: 30px;
             color: #666;
-            font-size: 16px;
+            font-size: 15px;
         }
         .error-message {
             text-align: center;
-            padding: 40px;
+            padding: 30px;
             color: #dc3545;
-            font-size: 16px;
+            font-size: 15px;
         }
         .radio-cell {
             text-align: center;
@@ -111,18 +113,18 @@
             background-color: #1b4f9c;
             border: none;
             color: white;
-            font-weight: 700;
-            padding: 10px 30px;
-            border-radius: 50px;
-            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 8px 22px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
         }
         .btn-success-custom:hover {
             background-color: #16417f;
-            transform: translateY(-1px);
             color: #fff;
         }
         .btn-continue {
-            min-width: 150px;
+            min-width: 140px;
         }
         .btn-continue:disabled { opacity: .55; }
         /* Navbar dropdown items: royal-blue palette hover */
