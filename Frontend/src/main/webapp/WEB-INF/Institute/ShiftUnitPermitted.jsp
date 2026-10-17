@@ -10,141 +10,174 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <title>Shift & Unit Permitted Configuration</title>
     <style>
-        /* ---- Professional royal-blue theme (medium scale) ---- */
+        /* ---- Modern admin theme (blue accent, light canvas) ---- */
+        .page-canvas {
+            background-color: #f5f7fa;
+            border: 1px solid #e8edf3;
+            border-radius: 14px;
+            padding-top: 20px;
+            padding-bottom: 26px;
+        }
         .page-header-custom {
-            background: linear-gradient(135deg, #2a65b8 0%, #1b4f9c 100%);
+            background: linear-gradient(135deg, #1d5aa6 0%, #164a86 100%);
             color: #ffffff;
-            padding: 14px 0 16px;
+            padding: 12px 0 14px;
             margin-top: 15px;
-            margin-bottom: 22px;
-            border-bottom: 3px solid #123a75;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(16,24,40,0.12);
         }
         .page-header-custom h2 {
-            font-size: 1.35rem;
+            font-size: 1.25rem;
             font-weight: 600;
-            letter-spacing: 0.4px;
-            margin-bottom: 3px;
+            letter-spacing: 0.2px;
+            margin-bottom: 2px;
         }
         .breadcrumb-text {
-            color: #cfe2f7;
-            font-size: 12.5px;
+            color: rgba(255,255,255,0.75);
+            font-size: 12px;
         }
         .form-card {
-            border: 1px solid #cfdff2;
+            border: 1px solid #e4e9f0;
             border-radius: 12px;
-            box-shadow: 0 3px 12px rgba(18,58,117,0.06);
+            box-shadow: 0 1px 2px rgba(16,24,40,0.05);
             overflow: hidden;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             background: #fff;
         }
         .card-header-primary {
-            background: linear-gradient(135deg, #2a65b8 0%, #1b4f9c 100%);
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 0.82rem;
-            padding: 10px 20px;
+            background-color: #ffffff;
+            color: #1f2937;
+            font-weight: 700;
+            font-size: 0.78rem;
+            padding: 12px 18px;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
+            letter-spacing: 0.8px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            border: none;
+            gap: 10px;
+            border-bottom: 1px solid #eef2f7;
+        }
+        .card-header-primary i { color: #17549e; }
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #17549e;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0;
         }
         .card-body-custom {
-            padding: 22px 20px;
+            padding: 20px;
             background-color: #fff;
+        }
+        .summary-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #17549e;
+            margin-bottom: 6px;
         }
         .detail-label {
             font-weight: 600;
-            color: #123a75;
+            color: #334155;
             font-size: 0.9rem;
         }
         .table th {
-            background-color: #1b4f9c !important;
-            color: white !important;
-            padding: 9px 12px;
+            background-color: #eef2f7 !important;
+            color: #475569 !important;
+            padding: 10px 12px;
             font-weight: 600;
-            font-size: 12px;
+            font-size: 11.5px;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e2e8f0 !important;
         }
         .table td {
-            padding: 8px 12px;
+            padding: 10px 12px;
             vertical-align: middle;
             font-size: 13px;
+            color: #1f2937;
+            border-bottom: 1px solid #eef2f7 !important;
         }
-        .table, .table th, .table td { border: 1px solid #cfdff2 !important; }
+        .table, .table th, .table td { border-color: #eef2f7 !important; }
         .table-striped > tbody > tr:nth-child(odd) > td,
-        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #f2f7fc !important; }
+        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #f8fafc !important; }
         .table-striped > tbody > tr:nth-child(even) > td,
         .table-striped > tbody > tr:nth-child(even) > th { background-color: #ffffff !important; }
+        .table tbody tr:hover > td { background-color: #eef6ff !important; }
         .form-control-sm, .form-select-sm {
-            border: 1px solid #b9cfe8;
+            border: 1px solid #cbd5e1;
             border-radius: 6px;
+            font-size: 13px;
         }
         .form-control-sm:focus, .form-select-sm:focus {
-            border-color: #2a65b8 !important;
-            box-shadow: 0 0 0 0.2rem rgba(42, 101, 184, 0.18) !important;
+            border-color: #2f6fc0 !important;
+            box-shadow: 0 0 0 0.2rem rgba(47, 111, 192, 0.15) !important;
         }
         .form-select option:hover {
-            background-color: #2a65b8 !important;
+            background-color: #2f6fc0 !important;
             color: #ffffff !important;
         }
         .loading-message {
             text-align: center;
             padding: 30px;
-            color: #666;
-            font-size: 15px;
+            color: #64748b;
+            font-size: 14px;
         }
         .error-message {
             text-align: center;
             padding: 30px;
-            color: #dc3545;
-            font-size: 15px;
+            color: #dc2626;
+            font-size: 14px;
         }
         .success-message {
             text-align: center;
             padding: 12px;
-            color: #123a75;
-            background-color: #eaf2fb;
-            border: 1px solid #b9cfe8;
+            color: #15803d;
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
             border-radius: 8px;
             margin-bottom: 16px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
         .validation-error {
-            color: #c41818;
+            color: #dc2626;
             font-size: 13px;
             margin-top: 5px;
             font-weight: 600;
         }
         .btn-success-custom {
-            background-color: #1b4f9c;
-            border: none;
-            color: white;
-            font-weight: 600;
-            font-size: 0.9rem;
-            padding: 8px 22px;
-            border-radius: 8px;
-            transition: background-color 0.2s;
-        }
-        .btn-success-custom:hover {
-            background-color: #16417f;
-            color: #fff;
-        }
-        .btn-danger-custom {
-            background-color: #c41818;
+            background-color: #17549e;
             border: none;
             color: #ffffff;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.875rem;
+            padding: 8px 20px;
             border-radius: 8px;
-            transition: background-color 0.2s;
+            transition: background-color 0.15s;
+        }
+        .btn-success-custom:hover {
+            background-color: #123f78;
+            color: #ffffff;
+        }
+        .btn-danger-custom {
+            background-color: #dc2626;
+            border: none;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 0.875rem;
+            border-radius: 6px;
+            transition: background-color 0.15s;
         }
         .btn-danger-custom:hover {
-            background-color: #cb342c;
-            color: #fff;
+            background-color: #b91c1c;
+            color: #ffffff;
         }
         .btn-save {
             min-width: 160px;
@@ -153,27 +186,36 @@
             min-width: 160px;
             border-radius: 8px;
             font-weight: 600;
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+        }
+        .btn-back:hover {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #1f2937;
         }
         #addEntryBtn {
             padding: 7px 16px;
             font-size: 0.85rem;
         }
         .remove-entry-btn {
-            background-color: #c41818;
+            background-color: #dc2626;
             border: none;
             border-radius: 6px;
+            font-size: 0.8rem;
             font-weight: 600;
         }
-        .remove-entry-btn:hover { background-color: #cb342c; }
-        /* Navbar dropdown items: royal-blue palette hover */
+        .remove-entry-btn:hover { background-color: #b91c1c; }
+        /* Navbar dropdown items: blue palette hover */
         body .dropdown-menu .dropdown-item:hover {
-            background-color: #2a65b8 !important;
+            background-color: #17549e !important;
             color: #ffffff !important;
             padding-left: 25px;
         }
         /* Footer: solid navy blue with white text */
         .lower-footer {
-            background-color: #123a75 !important;
+            background-color: #0f2f5c !important;
             color: #ffffff !important;
         }
     </style>
@@ -185,14 +227,14 @@
     <jsp:include page="/WEB-INF/reports/header.jsp" />
 
     <!-- Portal page heading -->
-    <div class="page-header-custom text-center">
+    <div class="page-header-custom">
         <div class="container">
-            <h2 class="text-uppercase">Shift &amp; Unit Permitted Configuration</h2>
-            <div class="breadcrumb-text">Home / Shift Unit Permitted</div>
+            <h2>Shift &amp; Unit Permitted Configuration</h2>
+            <div class="breadcrumb-text">Home / ITI Trade Selection / Shift &amp; Unit Permitted</div>
         </div>
     </div>
 
-    <div class="container-fluid px-5 mb-5" style="min-height: 50vh;">
+    <div class="container-fluid px-5 mb-5 page-canvas" style="min-height: 50vh;">
         <!-- Missing ITI/Trade Message -->
         <div id="missingInfoMessage" class="error-message" style="display: none;">
             <i class="fas fa-exclamation-triangle me-2"></i>
@@ -205,45 +247,36 @@
 
         <!-- Main Content -->
         <div id="mainContent" style="display: none;">
-            <!-- Selected ITI Card -->
-            <div class="card form-card">
-                <div class="card-header-primary">
-                    <i class="fas fa-building"></i> Selected ITI
-                </div>
-                <div class="card-body-custom">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>ITI Code:</strong> <span id="selectedItiCode"></span></p>
-                            <p class="mb-0"><strong>ITI Name:</strong> <span id="selectedItiName"></span></p>
-                        </div>
+        <!-- Selection Summary Card -->
+        <div class="card form-card">
+            <div class="card-header-primary">
+                <i class="fas fa-clipboard-check"></i> Selection Summary
+            </div>
+            <div class="card-body-custom">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="summary-label">ITI</div>
+                        <p class="mb-1"><strong>Code:</strong> <span id="selectedItiCode"></span></p>
+                        <p class="mb-0"><strong>Name:</strong> <span id="selectedItiName"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="summary-label">Trade</div>
+                        <p class="mb-1"><strong>Code:</strong> <span id="selectedTradeCode"></span></p>
+                        <p class="mb-0"><strong>Name:</strong> <span id="selectedTradeShort"></span></p>
                     </div>
                 </div>
             </div>
-
-            <!-- Selected Trade Card -->
-            <div class="card form-card">
-                <div class="card-header-primary">
-                    <i class="fas fa-tools"></i> Selected Trade
-                </div>
-                <div class="card-body-custom">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>Trade Code:</strong> <span id="selectedTradeCode"></span></p>
-                            <p class="mb-0"><strong>Trade:</strong> <span id="selectedTradeShort"></span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        </div>
 
             <!-- Configuration Section -->
             <div class="card form-card">
-                <div class="card-header-primary">
-                    <i class="fas fa-cogs"></i> Configuration
-                </div>
+            <div class="card-header-primary">
+                <span class="step-badge">3</span><i class="fas fa-cogs"></i> Shift &amp; Unit Configuration
+            </div>
                 <div class="card-body-custom">
                     <!-- Entries Table -->
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0" style="color: #123a75; font-size: 1rem;">Shift &amp; Unit Entries</h5>
+                        <h5 class="mb-0" style="color: #1f2937; font-size: 0.95rem;">Shift &amp; Unit Entries</h5>
                         <button class="btn btn-success-custom" id="addEntryBtn">
                             <i class="fas fa-plus me-2"></i>Add Entry
                         </button>

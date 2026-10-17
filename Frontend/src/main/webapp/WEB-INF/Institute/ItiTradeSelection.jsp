@@ -11,131 +11,156 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <title>ITI TRADE SELECTION</title>
     <style>
-        /* ---- Professional royal-blue theme (medium scale) ---- */
+        /* ---- Modern admin theme (blue accent, light canvas) ---- */
+        .page-canvas {
+            background-color: #f5f7fa;
+            border: 1px solid #e8edf3;
+            border-radius: 14px;
+            padding-top: 20px;
+            padding-bottom: 26px;
+        }
         .page-header-custom {
-            background: linear-gradient(135deg, #2a65b8 0%, #1b4f9c 100%);
+            background: linear-gradient(135deg, #1d5aa6 0%, #164a86 100%);
             color: #ffffff;
-            padding: 14px 0 16px;
+            padding: 12px 0 14px;
             margin-top: 15px;
-            margin-bottom: 22px;
-            border-bottom: 3px solid #123a75;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(16,24,40,0.12);
         }
         .page-header-custom h2 {
-            font-size: 1.35rem;
+            font-size: 1.25rem;
             font-weight: 600;
-            letter-spacing: 0.4px;
-            margin-bottom: 3px;
+            letter-spacing: 0.2px;
+            margin-bottom: 2px;
         }
         .breadcrumb-text {
-            color: #cfe2f7;
-            font-size: 12.5px;
+            color: rgba(255,255,255,0.75);
+            font-size: 12px;
         }
         .form-card {
-            border: 1px solid #cfdff2;
+            border: 1px solid #e4e9f0;
             border-radius: 12px;
-            box-shadow: 0 3px 12px rgba(18,58,117,0.06);
+            box-shadow: 0 1px 2px rgba(16,24,40,0.05);
             overflow: hidden;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             background: #fff;
         }
         .card-header-primary {
-            background: linear-gradient(135deg, #2a65b8 0%, #1b4f9c 100%);
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 0.82rem;
-            padding: 10px 20px;
+            background-color: #ffffff;
+            color: #1f2937;
+            font-weight: 700;
+            font-size: 0.78rem;
+            padding: 12px 18px;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
+            letter-spacing: 0.8px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            border: none;
+            gap: 10px;
+            border-bottom: 1px solid #eef2f7;
+        }
+        .card-header-primary i { color: #17549e; }
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #17549e;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0;
         }
         .card-body-custom {
-            padding: 22px 20px;
+            padding: 20px;
             background-color: #fff;
         }
         .form-label-custom {
             font-weight: 600;
-            color: #123a75;
+            color: #334155;
             margin-bottom: 6px;
             font-size: 0.9rem;
         }
         .form-select {
-            border: 1px solid #b9cfe8;
+            border: 1px solid #cbd5e1;
             border-radius: 6px;
+            font-size: 13px;
         }
         .form-select:focus {
-            border-color: #2a65b8 !important;
-            box-shadow: 0 0 0 0.2rem rgba(42, 101, 184, 0.18) !important;
+            border-color: #2f6fc0 !important;
+            box-shadow: 0 0 0 0.2rem rgba(47, 111, 192, 0.15) !important;
         }
         .form-select option:hover {
-            background-color: #2a65b8 !important;
+            background-color: #2f6fc0 !important;
             color: #ffffff !important;
         }
         .table th {
-            background-color: #1b4f9c !important;
-            color: white !important;
-            padding: 9px 12px;
+            background-color: #eef2f7 !important;
+            color: #475569 !important;
+            padding: 10px 12px;
             font-weight: 600;
-            font-size: 12px;
+            font-size: 11.5px;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e2e8f0 !important;
         }
         .table td {
-            padding: 8px 12px;
+            padding: 10px 12px;
             vertical-align: middle;
             font-size: 13px;
+            color: #1f2937;
+            border-bottom: 1px solid #eef2f7 !important;
         }
-        .table, .table th, .table td { border: 1px solid #cfdff2 !important; }
+        .table, .table th, .table td { border-color: #eef2f7 !important; }
         .table-striped > tbody > tr:nth-child(odd) > td,
-        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #f2f7fc !important; }
+        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #f8fafc !important; }
         .table-striped > tbody > tr:nth-child(even) > td,
         .table-striped > tbody > tr:nth-child(even) > th { background-color: #ffffff !important; }
+        .table tbody tr:hover > td { background-color: #eef6ff !important; }
         .loading-message {
             text-align: center;
             padding: 30px;
-            color: #666;
-            font-size: 15px;
+            color: #64748b;
+            font-size: 14px;
         }
         .error-message {
             text-align: center;
             padding: 30px;
-            color: #dc3545;
-            font-size: 15px;
+            color: #dc2626;
+            font-size: 14px;
         }
         .radio-cell {
             text-align: center;
             width: 60px;
         }
         .btn-success-custom {
-            background-color: #1b4f9c;
+            background-color: #17549e;
             border: none;
-            color: white;
+            color: #ffffff;
             font-weight: 600;
-            font-size: 0.9rem;
-            padding: 8px 22px;
+            font-size: 0.875rem;
+            padding: 8px 20px;
             border-radius: 8px;
-            transition: background-color 0.2s;
+            transition: background-color 0.15s;
         }
         .btn-success-custom:hover {
-            background-color: #16417f;
-            color: #fff;
+            background-color: #123f78;
+            color: #ffffff;
         }
         .btn-continue {
             min-width: 140px;
         }
         .btn-continue:disabled { opacity: .55; }
-        /* Navbar dropdown items: royal-blue palette hover */
+        /* Navbar dropdown items: blue palette hover */
         body .dropdown-menu .dropdown-item:hover {
-            background-color: #2a65b8 !important;
+            background-color: #17549e !important;
             color: #ffffff !important;
             padding-left: 25px;
         }
         /* Footer: solid navy blue with white text */
         .lower-footer {
-            background-color: #123a75 !important;
+            background-color: #0f2f5c !important;
             color: #ffffff !important;
         }
     </style>
@@ -147,18 +172,18 @@
     <jsp:include page="/WEB-INF/reports/header.jsp" />
 
     <!-- Portal page heading -->
-    <div class="page-header-custom text-center">
+    <div class="page-header-custom">
         <div class="container">
-            <h2 class="text-uppercase">ITI Trade Selection</h2>
+            <h2>ITI Trade Selection</h2>
             <div class="breadcrumb-text">Home / ITI Trade Selection</div>
         </div>
     </div>
 
-    <div class="container-fluid px-5 mb-5" style="min-height: 50vh;">
+    <div class="container-fluid px-5 mb-5 page-canvas" style="min-height: 50vh;">
         <!-- ITI Selection Area -->
         <div class="card form-card">
             <div class="card-header-primary">
-                <i class="fas fa-building"></i> Select ITI
+                <span class="step-badge">1</span><i class="fas fa-building"></i> Select ITI
             </div>
             <div class="card-body-custom">
                 <div class="row g-3">
@@ -190,7 +215,7 @@
         <!-- Trades Table Area -->
         <div class="card form-card" id="tradesArea" style="display: none;">
             <div class="card-header-primary">
-                <i class="fas fa-tools"></i> Trades Available in This ITI
+                <span class="step-badge">2</span><i class="fas fa-tools"></i> Trades Available in This ITI
             </div>
             <div class="card-body-custom">
                 <div class="d-flex justify-content-end mb-2">
