@@ -83,7 +83,7 @@ function loadItis(){
   if(!DIST){ DIST = localStorage.getItem('insCode') || ''; }
   var sel = document.getElementById('itiSel');
   if(!DIST){ setErr('itiError', 'District not found in session.'); return; }
-  fetch(CTX + '/iti/by-district?distCode=' + encodeURIComponent(DIST))
+  fetch(CTX + '/ReservationEntry/api/district/' + encodeURIComponent(DIST) + '/itis')
     .then(function(r){ return r.json(); })
     .then(function(list){
       var h = '<option value="">--select--</option>';
@@ -108,7 +108,7 @@ function loadTrades(){
     goBtn.disabled = false;
     if(!iti) { resolve(); return; }
     // Reservation Entry opens only after DGT Permitted Shifts Units AND Add Trade (Approve All).
-    fetch(CTX + '/admission/reservation-entry/readiness?itiCode=' + encodeURIComponent(iti))
+    fetch(CTX + '/ReservationEntry/api/iti/' + encodeURIComponent(iti) + '/readiness')
       .then(function(r){ return r.json(); })
       .then(function(rd){
         if(!rd || !rd.ready){
@@ -132,7 +132,7 @@ function loadTrades(){
 function loadTradesList(iti){
   return new Promise((resolve, reject) => {
     var sel = document.getElementById('tradeSel');
-    fetch(CTX + '/admission/reservation-entry/approved-trades?itiCode=' + encodeURIComponent(iti))
+    fetch(CTX + '/ReservationEntry/api/iti/' + encodeURIComponent(iti) + '/approved-trades')
       .then(function(r){ return r.json(); })
       .then(function(list){
         var h = '<option value="">--select--</option>';
@@ -162,7 +162,7 @@ function loadReservation(){
   var area = document.getElementById('resultArea');
   btn.disabled = true; btn.value = 'Loading...';
   area.innerHTML = '<p style="text-align:center;">Loading reservation breakup...</p>';
-  fetch(CTX + '/admission/reservation-entry?itiCode=' + encodeURIComponent(iti) + '&tradeCode=' + encodeURIComponent(trade))
+  fetch(CTX + '/ReservationEntry/api/reservation-entry?itiCode=' + encodeURIComponent(iti) + '&tradeCode=' + encodeURIComponent(trade))
     .then(function(r){ return r.json(); })
     .then(function(d){ render(d); })
     .catch(function(){ area.innerHTML = '<p class="err" style="text-align:center;">Unable to load reservation breakup.</p>'; })
@@ -233,7 +233,7 @@ function saveReservation(){
   setMsg('saveError',''); setMsg('saveOk','');
   var btn = document.getElementById('saveBtn');
   btn.disabled = true; btn.value = 'Saving...';
-  fetch(CTX + '/admission/reservation-entry', {
+  fetch(CTX + '/ReservationEntry/api/reservation-entry', {
     method: 'PUT', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ itiCode: iti, tradeCode: trade, entries: entries })
   }).then(function(r){ return r.json(); })
