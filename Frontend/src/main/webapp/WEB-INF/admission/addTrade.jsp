@@ -59,7 +59,7 @@
   <table>
     <tr>
       <td class="label">Select ITI * :</td>
-      <td><select id="itiSel"><option value="">--select--</option></select><span class="err" id="itiError"></span></td>
+      <td><select id="itiSel" onchange="getTrades();"><option value="">--select--</option></select><span class="err" id="itiError"></span></td>
     </tr>
     <tr>
       <td colspan="2" style="text-align:center;"><input type="button" id="goBtn" class="submit-btn" value="Submit" onclick="getTrades();" /></td>
@@ -135,7 +135,7 @@ function render(resp, iti){
     var frozen = num(t.tradeFreeze) === 1;
     var editCell = frozen ? ''
         : '<a href="javascript:void(0)" onclick="openEdit(' + "'" + esc(iti) + "'" + ',' + num(t.tradeCode) + ');">Edit</a>';
-    var resCell = frozen ? '<a href="' + CTX + '/ReservationEntry">Reservation Entry</a>' : '';
+    var resCell = frozen ? '<a href=\"' + CTX + '/ReservationEntry?itiCode=' + encodeURIComponent(iti) + '&tradeCode=' + num(t.tradeCode) + '\">Reservation Entry</a>' : '';
     h += '<tr><td>' + esc(t.tradeCode) + '</td>'
        + '<td>' + esc(t.tradeShort) + ' - ' + esc(t.tradeName) + '</td>'
        + '<td>' + num(t.strength) + '</td>'

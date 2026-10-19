@@ -6,9 +6,9 @@
 
 <html>
     <head>
+        <jsp:include page="/WEB-INF/jsp/_api_base_url.jsp"/>
         <script language="javascript" type="text/javascript">
             function checkRange() {
-                //var rank='';
                 var min = document.getElementById("min").value * 1;
                 var max = document.getElementById("max").value * 1;
                 val = document.getElementById("rank").value * 1;
@@ -23,21 +23,16 @@
             function NumericsOnly(evt)
             {
                 var charCode = (evt.which) ? evt.which : event.keyCode
-
                 if ((charCode > 31 && (charCode < 48 || charCode > 57)))
                 {
                     alert("Please Enter Numaric Values");
                     return false;
                 }
-
-
                 return true;
             }
         </script>
     </head>
     <body>
-        <form action="${pageContext.request.contextPath}/AdmissionPhase/districtAdmissionProcessOptimise" method="post">
-
         <center><h1>Admission Counseling</h1><font color="red">${errorMsg}</font></center>
         <table width="400" border="0" align="center" >
             <tr>
@@ -53,26 +48,27 @@
             </tr>
         </table><br/>
 
-        <input type="hidden" name="currentDate" value="${currentDate}" />
-        <input type="hidden" name="merit_from" id="min" value="${merit_from}" />
-        <input type="hidden" name="merit_to" id="max" value="${merit_to}" />
-        <input type="hidden" name="caste_perform" value="${caste_perform}" />
-        <input type="hidden" name="qual_perform" value="${qual_perform}" />
-        <input type="hidden" name="adm_perform" value="${adm_perform}" />
-        <table width="276" border="1"  align="center" bgcolor="">
-            <tr>
-                <td width="87">Enter Rank </td>
-                <td width="173"><input type="text"  name="rank" id="rank" size="20" maxlength="5" autofocus="true" onkeypress="return NumericsOnly(event);"/></td>
-            </tr>
+        <form action="/AdmissionPhase/districtAdmissionProcessOptimise" method="post" id="lookupForm">
+            <input type="hidden" name="currentDate" value="${currentDate}" />
+            <input type="hidden" name="merit_from" id="min" value="${merit_from}" />
+            <input type="hidden" name="merit_to" id="max" value="${merit_to}" />
+            <input type="hidden" name="caste_perform" value="${caste_perform}" />
+            <input type="hidden" name="qual_perform" value="${qual_perform}" />
+            <input type="hidden" name="adm_perform" value="${adm_perform}" />
+            <table width="276" border="1"  align="center" bgcolor="">
+                <tr>
+                    <td width="87">Enter Rank </td>
+                    <td width="173"><input type="text"  name="rank" id="rank" size="20" maxlength="5" autofocus="true" onkeypress="return NumericsOnly(event);"/><span id="rankErr"></span></td>
+                </tr>
+                <tr>
+                    <td width="87" colspan="2" align="center" >
+                        <input type="submit" value="LOOKUP RANK" onclick="return checkRange();" class="btn btn-primary"/>
+                    </td>
+                </tr>
+            </table>
+        </form>
 
-            <tr>
-                <td colspan="2"> <span id="messg">&nbsp;</span></td>
-            </tr>
-            <tr>
-                <td width="87" colspan="2" align="center" ><input type="submit" value="submit" onclick=" return checkRange();" /></td>
-            </tr>
-        </table>
-
-    </form>
-</body>
-</html>
+        <c:if test="${not empty errorMsg}">
+            <center><font color="red"><b>${errorMsg}</b></font></center>
+        </c:if>
+    </body>

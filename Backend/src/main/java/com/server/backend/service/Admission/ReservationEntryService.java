@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -462,33 +464,82 @@ public class ReservationEntryService {
                     : String.valueOf(row.get("trade_short")));
             response.setTradeName(row.get("trade_name") == null ? null
                     : String.valueOf(row.get("trade_name")));
-            response.setTotalStrength(asInteger(row.get("strength")));
-            response.setTotalStrengthFill(asInteger(row.get("strength_fill")));
-            response.setTotalStrengthVacant(asInteger(row.get("strength_vacant")));
+            response.setTotalStrength(getIntegerFromValue(row.get("strength")));
+            response.setTotalStrengthFill(getIntegerFromValue(row.get("strength_fill")));
+            response.setTotalStrengthVacant(getIntegerFromValue(row.get("strength_vacant")));
         }
         return response;
     }
 
+
     private void loadMatrix(String itiCode, Integer tradeCode, String year, int phase,
                             Map<String, Integer> strength, Map<String, Integer> fill) {
         List<Map<String, Object>> rows = jdbc.getJdbcTemplate().queryForList(
-                "SELECT s.category_code, s.strength, s.strength_fill"
-                        + " FROM (SELECT skeys(strength) AS category_code,"
-                        + " svals(strength) AS strength, svals(strength_fill) AS strength_fill"
+                "SELECT strength, strength_fill"
                         + " FROM iti_seatmatrix"
-                        + " WHERE iti_code = ? AND trade_code = ? AND year = ? AND phase = ?) s",
+                        + " WHERE iti_code = ? AND trade_code = ? AND year = ? AND phase = ?",
                 itiCode, tradeCode, year, phase);
         for (Map<String, Object> row : rows) {
-            String code = row.get("category_code") == null ? null
-                    : String.valueOf(row.get("category_code"));
-            if (code == null) {
-                continue;
+            String strengthHstore = row.get("strength") == null ? null
+                    : String.valueOf(row.get("strength"));
+            String fillHstore = row.get("fill") == null ? null
+                    : String.valueOf(row.get("fill"));
+            Map<String, String> strengthMap = parseHstoreToMap(strengthHstore);
+            Map<String, String> fillMap = parseHstoreToMap(fillHstore);
+            // We need to combine the keys from both maps; assume they have the same keys.
+            // We'll iterate over the union of keys.
+            Set<String> keys = new LinkedHashSet<>(strengthMap.keySet());
+            keys.addAll(fillMap.keySet());
+            for (String code : keys) {
+                String sVal = strengthMap.get(code);
+                String fVal = fillMap.get(code);
+                int sInt = sVal == null ? 0 : parseInt(sVal);
+                int fInt = fVal == null ? 0 : parseInt(fVal);
+                strength.put(code, sInt);
+                fill.put(code, fInt);
             }
-            strength.put(code, asInteger(row.get("strength")));
-            fill.put(code, asInteger(row.get("strength_fill")));
         }
     }
 
+    private int parseInt(String value) {
+        try {
+            return Integer.valueOf(value);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+    private static Map<String, String> parseHstoreToMap(String hstoreString) {
+        Map<String, String> map = new LinkedHashMap<>();
+        if (hstoreString == null || hstoreString.isEmpty()) {
+            return map;
+        }
+        String text = hstoreString.trim();
+        if (text.isEmpty() || "null".equalsIgnoreCase(text)) {
+            return map;
+        }
+        // Expect format: {key1=>value1,key2=>value2,...}
+        if (text.startsWith("{") && text.endsWith("}")) {
+            String inner = text.substring(1, text.length() - 1);
+            if (inner.isEmpty()) {
+                return map;
+            }
+            String[] pairs = inner.split(",");
+            for (String pair : pairs) {
+                String[] kv = pair.split("=>", 2);
+                if (kv.length == 2) {
+                    String key = kv[0].trim();
+                    String val = kv[1].trim();
+                    // Remove surrounding quotes if present
+                    if (val.startsWith("\"") && val.endsWith("\"") && val.length() > 1) {
+                        val = val.substring(1, val.length() - 1);
+                    }
+                    map.put(key, val);
+                }
+            }
+        }
+        // If not hstore format, treat as a single value? Not expected.
+        return map;
+    }
     private List<String[]> categoryList() {
         List<Map<String, Object>> rows = jdbc.getJdbcTemplate().queryForList(
                 "SELECT category_code, category_name FROM category_mast"
@@ -563,5 +614,49 @@ public class ReservationEntryService {
             return null;
         }
         return Integer.valueOf(text);
+    }
+    private static Integer getIntegerFromValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        String text = String.valueOf(value).trim();
+        if (text.isEmpty() || "null".equalsIgnoreCase(text)) {
+            return null;
+        }
+        // Try to parse as integer directly
+        try {
+            return Integer.valueOf(text);
+        } catch (NumberFormatException e) {
+            // If not a plain integer, try to parse as hstore
+            if (text.startsWith("{") && text.endsWith("}")) {
+                String inner = text.substring(1, text.length() - 1);
+                if (inner.isEmpty()) {
+                    return null;
+                }
+                String[] pairs = inner.split(",");
+                int sum = 0;
+                for (String pair : pairs) {
+                    String[] kv = pair.split("=>", 2);
+                    if (kv.length == 2) {
+                        String valStr = kv[1].trim();
+                        // Remove surrounding quotes if present
+                        if (valStr.startsWith("\"") && valStr.endsWith("\"") && valStr.length() > 1) {
+                            valStr = valStr.substring(1, valStr.length() - 1);
+                        }
+                        try {
+                            sum += Integer.valueOf(valStr);
+                        } catch (NumberFormatException ex) {
+                            // If a value is not an integer, skip it
+                        }
+                    }
+                }
+                return sum;
+            }
+            // If not hstore and not integer, return null
+            return null;
+        }
     }
 }

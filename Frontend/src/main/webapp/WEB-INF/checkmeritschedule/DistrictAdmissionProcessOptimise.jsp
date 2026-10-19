@@ -45,23 +45,15 @@
     <body>
 
     <center><h3>ITI Admissions For AUGUST, ${student.year_of_admission}</h3></center><br/>
-    <center><font color="red">${errorMsg}</font></center>
+    <div align="right">
+      <img src="${pageContext.request.contextPath}/AdmissionPhase/photo/${student.regid}" alt="Student Photo" width="150" height="200">
+    </div>
 
     <form action="${pageContext.request.contextPath}/AdmissionPhase/take-admission" method="post"
           onsubmit="return validateRadioSelection();">
 
-        <input type="hidden" name="regid" value="${student.regid}" />
-        <input type="hidden" name="caste_name" value="${student.caste}" />
 
         <table align="center" width="800" border="1" bgcolor="#E3E4FA">
-            <tr>
-                <td colspan='2'>
-                    <img src="${pageContext.request.contextPath}/AdmissionPhase/photo/${student.regid}"/>
-                </td>
-                <td>
-                    <input type="file" name="pic"/>
-                </td>
-            </tr>
             <tr>
                 <th align="left" width="164">Name</th>
                 <td width="160">${student.name}</td>
