@@ -82,8 +82,8 @@ function num(v){ v = parseInt(v,10); return isNaN(v) ? 0 : v; }
 function loadItis(){
   if(!DIST){ DIST = localStorage.getItem('insCode') || ''; }
   var sel = document.getElementById('itiSel');
-  if(!DIST){ setErr('itiError', 'District not found in session.'); return; }
-  fetch(CTX + '/ReservationEntry/api/district/' + encodeURIComponent(DIST) + '/itis')
+  if(!DIST){ setErr('itiError', 'District not found in session.'); return Promise.reject(); }
+  return fetch(CTX + '/ReservationEntry/api/district/' + encodeURIComponent(DIST) + '/itis')
     .then(function(r){ return r.json(); })
     .then(function(list){
       var h = '<option value="">--select--</option>';
@@ -261,13 +261,23 @@ function initFromParams() {
     const itiParam = url.searchParams.get('itiCode');
     const tradeParam = url.searchParams.get('tradeCode');
     if (itiParam) {
-        document.getElementById('itiSel').value = itiParam;
-        loadTrades().then(() => {
+        // Came from Add Trade -> Reservation Entry link: load ITIs, then select this ITI,
+        // load its trades, then select the trade and load the reservation breakup.
+        loadItis().then(function() {
+            document.getElementById('itiSel').value = itiParam;
+            return loadTrades();
+        }).then(function() {
             if (tradeParam) {
                 document.getElementById('tradeSel').value = tradeParam;
                 loadReservation();
             }
-            // if no tradeParam, we just loaded trades and do nothing else
+        }).catch(function() {
+            // Best effort: still try to select and load
+            try { document.getElementById('itiSel').value = itiParam; } catch(e) {}
+            if (tradeParam) {
+                try { document.getElementById('tradeSel').value = tradeParam; } catch(e) {}
+                loadReservation();
+            }
         });
     } else {
         loadItis();

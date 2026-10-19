@@ -482,8 +482,8 @@ public class ReservationEntryService {
         for (Map<String, Object> row : rows) {
             String strengthHstore = row.get("strength") == null ? null
                     : String.valueOf(row.get("strength"));
-            String fillHstore = row.get("fill") == null ? null
-                    : String.valueOf(row.get("fill"));
+            String fillHstore = row.get("strength_fill") == null ? null
+                    : String.valueOf(row.get("strength_fill"));
             Map<String, String> strengthMap = parseHstoreToMap(strengthHstore);
             Map<String, String> fillMap = parseHstoreToMap(fillHstore);
             // We need to combine the keys from both maps; assume they have the same keys.
