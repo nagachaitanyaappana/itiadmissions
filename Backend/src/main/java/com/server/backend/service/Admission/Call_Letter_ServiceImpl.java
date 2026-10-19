@@ -40,10 +40,9 @@ public class Call_Letter_ServiceImpl
             String casteValue =
                     row[1] != null ? row[1].toString() : null;
 
-            Integer regid =
-                    row[2] != null
-                            ? ((Number) row[2]).intValue()
-                            : null;
+            // r.regid is character varying in public.ranks — keep it as text.
+            String regid =
+                    row[2] != null ? row[2].toString() : null;
 
             String itiCode =
                     row[3] != null ? row[3].toString() : null;

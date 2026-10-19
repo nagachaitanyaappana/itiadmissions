@@ -13,7 +13,7 @@ public class RankEntity {
 
     @Id
     @Column(name = "regid")
-    private Integer regid;
+    private String regid;
 
     @Id
     @Column(name = "qual")
@@ -48,11 +48,11 @@ public class RankEntity {
     public RankEntity() {
     }
 
-    public Integer getRegid() {
+    public String getRegid() {
         return regid;
     }
 
-    public void setRegid(Integer regid) {
+    public void setRegid(String regid) {
         this.regid = regid;
     }
 

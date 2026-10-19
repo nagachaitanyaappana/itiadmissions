@@ -5,7 +5,7 @@ public class Call_Letter_DTO {
 
     private String rank;
     private String caste;
-    private Integer regid;
+    private String regid;
     private String itiCode;
     private String qualification;
     private String tempPk;
@@ -20,7 +20,7 @@ public class Call_Letter_DTO {
     public Call_Letter_DTO(
             String rank,
             String caste,
-            Integer regid,
+            String regid,
             String itiCode,
             String qualification,
             String tempPk,
@@ -57,11 +57,11 @@ public class Call_Letter_DTO {
         this.caste = caste;
     }
 
-    public Integer getRegid() {
+    public String getRegid() {
         return regid;
     }
 
-    public void setRegid(Integer regid) {
+    public void setRegid(String regid) {
         this.regid = regid;
     }
 

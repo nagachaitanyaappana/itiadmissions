@@ -35,7 +35,7 @@ public class MeritListService {
         return meritListRepository.findAll();
     }
     
-    public RankEntity getMeritListByRegId(Integer regid) {
+    public RankEntity getMeritListByRegId(String regid) {
         return meritListRepository.findByRegid(regid);
     }
 
