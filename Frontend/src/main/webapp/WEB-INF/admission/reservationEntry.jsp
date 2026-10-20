@@ -82,8 +82,8 @@ function num(v){ v = parseInt(v,10); return isNaN(v) ? 0 : v; }
 function loadItis(){
   if(!DIST){ DIST = localStorage.getItem('insCode') || ''; }
   var sel = document.getElementById('itiSel');
-  if(!DIST){ setErr('itiError', 'District not found in session.'); return; }
-  fetch(CTX + '/ReservationEntry/api/district/' + encodeURIComponent(DIST) + '/itis')
+  if(!DIST){ setErr('itiError', 'District not found in session.'); return Promise.reject(); }
+  return fetch(CTX + '/ReservationEntry/api/district/' + encodeURIComponent(DIST) + '/itis')
     .then(function(r){ return r.json(); })
     .then(function(list){
       var h = '<option value="">--select--</option>';
@@ -94,58 +94,64 @@ function loadItis(){
     }).catch(function(){ setErr('itiError', 'Unable to load ITIs.'); });
 }
 
+
 function loadTrades(){
-  var iti = document.getElementById('itiSel').value;
-  var sel = document.getElementById('tradeSel');
-  var gate = document.getElementById('gateArea');
-  var goBtn = document.getElementById('goBtn');
-  sel.innerHTML = '<option value="">--select--</option>';
-  document.getElementById('resultArea').innerHTML = '';
-  gate.className = 'gate-banner';
-  gate.innerHTML = '';
-  goBtn.disabled = false;
-  if(!iti) return;
-  // Reservation Entry opens only after DGT Permitted Shifts Units AND Add Trade (Approve All).
-  fetch(CTX + '/ReservationEntry/api/iti/' + encodeURIComponent(iti) + '/readiness')
-    .then(function(r){ return r.json(); })
-    .then(function(rd){
-      if(!rd || !rd.ready){
-        gate.className = 'gate-banner block';
-        gate.innerHTML = esc((rd && rd.message) ? rd.message : 'Reservation Entry is not open for this ITI.')
-          + ' <a href="' + CTX + '/iti-trade-selection">DGT Permitted Shift Units</a>'
-          + ' | <a href="' + CTX + '/AddTrade">Add Trade</a>';
-        sel.innerHTML = '<option value="">--select--</option>';
-        goBtn.disabled = true;
-        return;
-      }
-      gate.className = 'gate-banner ok';
-      gate.innerHTML = esc(rd.message || 'Reservation Entry is open.');
-      loadTradesList(iti);
-    })
-    .catch(function(){ setErr('tradeError', 'Unable to check Reservation Entry readiness.'); });
+  return new Promise((resolve, reject) => {
+    var iti = document.getElementById('itiSel').value;
+    var sel = document.getElementById('tradeSel');
+    var gate = document.getElementById('gateArea');
+    var goBtn = document.getElementById('goBtn');
+    sel.innerHTML = '<option value="">--select--</option>';
+    document.getElementById('resultArea').innerHTML = '';
+    gate.className = 'gate-banner';
+    gate.innerHTML = '';
+    goBtn.disabled = false;
+    if(!iti) { resolve(); return; }
+    // Reservation Entry opens only after DGT Permitted Shifts Units AND Add Trade (Approve All).
+    fetch(CTX + '/ReservationEntry/api/iti/' + encodeURIComponent(iti) + '/readiness')
+      .then(function(r){ return r.json(); })
+      .then(function(rd){
+        if(!rd || !rd.ready){
+          gate.className = 'gate-banner block';
+          gate.innerHTML = esc((rd && rd.message) ? rd.message : 'Reservation Entry is not open for this ITI.')
+            + ' <a href="' + CTX + '/iti-trade-selection">DGT Permitted Shift Units</a>'
+            + ' | <a href="' + CTX + '/AddTrade">Add Trade</a>';
+          sel.innerHTML = '<option value="">--select--</option>';
+          goBtn.disabled = true;
+          resolve();
+          return;
+        }
+        gate.className = 'gate-banner ok';
+        gate.innerHTML = esc(rd.message || 'Reservation Entry is open.');
+        loadTradesList(iti).then(resolve, reject);
+      })
+      .catch(function(){ setErr('tradeError', 'Unable to check Reservation Entry readiness.'); reject(); });
+  });
 }
 
 function loadTradesList(iti){
-  var sel = document.getElementById('tradeSel');
-  fetch(CTX + '/ReservationEntry/api/iti/' + encodeURIComponent(iti) + '/approved-trades')
-    .then(function(r){ return r.json(); })
-    .then(function(list){
-      var h = '<option value="">--select--</option>';
-      var n = 0;
-      (Array.isArray(list)?list:[]).forEach(function(t){
-        n++;
-        h += '<option value="' + esc(t.tradeCode) + '">' + esc(t.tradeShort) + ' - ' + esc(t.tradeName) + '</option>';
-      });
-      sel.innerHTML = h;
-      if(n === 0){
-        var gate = document.getElementById('gateArea');
-        gate.className = 'gate-banner block';
-        gate.innerHTML = 'No approved trade for this ITI. Approve a trade in Add Trade first.';
-        document.getElementById('goBtn').disabled = true;
-      }
-    }).catch(function(){ setErr('tradeError', 'Unable to load trades.'); });
+  return new Promise((resolve, reject) => {
+    var sel = document.getElementById('tradeSel');
+    fetch(CTX + '/ReservationEntry/api/iti/' + encodeURIComponent(iti) + '/approved-trades')
+      .then(function(r){ return r.json(); })
+      .then(function(list){
+        var h = '<option value="">--select--</option>';
+        var n = 0;
+        (Array.isArray(list)?list:[]).forEach(function(t){
+          n++;
+          h += '<option value="' + esc(t.tradeCode) + '">' + esc(t.tradeShort) + ' - ' + esc(t.tradeName) + '</option>';
+        });
+        sel.innerHTML = h;
+        if(n === 0){
+          var gate = document.getElementById('gateArea');
+          gate.className = 'gate-banner block';
+          gate.innerHTML = 'No approved trade for this ITI. Approve a trade in Add Trade first.';
+          document.getElementById('goBtn').disabled = true;
+        }
+        resolve();
+      }).catch(function(){ setErr('tradeError', 'Unable to load trades.'); reject(); });
+  });
 }
-
 function loadReservation(){
   var iti = document.getElementById('itiSel').value;
   var trade = document.getElementById('tradeSel').value;
@@ -249,9 +255,35 @@ function numerics(evt){
   return true;
 }
 function setMsg(id,m){ var e = document.getElementById(id); if(e) e.innerHTML = esc(m); }
-
 document.getElementById('itiSel').addEventListener('change', loadTrades);
-loadItis();
+function initFromParams() {
+    const url = new URL(window.location);
+    const itiParam = url.searchParams.get('itiCode');
+    const tradeParam = url.searchParams.get('tradeCode');
+    if (itiParam) {
+        // Came from Add Trade -> Reservation Entry link: load ITIs, then select this ITI,
+        // load its trades, then select the trade and load the reservation breakup.
+        loadItis().then(function() {
+            document.getElementById('itiSel').value = itiParam;
+            return loadTrades();
+        }).then(function() {
+            if (tradeParam) {
+                document.getElementById('tradeSel').value = tradeParam;
+                loadReservation();
+            }
+        }).catch(function() {
+            // Best effort: still try to select and load
+            try { document.getElementById('itiSel').value = itiParam; } catch(e) {}
+            if (tradeParam) {
+                try { document.getElementById('tradeSel').value = tradeParam; } catch(e) {}
+                loadReservation();
+            }
+        });
+    } else {
+        loadItis();
+    }
+}
+initFromParams();
 </script>
 </body>
 </html>

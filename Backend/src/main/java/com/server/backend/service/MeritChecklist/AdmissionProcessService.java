@@ -297,7 +297,8 @@ public class AdmissionProcessService {
 
         // Application profile (getApplicationDetails).
         List<Map<String, Object>> candidates = jdbc.queryForList(
-                "SELECT regid, name, fname, caste, gender, dob, phc, exservice, ssc_regno, ssc_year "
+                "SELECT regid, name, fname, caste, gender, dob, phc, exservice, ssc_regno, ssc_year, "
+                        + "email, economic_weaker_section, ewsv, pwd_category "
                         + "FROM public.application WHERE regid = CAST(:regid AS integer) LIMIT 1",
                 new MapSqlParameterSource("regid", regid));
         if (candidates.isEmpty()) {
@@ -389,10 +390,15 @@ public class AdmissionProcessService {
         student.put("caste", text(candidate.get("caste")));
         student.put("gender", text(candidate.get("gender")));
         student.put("dob", candidate.get("dob"));
-        student.put("phc", text(candidate.get("phc")));
-        student.put("exservice", text(candidate.get("exservice")));
+        student.put("phc", isYes(candidate.get("phc")) ? "Yes" : "No");
+        student.put("exservice", isYes(candidate.get("exservice")) ? "Yes" : "No");
         student.put("year_of_admission", year + "-" + academicYearSuffix(year));
         student.put("current_date", java.time.LocalDate.now().toString());
+        student.put("ssc_regno", text(candidate.get("ssc_regno")));
+        student.put("ssc_year", text(candidate.get("ssc_year")));
+        student.put("email_id", text(candidate.get("email")));
+        student.put("ews", isYes(candidate.get("economic_weaker_section")) ? "Yes" : "No");
+        student.put("pwd_category", isYes(candidate.get("pwd_category")) ? "Yes" : "No");
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -873,7 +879,8 @@ public class AdmissionProcessService {
         String regid = text(rankRows.get(0).get("regid"));
         String candidateTable = resolveCandidateTable(year);
         List<Map<String, Object>> candidates = jdbc.queryForList(
-                "SELECT regid, name, fname, caste, gender, dob, phc, exservice, ssc_regno, ssc_year "
+                "SELECT regid, name, fname, caste, gender, dob, phc, exservice, ssc_regno, ssc_year, "
+                        + "email, economic_weaker_section, ewsv, pwd_category "
                         + "FROM public." + candidateTable + " WHERE regid = CAST(:regid AS integer) LIMIT 1",
                 new MapSqlParameterSource("regid", regid));
         if (candidates.isEmpty()) {
@@ -891,11 +898,14 @@ public class AdmissionProcessService {
         student.put("caste", text(candidate.get("caste")));
         student.put("gender", text(candidate.get("gender")));
         student.put("dob", candidate.get("dob"));
-        student.put("phc", candidate.get("phc"));
-        student.put("exservice", candidate.get("exservice"));
+        student.put("phc", isYes(candidate.get("phc")) ? "Yes" : "No");
+        student.put("exservice", isYes(candidate.get("exservice")) ? "Yes" : "No");
         student.put("year_of_admission", year + "-" + academicYearSuffix(year));
         student.put("ssc_regno", text(candidate.get("ssc_regno")));
         student.put("ssc_year", text(candidate.get("ssc_year")));
+        student.put("email_id", text(candidate.get("email")));
+        student.put("ews", isYes(candidate.get("economic_weaker_section")) ? "Yes" : "No");
+        student.put("pwd_category", isYes(candidate.get("pwd_category")) ? "Yes" : "No");
         student.put("photo_base64", photoBase64(regid));
         student.put("is_admitted", admission != null);
         student.put("admission_details", admission);

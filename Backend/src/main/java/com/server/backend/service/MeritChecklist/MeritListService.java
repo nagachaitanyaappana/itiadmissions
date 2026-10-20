@@ -35,7 +35,7 @@ public class MeritListService {
         return meritListRepository.findAll();
     }
     
-    public RankEntity getMeritListByRegId(Integer regid) {
+    public RankEntity getMeritListByRegId(String regid) {
         return meritListRepository.findByRegid(regid);
     }
 
@@ -172,6 +172,18 @@ public class MeritListService {
             Boolean checklistExists = jdbcTemplate.queryForObject(checkQuery, checkParams, Boolean.class);
             if (checklistExists == null || !checklistExists) {
                 throw new IllegalStateException("Checklist must be generated first for this ITI/District and Phase.");
+            }
+
+            // Guard: the final merit list may be generated only once per scope + phase.
+            // The check list stays regenerable ("checklist" / "regeneratechecklist" delete
+            // and rebuild their own rows), but once ranks exist the caller must not be
+            // allowed to regenerate them.
+            String rankCheckQuery = String.format("SELECT EXISTS(SELECT 1 FROM ranks WHERE phase = :phase AND %s = :targetCode LIMIT 1)", codeColumn);
+            Boolean alreadyGenerated = jdbcTemplate.queryForObject(rankCheckQuery, checkParams, Boolean.class);
+            if (alreadyGenerated != null && alreadyGenerated) {
+                throw new IllegalStateException(
+                    "Final merit list has already been generated for this " +
+                    (useDistCode ? "district" : "ITI") + " and phase; it cannot be regenerated.");
             }
 
             dbTablename = "ranks";

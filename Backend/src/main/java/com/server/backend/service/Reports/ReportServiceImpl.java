@@ -310,7 +310,7 @@ public class ReportServiceImpl implements ReportService {
                    a.adm_num, a.name, a.fname, a.gender,
                    TO_CHAR(a.dob, 'DD-MM-YYYY') AS dob, a.caste, a.res_category
             FROM admissions.iti_admissions a
-            LEFT JOIN ranks r ON a.regid::int = r.regid
+            LEFT JOIN ranks r ON a.regid = r.regid
              WHERE TRIM(a.iti_code::text) = TRIM(?::text)
                AND TRIM(a.trade_code::text) = TRIM(?::text)
                AND a.phase = ?

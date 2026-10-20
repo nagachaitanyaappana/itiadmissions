@@ -42,7 +42,7 @@ public class MeritListController {
     }
     @Operation(summary = "Get merit list by registration ID")
     @GetMapping("/{regid}")
-    public RankEntity getMeritListByRegId(@PathVariable Integer regid){
+    public RankEntity getMeritListByRegId(@PathVariable String regid){
         return meritListService.getMeritListByRegId(regid);
     }
 
@@ -84,7 +84,7 @@ public RankEntity createMeritList(@RequestBody RankEntity meritList) {
 }
 @Operation(summary = "Update an existing merit list")
 @PutMapping("/{regid}")
-public RankEntity updateMeritList(@PathVariable Integer regid, @RequestBody RankEntity meritList) {
+public RankEntity updateMeritList(@PathVariable String regid, @RequestBody RankEntity meritList) {
 
     meritList.setRegid(regid);
     return meritListService.updateMeritList(meritList);
@@ -92,7 +92,7 @@ public RankEntity updateMeritList(@PathVariable Integer regid, @RequestBody Rank
 @Operation(summary = "Delete a merit list")
 @DeleteMapping("/{regid}")
 public void deleteMeritList(
-        @PathVariable Integer regid,
+        @PathVariable String regid,
         @RequestParam String qual,
         @RequestParam String temp_pk,
         @RequestParam String phase)

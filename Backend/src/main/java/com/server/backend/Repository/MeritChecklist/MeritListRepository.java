@@ -6,7 +6,7 @@ import com.server.backend.entity.RankEntity;
 import com.server.backend.entity.RankId;
 
 public interface MeritListRepository extends JpaRepository<RankEntity, RankId> {
-    RankEntity findByRegid(Integer regid);
+    RankEntity findByRegid(String regid);
      List<RankEntity> findByDistCode(String dist_code);
 
 

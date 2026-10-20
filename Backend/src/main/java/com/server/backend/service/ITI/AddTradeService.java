@@ -1,8 +1,11 @@
 package com.server.backend.service.ITI;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.AbstractMap;
+import java.util.Comparator;
 
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -286,19 +289,39 @@ public class AddTradeService {
      * Legacy "Seat Matrix" cell: the ITI+trade's per-category sanctioned strength from
      * {@code iti_seatmatrix.strength} (hstore), rendered as {@code "OC-9 PH-13 EWS-9"}.
      */
+    /**
+     * Legacy "Seat Matrix" cell: the ITI+trade's per-category sanctioned strength from
+     * {@code iti_seatmatrix.strength} (hstore), rendered as {@code "OC-9 PH-13 EWS-9"}.
+     */
+    /**
+     * Legacy "Seat Matrix" cell: the ITI+trade's per-category sanctioned strength from
+     * {@code iti_seatmatrix.strength} (hstore), rendered as {@code "OC-9 PH-13 EWS-9"}.
+     */
+    /**
+     * Legacy "Seat Matrix" cell: the ITI+trade's per-category sanctioned strength from
+     * {@code iti_seatmatrix.strength} (hstore), rendered as {@code "OC-9 PH-13 EWS-9"}.
+     */
+    /**
+     * Legacy "Seat Matrix" cell: the ITI+trade's per-category sanctioned strength from
+     * {@code iti_seatmatrix.strength} (hstore), rendered as {@code "OC-9 PH-13 EWS-9"}.
+     */
+    /**
+     * Legacy "Seat Matrix" cell: the ITI+trade's per-category sanctioned strength from
+     * {@code iti_seatmatrix.strength} (hstore), rendered as {@code "OC-9 PH-13 EWS-9"}.
+     */
     private String buildSeatMatrix(String itiCode, Integer tradeCode, String year, int phase) {
         if (tradeCode == null || year == null) {
             return "";
         }
         List<Map<String, Object>> rows = jdbc.getJdbcTemplate().queryForList(
-                "SELECT c.category_name, s.strength FROM"
-                        + " (SELECT skeys(strength) AS category_code, svals(strength) AS strength"
-                        + " FROM iti_seatmatrix"
-                        + " WHERE iti_code = ? AND trade_code = ? AND year = ? AND phase = ?) s"
-                        + " JOIN (SELECT DISTINCT category_code, category_name, category_order"
-                        + " FROM category_mast WHERE category_code IS NOT NULL) c"
-                        + " ON c.category_code = s.category_code"
-                        + " ORDER BY c.category_order NULLS LAST, c.category_name",
+                "SELECT c.category_name, sval AS strength "
+                        + "FROM (SELECT skeys(strength) AS category_code, svals(strength) AS sval "
+                        + "FROM iti_seatmatrix "
+                        + "WHERE iti_code = ? AND trade_code = ? AND year = ? AND phase = ?) s "
+                        + "JOIN (SELECT DISTINCT category_code, category_name, category_order "
+                        + "FROM category_mast WHERE category_code IS NOT NULL) c "
+                        + "ON c.category_code = s.category_code "
+                        + "ORDER BY c.category_order NULLS LAST, c.category_name",
                 itiCode, tradeCode, year, phase);
         StringBuilder builder = new StringBuilder();
         for (Map<String, Object> row : rows) {
@@ -308,7 +331,6 @@ public class AddTradeService {
         }
         return builder.toString().trim();
     }
-
     private static Integer asInteger(Object value) {
         if (value == null) {
             return null;

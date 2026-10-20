@@ -22,7 +22,7 @@ public class candidate_profile_controller {
     }
 
     @GetMapping("/candidate/{regId}")
-    public List<candidate_profile_dto> getCandidateProfile(@PathVariable Integer regId) {
+    public List<candidate_profile_dto> getCandidateProfile(@PathVariable String regId) {
 
         return service.getCandidateProfile(regId);
     }

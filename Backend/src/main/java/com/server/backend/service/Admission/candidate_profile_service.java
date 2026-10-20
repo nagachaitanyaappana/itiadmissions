@@ -17,7 +17,7 @@ public class candidate_profile_service {
         this.repository = repository;
     }
 
-    public List<candidate_profile_dto> getCandidateProfile(Integer regId) {
+    public List<candidate_profile_dto> getCandidateProfile(String regId) {
 
         List<Object[]> rows = repository.getCandidateProfile(regId);
 

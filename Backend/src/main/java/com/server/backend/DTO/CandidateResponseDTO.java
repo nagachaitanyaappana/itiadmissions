@@ -3,12 +3,14 @@ package com.server.backend.DTO;
 public class CandidateResponseDTO {
 
     private String regid;
-    private Integer rank;
+    // public.ranks.rank / phase / year are character varying — must match RankEntity's
+    // String fields or BeanUtils.copyProperties silently drops them (nulls in the API).
+    private String rank;
     private String qual;
     private String dist_code;
     private String iti_code;
-    private Integer phase;
-    private Integer year;
+    private String phase;
+    private String year;
     private String app_status;
 
     // Default Constructor
@@ -17,12 +19,12 @@ public class CandidateResponseDTO {
 
     // Parameterized Constructor
     public CandidateResponseDTO(String regid,
-                                Integer rank,
+                                String rank,
                                 String qual,
                                 String dist_code,
                                 String iti_code,
-                                Integer phase,
-                                Integer year,
+                                String phase,
+                                String year,
                                 String app_status) {
 
         this.regid = regid;
@@ -43,11 +45,11 @@ public class CandidateResponseDTO {
         this.regid = regid;
     }
 
-    public Integer getRank() {
+    public String getRank() {
         return rank;
     }
 
-    public void setRank(Integer rank) {
+    public void setRank(String rank) {
         this.rank = rank;
     }
 
@@ -75,19 +77,19 @@ public class CandidateResponseDTO {
         this.iti_code = iti_code;
     }
 
-    public Integer getPhase() {
+    public String getPhase() {
         return phase;
     }
 
-    public void setPhase(Integer phase) {
+    public void setPhase(String phase) {
         this.phase = phase;
     }
 
-    public Integer getYear() {
+    public String getYear() {
         return year;
     }
 
-    public void setYear(Integer year) {
+    public void setYear(String year) {
         this.year = year;
     }
 

@@ -189,7 +189,7 @@
                     <thead>
                         <tr style="background: #f5f5f5;">
                             <th>Subject</th>
-                            <th style="text-align: center;">Score</th>
+                            <th style="text-align: center;" id="scoreHeader">Score</th>
                         </tr>
                     </thead>
                     <tbody id="marksBody">
@@ -336,6 +336,7 @@
     </div>
 
     <jsp:include page="/WEB-INF/footer.jsp" />
+    <script type="text/javascript" src="${pageContext.request.contextPath}/js/sscScore.js"></script>
     <script type="text/javascript" src="${pageContext.request.contextPath}/js/verifyApplication.js"></script>
 </body>
 </html>
