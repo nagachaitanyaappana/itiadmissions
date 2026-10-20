@@ -148,8 +148,11 @@ function renderResult(data) {
     setText('d_ssc_year', app.ssc_year);
     setText('d_ssc_month', app.ssc_month);
 
-    // Marks
-    renderMarks(marks);
+    // The score shown must follow the candidate's ssc_type: a GPA candidate stores
+    // 0 in every marks column, so picking "whichever value is present" would show
+    // 0 instead of the real GPA. SscScore.pick() selects strictly by ssc_type.
+    const sscType = app.ssc_type || app.sscType || null;
+    renderMarks(marks, sscType);
 
     // Document verification - pre-populate from student data
     populateDocumentVerification(app);
@@ -252,8 +255,23 @@ function setText(id, val) {
     if (el) el.textContent = val == null ? '' : val;
 }
 
-function renderMarks(marks) {
+/**
+ * Renders the marks/GPA summary of a candidate.
+ *
+ * The value shown for every subject and for the total is selected by the
+ * candidate's ssc_type ('sscm' -> marks, 'sscg' -> GPA), see SscScore.pick().
+ * A GPA candidate legitimately stores 0 in the marks columns, so the value must
+ * never be chosen by preferring a non-null marks value.
+ *
+ * @param {Object} marks   the student_cand_marks row
+ * @param {String} sscType the candidate's ssc_type
+ */
+function renderMarks(marks, sscType) {
     const tbody = document.getElementById('marksBody');
+    const scoreHeader = document.getElementById('scoreHeader');
+    if (scoreHeader) {
+        scoreHeader.textContent = (window.SscScore ? window.SscScore.label(sscType, marks) : 'Score');
+    }
     if (!marks) {
         tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:#666;padding:12px;">No marks data available</td></tr>';
         document.getElementById('totalScore').textContent = '-';
@@ -269,20 +287,25 @@ function renderMarks(marks) {
         {label: 'Social', marks: 'ssc_social_marks', gpa: 'ssc_social_gpa'},
     ];
 
+    const pick = window.SscScore
+        ? window.SscScore.pick.bind(window.SscScore)
+        : function (type, m, g) {
+            // Fallback when the helper is not loaded: still prefer the column
+            // matching ssc_type, and keep a legitimate 0.
+            if (type === 'sscm') return (m === null || m === undefined || m === '') ? '-' : m;
+            if (type === 'sscg') return (g === null || g === undefined || g === '') ? '-' : g;
+            return (g === null || g === undefined || g === '') ? m : g;
+        };
+
     let rows = '';
     for (const s of subjects) {
-        const m = marks[s.marks];
-        const g = marks[s.gpa];
-        const score = (m !== null && m !== undefined && m !== '') ? m : 
-                       (g !== null && g !== undefined && g !== '') ? g : '-';
+        const score = pick(sscType, marks[s.marks], marks[s.gpa]);
         rows += `<tr><td style="padding:6px;border:1px solid #ddd;">${s.label}</td><td style="text-align:center;padding:6px;border:1px solid #ddd;">${score}</td></tr>`;
     }
     document.getElementById('marksBody').innerHTML = rows;
 
-    const total = (marks.ssc_tot_marks !== null && marks.ssc_tot_marks !== undefined && marks.ssc_tot_marks !== '') 
-        ? marks.ssc_tot_marks 
-        : marks.ssc_tot_gpa;
-    document.getElementById('totalScore').textContent = total ?? '-';
+    const total = pick(sscType, marks.ssc_tot_marks, marks.ssc_tot_gpa);
+    document.getElementById('totalScore').textContent = total;
 }
 
 function showRejectReason() {

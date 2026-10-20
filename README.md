@@ -17,6 +17,14 @@ cd Frontend && ./mvnw -o clean test     # build frontend + run tests
 
 Backend must be running before Frontend (`backend.api.base-url` points at `:6050`).
 
+### Frontend JS unit tests
+
+The browser JS (no bundler) is unit-tested with the Node test runner:
+
+```bash
+cd Frontend && npm test     # or: node --test "src/test/js/*.test.js"
+```
+
 ## Repeatable sync from combined trees
 
 See `/home/naga/Projects/NIC/ITI/ITIAP/docs/port-to-itiadmissions.md`

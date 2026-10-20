@@ -1,0 +1,10 @@
+{
+  "name": "iti-frontend",
+  "version": "0.0.1",
+  "private": true,
+  "description": "AP ITI Admissions Frontend - plain browser JS, no bundler. The package.json exists only to give the JS unit tests a runner entry point.",
+  "scripts": {
+    "test": "node --test \"src/test/js/*.test.js\""
+  },
+  "license": "UNLICENSED"
+}
