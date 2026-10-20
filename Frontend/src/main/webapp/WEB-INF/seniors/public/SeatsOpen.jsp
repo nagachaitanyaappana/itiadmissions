@@ -114,7 +114,7 @@
 <body>
     <!-- Global Header -->
     <header>
-        <%@ include file="header.jsp" %>
+        <%@ include file="/WEB-INF/seniors/header.jsp" %>
     </header>
 
     <div class="container-fluid px-5 mt-4">
@@ -192,7 +192,7 @@
 
     <!-- Global Footer -->
     <footer>
-        <%@ include file="footer.jsp" %>
+        <%@ include file="/WEB-INF/seniors/footer.jsp" %>
     </footer>
 
     <script>

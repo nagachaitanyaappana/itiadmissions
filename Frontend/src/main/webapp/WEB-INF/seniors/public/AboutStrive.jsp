@@ -14,7 +14,7 @@
     <body class="d-flex flex-column min-vh-100">
 
         <!-- Global Header Component (Includes banner, navbar, and marquee) -->
-        <%@ include file="header.jsp" %>
+        <%@ include file="/WEB-INF/seniors/header.jsp" %>
 
                 <!-- 4. Main Content (About STRIVE) -->
                 <div class="container-fluid px-5 my-5 flex-grow-1">
@@ -82,7 +82,7 @@
                 </div>
 
                 <!-- Global Footer Component -->
-                <%@ include file="footer.jsp" %>
+                <%@ include file="/WEB-INF/seniors/footer.jsp" %>
     </body>
 
     </html>

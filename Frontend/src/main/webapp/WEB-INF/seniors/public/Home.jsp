@@ -14,7 +14,7 @@
     <body>
         <!-- Global Header Component (Includes banner, navbar, and marquee) -->
         <header>
-            <%@ include file="header.jsp" %>
+            <%@ include file="/WEB-INF/seniors/header.jsp" %>
         </header>
 
         <!-- 5. Main Hero Section (Grid) -->
@@ -140,7 +140,7 @@
 
         <!-- Global Footer Component -->
         <footer>
-            <%@ include file="footer.jsp" %>
+            <%@ include file="/WEB-INF/seniors/footer.jsp" %>
         </footer>
     </body>
 

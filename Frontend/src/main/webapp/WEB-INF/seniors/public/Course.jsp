@@ -60,7 +60,7 @@
 
     <!-- Global Header Component -->
     <header>
-        <%@ include file="header.jsp" %>
+        <%@ include file="/WEB-INF/seniors/header.jsp" %>
     </header>
 
     <!-- Main Content -->
@@ -119,7 +119,7 @@
 
     <!-- Global Footer Component -->
     <footer style="margin-top: auto;">
-        <%@ include file="footer.jsp" %>
+        <%@ include file="/WEB-INF/seniors/footer.jsp" %>
     </footer>
 
     <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>

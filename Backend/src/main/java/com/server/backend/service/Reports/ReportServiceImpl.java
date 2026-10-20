@@ -66,7 +66,8 @@ public class ReportServiceImpl implements ReportService {
             return year.trim();
         }
         try {
-            String v = jdbcTemplate.queryForObject(
+            String v = jdbcTemplate.queryForObject(            m.put("principalName", firstNonNull(row.get("principalname"), row.get("principalName")));
+
                     "SELECT value FROM public.iti_params WHERE code='7'", String.class);
             if (v != null && !v.isBlank()) {
                 return v.trim();
@@ -1854,7 +1855,9 @@ public class ReportServiceImpl implements ReportService {
      * <p>Ported from the seniors' UnifiedApp {@code getSeatsOpen} query. The
      * {@code strength}, {@code strength_fill} and {@code strength_vacant} columns
      * of {@code public.iti_seatmatrix} are hstore maps of per-category counts, so
-     * each is summed across its values to obtain the ITI+trade totals.
+     * each is summed across its values to obtain the ITI+trade totals. Some rows
+     * store the values single-quoted (e.g. {@code '0'}), so the digits are
+     * extracted before the integer cast.
      */
     @Override
     public List<ItiTradeSeatResponse> getItiTradeSeats(String year, String govt) {
@@ -1868,9 +1871,12 @@ public class ReportServiceImpl implements ReportService {
                    i.govt,
                    sm.trade_code,
                    tm.trade_name,
-                   (SELECT COALESCE(SUM(val::int), 0) FROM each(sm.strength) AS e(key, val)) AS total_seats_opened,
-                   (SELECT COALESCE(SUM(val::int), 0) FROM each(sm.strength_fill) AS e(key, val)) AS total_reported,
-                   (SELECT COALESCE(SUM(val::int), 0) FROM each(sm.strength_vacant) AS e(key, val)) AS total_vacant
+                   (SELECT COALESCE(SUM(NULLIF(regexp_replace(val, '[^0-9]', '', 'g'), '')::int), 0)
+                      FROM each(sm.strength) AS e(key, val)) AS total_seats_opened,
+                   (SELECT COALESCE(SUM(NULLIF(regexp_replace(val, '[^0-9]', '', 'g'), '')::int), 0)
+                      FROM each(sm.strength_fill) AS e(key, val)) AS total_reported,
+                   (SELECT COALESCE(SUM(NULLIF(regexp_replace(val, '[^0-9]', '', 'g'), '')::int), 0)
+                      FROM each(sm.strength_vacant) AS e(key, val)) AS total_vacant
             FROM public.iti_seatmatrix sm
             JOIN public.iti i ON TRIM(sm.iti_code) = TRIM(i.iti_code)
             LEFT JOIN public.dist_mst d ON TRIM(i.dist_code) = TRIM(d.dist_code)
