@@ -27,7 +27,6 @@
         <li><a href="#">Admissions</a>
             <ul>
                 <li><a href="${pageContext.request.contextPath}/AdmissionPhase">ADMISSIONS PHASE 1</a></li>
-                <li><a href="${pageContext.request.contextPath}/AdmissionPhase">Admission Counseling (Rank)</a></li>
                 <li><a href="${pageContext.request.contextPath}/SeatMatrix">seatmatrix</a></li>
                 <li><a href="${pageContext.request.contextPath}/CallLetterView">Call Letter</a></li>
                 <li><a href="${pageContext.request.contextPath}/iti-trade-selection">DGT Permitted Shifts Units</a></li>
