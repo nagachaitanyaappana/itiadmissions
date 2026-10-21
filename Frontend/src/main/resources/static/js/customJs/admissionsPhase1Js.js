@@ -41,7 +41,7 @@ function getScheduleTimingsByDist(insCode){
 	
 	$.ajax({
 		type: 'post',
-		url: 'http://localhost:5051/itiapi/admissions/getScheduleTimingsByDist?distCode='+insCode,
+		url: 'window.API_BASE_URL + '/itiapi/admissions/getScheduleTimingsByDist?distCode='+insCode,
 		headers:{
 			'Authorization': jwtToken
 		},
@@ -103,8 +103,8 @@ function checkAdmissions(rank,insCode){
 	
 	$.ajax({
 		type: 'post',
-		url: 'http://localhost:5051/itiapi/masterdata/getSeatMatrixPhaseOneByRank',
-		//url: 'http://localhost:5051/itiapi/admissions/checkRankIsAdmitted',
+		url: 'window.API_BASE_URL + '/itiapi/masterdata/getSeatMatrixPhaseOneByRank',
+		//url: 'window.API_BASE_URL + '/itiapi/admissions/checkRankIsAdmitted',
 		data: JSON.stringify(rbody),
 		contentType: 'application/json',
 //		headers: {
