@@ -36,7 +36,16 @@ public class MeritListService {
     }
     
     public RankEntity getMeritListByRegId(String regid) {
-        return meritListRepository.findByRegid(regid);
+        // public.ranks.regid is integer in the reference schema; a non-numeric path
+        // segment (e.g. /api/meritlist/phases matching /{regid}) must 404/400 rather
+        // than reach Postgres as a varchar comparison.
+        Integer id;
+        try {
+            id = Integer.valueOf(regid.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        return meritListRepository.findByRegid(id);
     }
 
     public List<RankEntity> getMeritListByDistCode(String dist_code) {

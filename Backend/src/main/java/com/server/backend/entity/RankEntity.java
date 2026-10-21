@@ -11,9 +11,12 @@ import jakarta.persistence.Table;
 @IdClass(RankId.class)
 public class RankEntity {
 
+    // public.ranks.regid is integer in the reference schema (verified against the
+    // correct-schema dump), so the key maps as Integer — a String mapping makes
+    // every findByRegid query fail with "operator does not exist: integer = character varying".
     @Id
     @Column(name = "regid")
-    private String regid;
+    private Integer regid;
 
     @Id
     @Column(name = "qual")
@@ -48,11 +51,11 @@ public class RankEntity {
     public RankEntity() {
     }
 
-    public String getRegid() {
+    public Integer getRegid() {
         return regid;
     }
 
-    public void setRegid(String regid) {
+    public void setRegid(Integer regid) {
         this.regid = regid;
     }
 

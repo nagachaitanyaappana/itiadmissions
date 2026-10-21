@@ -15,12 +15,12 @@ import lombok.Setter;
 public class ShiftUnitPermitted{
     
     @Id
-    @Column(name = "iti_code", nullable = false)
-    private Integer itiCode;
+    @Column(name = "iti_code", nullable = false, length = 4)
+    private String itiCode;
 
     @Id
-    @Column(name = "trade_code", nullable = false)
-    private Integer tradeCode;
+    @Column(name = "trade_code", nullable = false, length = 50)
+    private String tradeCode;
 
     @Column(name = "strength")
     private Integer strength;

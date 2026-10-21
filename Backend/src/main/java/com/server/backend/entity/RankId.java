@@ -5,7 +5,7 @@ import java.util.Objects;
 
 public class RankId implements Serializable {
 
-    private String regid;
+    private Integer regid;
     private String qual;
     private String tempPk;
     private String phase;
@@ -13,18 +13,18 @@ public class RankId implements Serializable {
     public RankId() {
     }
 
-    public RankId(String regid, String qual, String tempPk, String phase) {
+    public RankId(Integer regid, String qual, String tempPk, String phase) {
         this.regid = regid;
         this.qual = qual;
         this.tempPk = tempPk;
         this.phase = phase;
     }
 
-    public String getRegid() {
+    public Integer getRegid() {
         return regid;
     }
 
-    public void setRegid(String regid) {
+    public void setRegid(Integer regid) {
         this.regid = regid;
     }
 

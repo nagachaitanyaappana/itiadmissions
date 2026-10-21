@@ -11,17 +11,17 @@ public interface ShiftUnitPermittedRepository
         extends JpaRepository<ShiftUnitPermitted, ShiftUnitPermittedId> {
 
     List<ShiftUnitPermitted> findByItiCodeAndTradeCode(
-            Integer itiCode,
-            Integer tradeCode);
+            String itiCode,
+            String tradeCode);
 
     boolean existsByItiCodeAndTradeCodeAndShiftAllowedAndUnitAllowed(
-            Integer itiCode,
-            Integer tradeCode,
+            String itiCode,
+            String tradeCode,
             String shiftAllowed,
             String unitAllowed);
 
     
     void deleteByItiCodeAndTradeCode(
-            Integer itiCode,
-            Integer tradeCode);
+            String itiCode,
+            String tradeCode);
 }
