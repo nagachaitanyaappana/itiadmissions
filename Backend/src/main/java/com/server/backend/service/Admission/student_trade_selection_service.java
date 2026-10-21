@@ -133,7 +133,7 @@ public class student_trade_selection_service {
         requireRegid(regid);
         // student_trade_sel.regid is character varying (mirrors student_application.regid)
         return jdbcTemplate.query(SELECT_SQL,
-                new MapSqlParameterSource("regid", String.valueOf(regid)), ROW_MAPPER);
+                new MapSqlParameterSource("regid", regid), ROW_MAPPER);
     }
 
     /**
@@ -186,7 +186,7 @@ public class student_trade_selection_service {
         // a re-submit cannot produce duplicate rows.
         Set<String> existingCodes = new LinkedHashSet<>();
         jdbcTemplate.query("SELECT dist_code, iti_code FROM student_trade_sel WHERE regid = :regid",
-                new MapSqlParameterSource("regid", String.valueOf(regid)),
+                new MapSqlParameterSource("regid", regid),
                 (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
                     existingCodes.add(rs.getString("dist_code") + "|" + rs.getString("iti_code"));
                 });
@@ -208,7 +208,7 @@ public class student_trade_selection_service {
         // (OpeneditviewPageAction "update student_application set entry_date=? where regid=?").
         jdbcTemplate.update(
                 "UPDATE student_application SET entry_date = now() WHERE regid = :regid",
-                new MapSqlParameterSource("regid", String.valueOf(regid)));
+                new MapSqlParameterSource("regid", regid));
 
         logger.info("Saved {} {}selection(s) for regid {} (year {}, phase {}, {} already present)",
                 rows.size(), districtOnly ? "district " : "ITI ", regid, year, phase, request.getChoices().size() - rows.size());
@@ -231,9 +231,9 @@ public class student_trade_selection_service {
 
     /** The candidate must exist: {@code student_application} is what the student flow writes. */
     private void requireCandidateExists(Integer regid) {
-        List<String> found = jdbcTemplate.getJdbcTemplate().queryForList(
-                "SELECT regid FROM student_application WHERE regid = ?", String.class,
-                String.valueOf(regid));
+        List<Integer> found = jdbcTemplate.getJdbcTemplate().queryForList(
+                "SELECT regid FROM student_application WHERE regid = ?", Integer.class,
+                regid);
         if (found.isEmpty()) {
             throw new IllegalArgumentException("No registration found for Registration Id " + regid
                     + ". Please register and apply first.");
@@ -361,7 +361,7 @@ public class student_trade_selection_service {
 
         List<SqlParameterSource> batch = new ArrayList<>(rows.size());
         for (Row row : rows) {
-            batch.add(new MapSqlParameterSource("regid", String.valueOf(regid))
+            batch.add(new MapSqlParameterSource("regid", regid)
                     .addValue("distCode", row.distCode())
                     .addValue("trno", trno)
                     .addValue("phase", phase)
@@ -382,7 +382,7 @@ public class student_trade_selection_service {
 
         int rows = jdbcTemplate.update(
                 "DELETE FROM student_trade_sel WHERE regid = :regid AND iti_code = :itiCode",
-                new MapSqlParameterSource("regid", String.valueOf(regid)).addValue("itiCode", itiCode.trim()));
+                new MapSqlParameterSource("regid", regid).addValue("itiCode", itiCode.trim()));
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
@@ -401,7 +401,7 @@ public class student_trade_selection_service {
         }
         int rows = jdbcTemplate.update(
                 "DELETE FROM student_trade_sel WHERE regid = :regid AND dist_code = :distCode",
-                new MapSqlParameterSource("regid", String.valueOf(regid)).addValue("distCode", distCode.trim()));
+                new MapSqlParameterSource("regid", regid).addValue("distCode", distCode.trim()));
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
         result.put("regid", regid);
@@ -416,7 +416,7 @@ public class student_trade_selection_service {
         requireRegid(regid);
 
         int rows = jdbcTemplate.update("DELETE FROM student_trade_sel WHERE regid = :regid",
-                new MapSqlParameterSource("regid", String.valueOf(regid)));
+                new MapSqlParameterSource("regid", regid));
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);

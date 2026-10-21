@@ -145,16 +145,12 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
     @PostMapping("/delete-by-id")
     public ResponseEntity<Map<String, Object>> deleteById(@RequestBody Map<String, Object> req) {
         Object raw = req.get("sid");
-        Long sid = null;
-        if (raw != null && !String.valueOf(raw).isBlank()) {
-            try {
-                sid = Long.valueOf(String.valueOf(raw).trim());
-            } catch (NumberFormatException e) {
-                Map<String, Object> bad = new HashMap<>();
-                bad.put("success", false);
-                bad.put("error", "Invalid schedule id: " + raw);
-                return new ResponseEntity<>(bad, HttpStatus.BAD_REQUEST);
-            }
+        String sid = raw == null || String.valueOf(raw).isBlank() ? null : String.valueOf(raw).trim();
+        if (sid == null) {
+            Map<String, Object> bad = new HashMap<>();
+            bad.put("success", false);
+            bad.put("error", "Missing schedule id");
+            return new ResponseEntity<>(bad, HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(admissionTimingService.deleteScheduleById(sid), HttpStatus.OK);
     }

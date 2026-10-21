@@ -86,7 +86,7 @@ public RankEntity createMeritList(@RequestBody RankEntity meritList) {
 @PutMapping("/{regid}")
 public RankEntity updateMeritList(@PathVariable String regid, @RequestBody RankEntity meritList) {
 
-    meritList.setRegid(regid);
+    meritList.setRegid(Integer.valueOf(regid.trim())); // public.ranks.regid is integer
     return meritListService.updateMeritList(meritList);
 }
 @Operation(summary = "Delete a merit list")
@@ -97,7 +97,7 @@ public void deleteMeritList(
         @RequestParam String temp_pk,
         @RequestParam String phase)
         {
-            RankId meritListId = new RankId(regid, qual, temp_pk, phase);
+            RankId meritListId = new RankId(Integer.valueOf(regid.trim()), qual, temp_pk, phase);
             meritListService.deleteMeritList(meritListId);
         }
 @Operation(summary = "Generate/Regenerate merit lists or checklists")

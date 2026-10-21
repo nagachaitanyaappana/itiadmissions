@@ -293,8 +293,16 @@ List<Object[]> findItisForDelete(@Param("distCode") String distCode, @Param("gov
  * Schedule rows for the running phase/year, filtered by whatever the page selected. Any of
  * district/ITI/govt may be null and is then ignored. The LEFT JOINs keep phase 1 (district-level,
  * iti_code NULL) rows visible while still allowing an ITI/govt filter in later phases.
+ *
+ * <p>The reference schema has no {@code sid} identity column (that was a quirk of the drifted
+ * dev DB), and {@code trno} repeats (verified against the archive tables), so the page's
+ * opaque row id is the legacy business key — phase~year~dist~iti~caste~minqul~merit_from~merit_to —
+ * which is exactly what legacy deleted by (Districtdataaction: delete from admission_timings
+ * where dist_code=? and merit_from=? and merit_to=? and minqul=? and caste=?).
  */
-@Query(value = "SELECT a.sid, a.dist_code, c.dist_name, a.iti_code, b.iti_name, a.caste, a.minqul, "
+@Query(value = "SELECT concat_ws('~', a.phase, a.year, coalesce(a.dist_code, ''), "
+    + "coalesce(a.iti_code, ''), a.caste, a.minqul, a.merit_from::text, a.merit_to::text) AS sid, "
+    + "a.dist_code, c.dist_name, a.iti_code, b.iti_name, a.caste, a.minqul, "
     + "a.merit_from, a.merit_to, a.cal_date, a.cal_time FROM public.admission_timings a "
     + "LEFT JOIN public.iti b ON b.iti_code = a.iti_code "
     + "LEFT JOIN public.dist_mst c ON c.dist_code = a.dist_code "
@@ -311,10 +319,27 @@ List<Object[]> findScheduleRowsForDelete(
     @Param("govt") String govt
 );
 
-/** Deletes one schedule row by its identity column ({@code sid} is unique, unlike {@code temp_pk}). */
+/**
+ * Deletes one schedule row by its legacy business key. {@code itiCode} is null for the
+ * district-level phase 1 rows, hence IS NOT DISTINCT FROM.
+ */
 @Modifying
-@Query(value = "DELETE FROM public.admission_timings WHERE sid = :sid", nativeQuery = true)
-int deleteBySid(@Param("sid") Long sid);
+@Query(value = "DELETE FROM public.admission_timings "
+    + "WHERE phase = :phase AND year = :year "
+    + "AND dist_code IS NOT DISTINCT FROM :distCode "
+    + "AND iti_code IS NOT DISTINCT FROM :itiCode "
+    + "AND caste = :caste AND minqul = :minqul "
+    + "AND merit_from = :meritFrom AND merit_to = :meritTo", nativeQuery = true)
+int deleteByBusinessKey(
+    @Param("phase") String phase,
+    @Param("year") String year,
+    @Param("distCode") String distCode,
+    @Param("itiCode") String itiCode,
+    @Param("caste") String caste,
+    @Param("minqul") String minqul,
+    @Param("meritFrom") Integer meritFrom,
+    @Param("meritTo") Integer meritTo
+);
 
 // The /view search is the native findFilteredScheduleRows() added above; the JPQL version that used
 // to live here returned the entity and therefore dropped every district row on null iti_code.

@@ -60,7 +60,7 @@ public interface Call_Letter_Print_Repository extends JpaRepository<application,
     List<Object[]> findTimings(@Param("distCode") String distCode);
 
     /** A single {@code iti_params} value by code (15/16/17/18-21). */
-    @Query(value = "SELECT value FROM public.iti_params WHERE code = CAST(:code AS integer) LIMIT 1", nativeQuery = true)
+    @Query(value = "SELECT value FROM public.iti_params WHERE code = :code LIMIT 1", nativeQuery = true)
     String findParam(@Param("code") String code);
 
     /** District display name + state code. Columns: dist_name, statecode. */

@@ -17,11 +17,10 @@ public class StudentApplication {
     public StudentApplication() {
     }
 
-    // public.student_application.regid is character varying in the reference schema,
-    // so the id maps as String (the sequence value is stored as text). Hibernate's
-    // built-in generators reject non-integral ids, so StudentApplicationRegidGenerator
-    // reads the sequence and returns the value as a string. The JSON API keeps exposing
-    // it as a number; StudentApplicationServiceImpl converts.
+    // public.student_application.regid is integer in the reference schema (default
+    // nextval('"application_Registration_id_seq"')). The sequence name is mixed-case and
+    // must stay quoted, so StudentApplicationRegidGenerator reads it via nextval with
+    // explicit quoting rather than a SEQUENCE generator.
     @Id
     @GeneratedValue(generator = "student-application-regid")
     @GenericGenerator(
@@ -29,7 +28,7 @@ public class StudentApplication {
             type = StudentApplicationRegidGenerator.class
     )
     @Column(name = "regid")
-    private String regid;
+    private Integer regid;
 
     @Column(name = "ssc_regno", nullable = false)
     private String sscRegNo;

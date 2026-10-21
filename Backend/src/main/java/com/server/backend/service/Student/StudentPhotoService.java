@@ -44,8 +44,7 @@ public class StudentPhotoService {
                     "Photograph must be a PNG or JPEG image (received " + contentType + ")");
         }
 
-        // regid is character varying in student_application; the photo table keeps it as integer.
-        applicationRepository.findById(String.valueOf(regid))
+        applicationRepository.findById(regid)
                 .orElseThrow(() -> new RuntimeException("Student Not Found"));
 
         byte[] bytes;

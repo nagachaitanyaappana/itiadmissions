@@ -603,7 +603,7 @@ public Map<String,Object> getCurrentStatus(){
      List<Map<String,Object>> data = new ArrayList<>();
      for (Object[] r : rows) {
          Map<String,Object> m = new HashMap<>();
-         m.put("sid", r[0] == null ? null : ((Number) r[0]).longValue());
+         m.put("sid", asString(r[0])); // opaque business-key row id (reference schema has no sid column)
          m.put("distCode", asString(r[1]));
          m.put("distName", asString(r[2]));
          m.put("itiCode", asString(r[3]));
@@ -624,16 +624,44 @@ public Map<String,Object> getCurrentStatus(){
      return response;
  }
 
- /** Deletes a single schedule row by {@code sid}. */
+ /**
+  * Deletes a single schedule row by its opaque {@code sid} — the phase~year~dist~iti~caste~minqul~
+  * merit_from~merit_to business key emitted by {@code findScheduleRowsForDelete}. The reference
+  * schema has no identity column on admission_timings, and trno repeats, so the delete matches the
+  * legacy semantics (Districtdataaction: delete ... where dist_code/merit_from/merit_to/minqul/caste).
+  */
  @Transactional
- public Map<String,Object> deleteScheduleById(Long sid) {
+ public Map<String,Object> deleteScheduleById(String sid) {
      Map<String,Object> response = new HashMap<>();
-     if (sid == null) {
+     if (sid == null || sid.isBlank()) {
          response.put("success", false);
          response.put("error", "Missing schedule id");
          return response;
      }
-     int deleted = admissionTimingRepository.deleteBySid(sid);
+     String[] parts = sid.split("~", -1);
+     if (parts.length != 8) {
+         response.put("success", false);
+         response.put("error", "Invalid schedule id: " + sid);
+         return response;
+     }
+     String phase = parts[0];
+     String year = parts[1];
+     String distCode = blankToNull(parts[2]);
+     String itiCode = blankToNull(parts[3]);
+     String caste = parts[4];
+     String minqul = parts[5];
+     Integer meritFrom;
+     Integer meritTo;
+     try {
+         meritFrom = Integer.valueOf(parts[6]);
+         meritTo = Integer.valueOf(parts[7]);
+     } catch (NumberFormatException e) {
+         response.put("success", false);
+         response.put("error", "Invalid schedule id: " + sid);
+         return response;
+     }
+     int deleted = admissionTimingRepository.deleteByBusinessKey(
+             phase, year, distCode, itiCode, caste, minqul, meritFrom, meritTo);
      response.put("success", deleted > 0);
      response.put("deleted", deleted);
      if (deleted == 0) {

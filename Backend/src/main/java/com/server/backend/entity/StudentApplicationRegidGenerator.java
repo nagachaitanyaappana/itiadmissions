@@ -7,16 +7,16 @@ import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.id.IdentifierGenerator;
 
 /**
- * {@code public.student_application.regid} is {@code character varying} in the
- * reference schema, so the primary key maps as {@code String}. Hibernate's
- * built-in sequence generator refuses non-integral id types, hence this
- * generator: it pulls the next value from {@code student_application_regid_seq}
- * and returns it as a numeric-looking string.
+ * {@code public.student_application.regid} is {@code integer} with default
+ * {@code nextval('"application_Registration_id_seq"')} in the reference schema. The sequence
+ * name is mixed-case, so it must stay double-quoted inside the nextval literal (an unquoted
+ * name folds to lowercase and the lookup fails). A plain SEQUENCE generator cannot guarantee
+ * that quoting, hence this generator.
  */
 public class StudentApplicationRegidGenerator implements IdentifierGenerator {
 
     private static final String NEXT_VAL_SQL =
-            "select nextval('student_application_regid_seq')";
+            "select nextval('\"application_Registration_id_seq\"')";
 
     @Override
     public Object generate(SharedSessionContractImplementor session, Object obj) {
@@ -24,7 +24,7 @@ public class StudentApplicationRegidGenerator implements IdentifierGenerator {
             try (Statement statement = connection.createStatement();
                     ResultSet rs = statement.executeQuery(NEXT_VAL_SQL)) {
                 rs.next();
-                return String.valueOf(rs.getLong(1));
+                return rs.getInt(1);
             }
         });
     }

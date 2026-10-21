@@ -2,7 +2,9 @@ package com.server.backend.DTO;
 
 public class CandidateResponseDTO {
 
-    private String regid;
+    // public.ranks.regid is integer in the reference schema — must match RankEntity's
+    // Integer field or BeanUtils.copyProperties silently drops it.
+    private Integer regid;
     // public.ranks.rank / phase / year are character varying — must match RankEntity's
     // String fields or BeanUtils.copyProperties silently drops them (nulls in the API).
     private String rank;
@@ -18,7 +20,7 @@ public class CandidateResponseDTO {
     }
 
     // Parameterized Constructor
-    public CandidateResponseDTO(String regid,
+    public CandidateResponseDTO(Integer regid,
                                 String rank,
                                 String qual,
                                 String dist_code,
@@ -37,11 +39,11 @@ public class CandidateResponseDTO {
         this.app_status = app_status;
     }
 
-    public String getRegid() {
+    public Integer getRegid() {
         return regid;
     }
 
-    public void setRegid(String regid) {
+    public void setRegid(Integer regid) {
         this.regid = regid;
     }
 
