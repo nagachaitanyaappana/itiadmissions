@@ -19,49 +19,7 @@
 		var insName = localStorage.getItem('insName');
 		//alert("jwtToken=>"+jwtToken);
 		
-                 if(roleId == '4'){
-                	 //alert("roleId=>4");
-                	    const listItem1 = document.createElement("li");
-                	    listItem1.setAttribute("class", "nav-item");
-                	    const link1 = document.createElement("a");
-                	    link1.setAttribute("class", "nav-link active");
-                	    
-                	    link1.href = "./plcmtEntryForm";  
-                	    link1.textContent = "Placement Entry";  
-                	    listItem1.appendChild(link1);
-                	    const navbarList = document.getElementById("placements");
-                	    navbarList.appendChild(listItem1);
-
-                	    const listItem2 = document.createElement("li");
-                	    listItem2.setAttribute("class", "nav-item");
-                	    const link2 = document.createElement("a");
-                	    link2.setAttribute("class", "nav-link active");
-                	    
-                	    link2.href = "./plcmtITIReport";  
-                	    link2.textContent = "Placement ITI Report";  
-                	    listItem2.appendChild(link2);
-                	    navbarList.appendChild(listItem2);
-                 }
                  if(roleId == "3"){
-                	 //alert("3")
-                	const listItem1 = document.createElement("li");
-                	listItem1.setAttribute("class", "dropdown-item");
-             	    const link1 = document.createElement("a");
-             	    link1.href = "./placementScheduleEntry";  
-             	    link1.textContent = "Placement Schedule Entry";  
-             	    listItem1.appendChild(link1);
-             	    const navbarList = document.getElementById("placements");
-             	   	navbarList.appendChild(listItem1);
-                	 
-                	const listItem2 = document.createElement("li");
-                	listItem2.setAttribute("class", "dropdown-item");
-             	    const link2 = document.createElement("a");
-             	   	link2.href = "./plcmtDistReport";  
-             	  	link2.textContent = "Placement Dist Report";  
-             	    listItem2.appendChild(link2);
-             	    const navbarList2 = document.getElementById("placements");
-             	   	navbarList2.appendChild(listItem2);
-             	   	
                 	const distVerificationli = document.createElement("li");
                 	distVerificationli.setAttribute("class", "dropdown-item");
              	    const distVerificationa = document.createElement("a");
@@ -138,28 +96,7 @@
               	   	
               	   	
                  }
-                 if(roleId == "10" || roleId == "2"){
-                	 //alert("3")
-                	const listItem1 = document.createElement("li");
-                	listItem1.setAttribute("class", "dropdown-item");
-             	    const link1 = document.createElement("a");
-             	    link1.href = "./plcmtStateReport";  
-             	    link1.textContent = "Placement State Report";  
-             	    listItem1.appendChild(link1);
-             	    const navbarList = document.getElementById("placements");
-             	   	navbarList.appendChild(listItem1);
-                	 
-                	const listItem2 = document.createElement("li");
-                	listItem2.setAttribute("class", "dropdown-item");
-             	    const link2 = document.createElement("a");
-             	   	link2.href = "./plcmtYearWiseCountReport";  
-             	  	link2.textContent = "Placement Year Wise Report";  
-             	    listItem2.appendChild(link2);
-             	    const navbarList2 = document.getElementById("placements");
-             	   	navbarList2.appendChild(listItem2);
-                	 
-             	   	
-                 }
+                 
                  $("#loginId").append('Welcome, '+username+'<br>'+insName+', '+insCode);
 	});
 	</script>
