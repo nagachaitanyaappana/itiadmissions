@@ -31,6 +31,16 @@ public class DistrictVerifyService {
         return o == null ? "" : String.valueOf(o).trim();
     }
 
+    /** student_application.regid is integer in the reference schema; a non-numeric
+     *  incoming id simply matches nothing (same as the old String id lookup). */
+    private static Optional<Integer> parseRegid(String rid) {
+        try {
+            return Optional.of(Integer.parseInt(rid.trim()));
+        } catch (NumberFormatException ex) {
+            return Optional.empty();
+        }
+    }
+
     /**
      * Lookup a student application by regid and enrich with marks, trade selections,
      * and district scope information.
@@ -126,7 +136,7 @@ public class DistrictVerifyService {
         String dc = distCode.trim();
 
         // Verify candidate exists and belongs to the district
-        Optional<StudentApplication> opt = studentRepo.findById(rid);
+        Optional<StudentApplication> opt = parseRegid(rid).flatMap(studentRepo::findById);
         if (opt.isEmpty()) {
             res.put("message", "No student application found with regid " + rid);
             return res;
@@ -266,7 +276,7 @@ public class DistrictVerifyService {
         String rejReason = reason == null ? "" : reason.trim();
 
         // Verify candidate exists
-        Optional<StudentApplication> opt = studentRepo.findById(rid);
+        Optional<StudentApplication> opt = parseRegid(rid).flatMap(studentRepo::findById);
         if (opt.isEmpty()) {
             res.put("message", "No student application found with regid " + rid);
             return res;

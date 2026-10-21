@@ -135,7 +135,8 @@ public class TradeSelectionService {
                 .addValue("phase", phase)
                 .addValue("year", year);
 
-        // Primary key is (regid, dist_code, iti_code), so this is an upsert. An existing row keeps
+        // Primary key is (regid, dist_code) in the reference schema (a candidate holds one ITI
+        // per district), so this is an upsert on that key. An existing row keeps
         // its history: the phase key is appended, matching legacy "update ... phase || hstore(...)".
         // `temp` is NOT NULL with no column default on this schema and the legacy inserts never
         // supplied it either (they relied on a production-side default that is absent here), so
@@ -145,7 +146,7 @@ public class TradeSelectionService {
                 VALUES (:regid, :itiCode, :distCode, :freezee, :itiCode,
                         nextval('public.trade_sel_temp_seq'),
                         hstore(array[:phase], array['true']), :year)
-                ON CONFLICT (regid, dist_code, iti_code) DO UPDATE SET
+                ON CONFLICT (regid, dist_code) DO UPDATE SET
                     freezee  = EXCLUDED.freezee,
                     year     = EXCLUDED.year,
                     phase    = COALESCE(trade_sel.phase, ''::hstore) || EXCLUDED.phase

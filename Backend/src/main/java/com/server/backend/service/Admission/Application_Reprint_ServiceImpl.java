@@ -24,12 +24,12 @@ public class Application_Reprint_ServiceImpl
             Long registrationId) {
 
         StudentApplication application = repository
-                .findByRegid(String.valueOf(registrationId))
+                .findByRegid(registrationId.intValue())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Application not found for the given Registration Id"));
 
         return new Application_Reprint_DTO(
-                application.getRegid(),
+                String.valueOf(application.getRegid()),
                 application.getName(),
                 application.getFname(),
                 application.getMname(),

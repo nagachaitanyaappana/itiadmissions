@@ -24,8 +24,8 @@ public class StudentCandMarksServiceImpl implements StudentCandMarksService {
     @Override
     public String saveMarks(StudentCandMarksDto dto) {
 
-        // Check whether regid exists in student_application (regid is character varying)
-        applicationRepository.findById(String.valueOf(dto.getRegid()))
+        // Check whether regid exists in student_application (regid is integer there)
+        applicationRepository.findById(dto.getRegid())
                 .orElseThrow(() -> new RuntimeException("Student Not Found"));
 
         String regid = String.valueOf(dto.getRegid());

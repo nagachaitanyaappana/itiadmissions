@@ -84,7 +84,8 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
                             "Details do not match the existing application for this SSC Registration Number.");
                 }
                 StudentApplicationDto resumed = new StudentApplicationDto();
-                resumed.setRegid(toIntegerId(str(row.get("regid"))));
+                Object regidValue = row.get("regid");
+                resumed.setRegid(regidValue instanceof Number n ? n.intValue() : null);
                 resumed.setSscRegNo(sscRegNo);
                 resumed.setResumed(true);
                 return resumed;
@@ -133,12 +134,13 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
 
         Integer matched = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM student_application WHERE regid = ? AND dob = ? AND ssc_regno = ?",
-                Integer.class, String.valueOf(regid), dobDate, sscRegNo.trim());
+                Integer.class, regid, dobDate, sscRegNo.trim());
         if (matched == null || matched == 0) {
             result.put("status", "norecords");
             return result;
         }
 
+        // admissions.iti_admissions.regid is character varying (unlike student_application).
         Integer admitted = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM admissions.iti_admissions WHERE regid = ?",
                 Integer.class, String.valueOf(regid));
@@ -182,22 +184,9 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
         return o == null ? null : o.toString();
     }
 
-    /** regid is stored as character varying; the JSON API exposes it as a number. */
-    private static Integer toIntegerId(String regid) {
-        if (regid == null || regid.isBlank()) {
-            return null;
-        }
-        try {
-            return Integer.valueOf(regid.trim());
-        } catch (NumberFormatException ex) {
-            return null;
-        }
-    }
-
     private static StudentApplicationDto toDto(StudentApplication entity) {
         StudentApplicationDto dto = new StudentApplicationDto();
         BeanUtils.copyProperties(entity, dto);
-        dto.setRegid(toIntegerId(entity.getRegid()));
         return dto;
     }
 
@@ -246,7 +235,8 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
                 isUpdate ? "Update" : "Insert", sessionId, new Timestamp(System.currentTimeMillis()).toString());
 
         String year = firstOrNull(jdbcTemplate.queryForList(
-                "SELECT value FROM public.iti_params WHERE code = CAST(? AS integer)", String.class, "7"));
+                // public.iti_params.code is character varying in the reference schema
+                "SELECT value FROM public.iti_params WHERE code = ?", String.class, "7"));
         String phase = null;
         if (year != null) {
             phase = firstOrNull(jdbcTemplate.queryForList(
@@ -258,7 +248,7 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
         }
 
         StudentApplication entity = isUpdate
-                ? repository.findById(String.valueOf(dto.getRegid()))
+                ? repository.findById(dto.getRegid())
                         .orElseThrow(() -> new RuntimeException("Student Not Found"))
                 : new StudentApplication();
 
@@ -314,7 +304,7 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
         }
 
         StudentApplication saved = repository.save(entity);
-        Integer regid = toIntegerId(saved.getRegid());
+        Integer regid = saved.getRegid();
 
         writeCandMarks(regid, dto, trno, isUpdate);
         writePhoto(regid, photo, photoContentType);
@@ -462,7 +452,7 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
     @Override
 public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto dto) {
 
-    StudentApplication entity = repository.findById(String.valueOf(regid))
+    StudentApplication entity = repository.findById(regid)
             .orElseThrow(() -> new RuntimeException("Student Not Found"));
 
     BeanWrapper src = new BeanWrapperImpl(dto);
@@ -535,7 +525,7 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
     @Override
     public StudentApplicationDto getStudentById(Integer regid) {
 
-        StudentApplication entity = repository.findById(String.valueOf(regid))
+        StudentApplication entity = repository.findById(regid)
                 .orElseThrow(() -> new RuntimeException("Student Not Found"));
 
         return toDto(entity);
@@ -561,7 +551,7 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
     @Override
     public void deleteStudent(Integer regid) {
 
-        repository.deleteById(String.valueOf(regid));
+        repository.deleteById(regid);
 
     }
     @Override

@@ -74,7 +74,8 @@ public class AdmissionProcessService {
      */
     private Map<String, Object> currentPhaseConfig() {
         String year = jdbc.getJdbcTemplate().queryForObject(
-                "SELECT value FROM public.iti_params WHERE code = 7", String.class);
+                // public.iti_params.code is character varying in the reference schema
+                "SELECT value FROM public.iti_params WHERE code = '7'", String.class);
         if (blank(year)) {
             throw new IllegalStateException("iti_params code 7 has no year value");
         }
@@ -862,14 +863,16 @@ public class AdmissionProcessService {
                     "No district code is available for this login; cannot resolve the rank");
         }
 
+        // Legacy resolves the rank with rank + district + phase only (MyUtil.getOptionValue on
+        // ranks, no year predicate): the rank list is per-phase, not per-year, and existing rows
+        // carry a NULL year — filtering on year finds nothing.
         List<Map<String, Object>> rankRows = jdbc.queryForList(
                 "SELECT DISTINCT r.regid AS regid, r.rank AS rank FROM public.ranks r "
                         + "WHERE r.rank::text = :rank AND r.dist_code = :distCode "
-                        + " AND r.year = :year AND r.phase = :phase LIMIT 1",
+                        + " AND r.phase = :phase LIMIT 1",
                 new MapSqlParameterSource()
                         .addValue("rank", wantedRank)
                         .addValue("distCode", distCode)
-                        .addValue("year", year)
                         .addValue("phase", String.valueOf(phase)));
         if (rankRows.isEmpty()) {
             return notFound("No candidate holds rank " + wantedRank + " in district " + distCode

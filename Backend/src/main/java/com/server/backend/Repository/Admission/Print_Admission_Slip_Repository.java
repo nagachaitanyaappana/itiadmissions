@@ -35,6 +35,6 @@ public interface Print_Admission_Slip_Repository
     String findDistrictName(@Param("code") String code);
 
     /** A single {@code iti_params} value by code (18-21 are the tuition fees). */
-    @Query(value = "SELECT value FROM public.iti_params WHERE code = CAST(:code AS integer) LIMIT 1", nativeQuery = true)
+    @Query(value = "SELECT value FROM public.iti_params WHERE code = :code LIMIT 1", nativeQuery = true)
     String findParam(@Param("code") String code);
 }
