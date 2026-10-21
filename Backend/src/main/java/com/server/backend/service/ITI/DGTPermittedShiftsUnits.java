@@ -8,12 +8,12 @@ public interface DGTPermittedShiftsUnits {
     ShiftUnitPermittedResponseDto save(ShiftUnitPermittedRequestDto dto);
 
     ShiftUnitPermittedResponseDto getByItiAndTrade(
-            String itiCode,
-            String tradeCode);
+            Integer itiCode,
+            Integer tradeCode);
 
     void delete(
-            String itiCode,
-            String tradeCode,
+            Integer itiCode,
+            Integer tradeCode,
             Integer shiftAllowed,
             Integer unitAllowed);
 }

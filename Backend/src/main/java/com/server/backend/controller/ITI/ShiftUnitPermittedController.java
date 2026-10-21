@@ -32,8 +32,8 @@ public class ShiftUnitPermittedController {
     // Get records by ITI and Trade
     @GetMapping
     public ResponseEntity<ShiftUnitPermittedResponseDto> getByItiAndTrade(
-            @RequestParam String itiCode,
-            @RequestParam String tradeCode) {
+            @RequestParam Integer itiCode,
+            @RequestParam Integer tradeCode) {
 
         return ResponseEntity.ok(
                 service.getByItiAndTrade(itiCode, tradeCode));
@@ -42,8 +42,8 @@ public class ShiftUnitPermittedController {
     // Delete a specific record using composite key
     @DeleteMapping
     public ResponseEntity<String> delete(
-            @RequestParam String itiCode,
-            @RequestParam String tradeCode,
+            @RequestParam Integer itiCode,
+            @RequestParam Integer tradeCode,
             @RequestParam Integer shiftAllowed,
             @RequestParam Integer unitAllowed) {
 

@@ -5,15 +5,15 @@ import lombok.Data;
 
 @Data
 public class ShiftUnitPermittedId implements Serializable {
-    private String itiCode;
-    private String tradeCode;
+    private Integer itiCode;
+    private Integer tradeCode;
     private String shiftAllowed;
     private String unitAllowed;
 
     public ShiftUnitPermittedId() {
     }
 
-    public ShiftUnitPermittedId(String itiCode, String tradeCode, String shiftAllowed,
+    public ShiftUnitPermittedId(Integer itiCode, Integer tradeCode, String shiftAllowed,
             String unitAllowed) {
         this.itiCode = itiCode;
         this.tradeCode = tradeCode;

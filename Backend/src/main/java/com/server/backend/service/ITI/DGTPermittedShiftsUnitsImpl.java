@@ -40,14 +40,14 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
         //    so carry the existing value over instead of writing the request.
         Map<String, Boolean> existingAvailability = new HashMap<>();
         for (ShiftUnitPermitted existing
-                : repository.findByItiCodeAndTradeCode(dto.getItiCode(), dto.getTradeCode())) {
+                : repository.findByItiCodeAndTradeCode(Integer.valueOf(dto.getItiCode()), Integer.valueOf(dto.getTradeCode()))) {
             existingAvailability.put(
                     existing.getShiftAllowed() + "-" + existing.getUnitAllowed(),
                     existing.getAvailableYear());
         }
 
         // 3. Delete all existing records for this ITI + Trade
-        repository.deleteByItiCodeAndTradeCode(dto.getItiCode(), dto.getTradeCode());
+        repository.deleteByItiCodeAndTradeCode(Integer.valueOf(dto.getItiCode()), Integer.valueOf(dto.getTradeCode()));
 
         // 4. Save each entry
         List<ShiftUnitEntryDto> savedEntries = new ArrayList<>();
@@ -75,16 +75,16 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
     @Override
     @Transactional(readOnly = true)
     public ShiftUnitPermittedResponseDto getByItiAndTrade(
-            String itiCode,
-            String tradeCode) {
+            Integer itiCode,
+            Integer tradeCode) {
 
         List<ShiftUnitPermitted> entities = repository.findByItiCodeAndTradeCode(
-                itiCode, tradeCode);
+                Integer.valueOf(itiCode), Integer.valueOf(tradeCode));
 
         if (entities.isEmpty()) {
             ShiftUnitPermittedResponseDto empty = new ShiftUnitPermittedResponseDto();
-            empty.setItiCode(itiCode);
-            empty.setTradeCode(tradeCode);
+            empty.setItiCode(itiCode.toString());
+            empty.setTradeCode(tradeCode.toString());
             return empty;
         }
 
@@ -93,8 +93,8 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
                 .collect(Collectors.toList());
 
         ShiftUnitPermittedResponseDto response = new ShiftUnitPermittedResponseDto();
-        response.setItiCode(itiCode);
-        response.setTradeCode(tradeCode);
+        response.setItiCode(itiCode.toString());
+        response.setTradeCode(tradeCode.toString());
         response.setAvailableYear(entities.get(0).getAvailableYear());
         response.setEntries(entries);
 
@@ -103,14 +103,14 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
     @Override
     @Transactional
-    public void delete(String itiCode,
-                       String tradeCode,
+    public void delete(Integer itiCode,
+                       Integer tradeCode,
                        Integer shiftAllowed,
                        Integer unitAllowed) {
 
         ShiftUnitPermittedId id = new ShiftUnitPermittedId(
-                itiCode,
-                tradeCode,
+                Integer.valueOf(itiCode),
+                Integer.valueOf(tradeCode),
                 String.valueOf(shiftAllowed),
                 String.valueOf(unitAllowed));
 
@@ -187,8 +187,8 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
         ShiftUnitPermitted entity = new ShiftUnitPermitted();
 
-        entity.setItiCode(requestDto.getItiCode());
-        entity.setTradeCode(requestDto.getTradeCode());
+        entity.setItiCode(Integer.valueOf(requestDto.getItiCode()));
+        entity.setTradeCode(Integer.valueOf(requestDto.getTradeCode()));
 
         entity.setShiftAllowed(String.valueOf(entryDto.getShiftAllowed()));
         entity.setUnitAllowed(String.valueOf(entryDto.getUnitAllowed()));
