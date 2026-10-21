@@ -7,165 +7,335 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <title>Shift & Unit Permitted Configuration</title>
     <style>
-        .page-title {
-            color: #330033;
-            font-size: 28px;
+        /* ---- Modern admin theme (blue accent, light canvas) ---- */
+        .page-canvas {
+            background-color: #f5f7fa;
+            border: 1px solid #e8edf3;
+            border-radius: 14px;
+            padding-top: 20px;
+            padding-bottom: 26px;
+        }
+        .page-header-custom {
+            background: linear-gradient(135deg, #1d4e8f 0%, #173d70 100%);
+            color: #ffffff;
+            padding: 12px 0 14px;
+            margin-top: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(16,24,40,0.12);
+        }
+        .page-header-custom h2 {
+            font-size: 1.25rem;
             font-weight: 600;
+            letter-spacing: 0.2px;
+            margin-bottom: 2px;
         }
         .breadcrumb-text {
-            color: #888;
-            font-size: 14px;
+            color: rgba(255,255,255,0.75);
+            font-size: 12px;
         }
-        .details-card {
-            border: 2px solid #000;
-            border-radius: 0;
-            margin-bottom: 25px;
-            background-color: #cbd6b2;
+        .form-card {
+            border: 1px solid #e4e9f0;
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(16,24,40,0.05);
+            overflow: hidden;
+            margin-bottom: 16px;
+            background: #fff;
         }
-        .details-card-header {
-            background-color: #4ab131;
-            color: white;
+        .card-header-primary {
+            background-color: #ffffff;
+            color: #1f2937;
+            font-weight: 700;
+            font-size: 0.78rem;
             padding: 12px 18px;
-            font-size: 18px;
-            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #eef2f7;
         }
-        .details-card-body {
+        .card-header-primary i { color: #17549e; }
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #17549e;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+        .card-body-custom {
             padding: 20px;
+            background-color: #fff;
+        }
+        .summary-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #17549e;
+            margin-bottom: 6px;
         }
         .detail-label {
             font-weight: 600;
-            color: #165500;
-            font-size: 14px;
+            color: #334155;
+            font-size: 0.9rem;
         }
+        #selectedItiCode, #selectedTradeCode { color: #17549e; font-weight: 700; }
+        #selectedItiName, #selectedTradeShort { color: #0f172a; font-weight: 600; }
+        .stat-strip {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: 140px;
+            border-radius: 10px;
+            padding: 10px 14px;
+            border: 1px solid transparent;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 2px;
+        }
+        .stat-value {
+            font-size: 1.35rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.2;
+        }
+        .stat-entries { background-color: #eef4fc; border-color: #d8e6f8; }
+        .stat-entries .stat-label { color: #17549e; }
+        .stat-entries .stat-value { color: #123c74; }
+        .stat-strength { background-color: #f0f7f5; border-color: #d7ebe6; }
+        .stat-strength .stat-label { color: #0f766e; }
+        .stat-strength .stat-value { color: #0b534d; }
+        .stat-vacant { background-color: #f0f9f2; border-color: #d9eedd; }
+        .stat-vacant .stat-label { color: #15803d; }
+        .stat-vacant .stat-value { color: #14532d; }
         .table th {
-            background-color: #4ab131 !important;
-            color: white !important;
-            padding: 12px;
-            font-weight: bold;
-            font-size: 13px;
+            background-color: #eef2f7 !important;
+            color: #475569 !important;
+            padding: 10px 12px;
+            font-weight: 600;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e2e8f0 !important;
         }
         .table td {
-            padding: 10px;
+            padding: 10px 12px;
             vertical-align: middle;
             font-size: 13px;
+            color: #1f2937;
+            border-bottom: 1px solid #eef2f7 !important;
         }
-        .table, .table th, .table td { border: 1px solid #000 !important; }
+        .table, .table th, .table td { border-color: #eef2f7 !important; }
         .table-striped > tbody > tr:nth-child(odd) > td,
-        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #ffffff !important; }
+        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #f8fafc !important; }
+        .table-striped > tbody > tr:nth-child(even) > td,
+        .table-striped > tbody > tr:nth-child(even) > th { background-color: #ffffff !important; }
+        .table tbody tr:hover > td { background-color: #eef6ff !important; }
+        .form-control-sm, .form-select-sm {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #0f172a;
+            font-variant-numeric: tabular-nums;
+        }
+        .form-control-sm:focus, .form-select-sm:focus {
+            border-color: #2f6fc0 !important;
+            box-shadow: 0 0 0 0.2rem rgba(47, 111, 192, 0.15) !important;
+        }
+        .form-select option:hover {
+            background-color: #2f6fc0 !important;
+            color: #ffffff !important;
+        }
         .loading-message {
             text-align: center;
-            padding: 40px;
-            color: #666;
-            font-size: 16px;
+            padding: 30px;
+            color: #64748b;
+            font-size: 14px;
         }
         .error-message {
             text-align: center;
-            padding: 40px;
-            color: #dc3545;
-            font-size: 16px;
+            padding: 30px;
+            color: #dc2626;
+            font-size: 14px;
         }
         .success-message {
             text-align: center;
-            padding: 15px;
-            color: #155724;
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            font-size: 16px;
+            padding: 12px;
+            color: #15803d;
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
         }
         .validation-error {
-            color: #dc3545;
-            font-size: 14px;
+            color: #dc2626;
+            font-size: 13px;
             margin-top: 5px;
             font-weight: 600;
         }
+        .btn-success-custom {
+            background-color: #17549e;
+            border: none;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 0.875rem;
+            padding: 8px 20px;
+            border-radius: 8px;
+            transition: background-color 0.15s;
+        }
+        .btn-success-custom:hover {
+            background-color: #123f78;
+            color: #ffffff;
+        }
+        .btn-danger-custom {
+            background-color: #dc2626;
+            border: none;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 0.875rem;
+            border-radius: 6px;
+            transition: background-color 0.15s;
+        }
+        .btn-danger-custom:hover {
+            background-color: #b91c1c;
+            color: #ffffff;
+        }
         .btn-save {
-            min-width: 180px;
-            background-color: blue;
-            border-color: blue;
+            min-width: 160px;
         }
-        .btn-save:hover { background-color: #0000b3; border-color: #0000b3; }
         .btn-back {
-            min-width: 180px;
+            min-width: 160px;
+            border-radius: 8px;
+            font-weight: 600;
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #334155;
         }
-        #addEntryBtn { background-color: green; border-color: green; }
-        #addEntryBtn:hover { background-color: #056b05; border-color: #056b05; }
+        .btn-back:hover {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #1f2937;
+        }
+        #addEntryBtn {
+            padding: 7px 16px;
+            font-size: 0.85rem;
+        }
+        .remove-entry-btn {
+            background-color: #dc2626;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .remove-entry-btn:hover { background-color: #b91c1c; }
+        /* Navbar dropdown items: blue palette hover */
+        body .dropdown-menu .dropdown-item:hover {
+            background-color: #17549e !important;
+            color: #ffffff !important;
+            padding-left: 25px;
+        }
+        /* Footer: solid navy blue with white text */
+        .lower-footer {
+            background-color: #0f2f5c !important;
+            color: #ffffff !important;
+        }
     </style>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
 </head>
 
 <body>
     <!-- Global Header -->
-    <header>
-        <jsp:include page="/WEB-INF/reports/header.jsp" />
-    </header>
+    <jsp:include page="/WEB-INF/reports/header.jsp" />
 
-    <div class="container-fluid px-5 mt-4 mb-5 lg-page" style="min-height: 50vh;">
-        <!-- Page Header & Breadcrumbs -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="page-title text-uppercase">Shift & Unit Permitted Configuration</h2>
-            <div class="breadcrumb-text">Home / Shift Unit Permitted</div>
+    <!-- Portal page heading -->
+    <div class="page-header-custom">
+        <div class="container">
+            <h2>Shift &amp; Unit Permitted Configuration</h2>
+            <div class="breadcrumb-text">Home / ITI Trade Selection / Shift &amp; Unit Permitted</div>
         </div>
+    </div>
 
+    <div class="container-fluid px-5 mb-5 page-canvas" style="min-height: 50vh;">
         <!-- Missing ITI/Trade Message -->
         <div id="missingInfoMessage" class="error-message" style="display: none;">
             <i class="fas fa-exclamation-triangle me-2"></i>
             <span id="missingInfoText"></span>
             <br><br>
-            <a href="${pageContext.request.contextPath}/iti-trade-selection" class="btn btn-primary">
+            <a href="${pageContext.request.contextPath}/iti-trade-selection" class="btn btn-success-custom">
                 <i class="fas fa-arrow-left me-2"></i>Back to Trade Selection
             </a>
         </div>
 
         <!-- Main Content -->
         <div id="mainContent" style="display: none;">
-            <!-- Selected ITI Card -->
-            <div class="details-card">
-                <div class="details-card-header">
-                    <i class="fas fa-building"></i> Selected ITI
-                </div>
-                <div class="details-card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>ITI Code:</strong> <span id="selectedItiCode"></span></p>
-                            <p class="mb-0"><strong>ITI Name:</strong> <span id="selectedItiName"></span></p>
-                        </div>
+        <!-- Selection Summary Card -->
+        <div class="card form-card">
+            <div class="card-header-primary">
+                <i class="fas fa-clipboard-check"></i> Selection Summary
+            </div>
+            <div class="card-body-custom">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="summary-label">ITI</div>
+                        <p class="mb-1"><strong>Code:</strong> <span id="selectedItiCode"></span></p>
+                        <p class="mb-0"><strong>Name:</strong> <span id="selectedItiName"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="summary-label">Trade</div>
+                        <p class="mb-1"><strong>Code:</strong> <span id="selectedTradeCode"></span></p>
+                        <p class="mb-0"><strong>Name:</strong> <span id="selectedTradeShort"></span></p>
                     </div>
                 </div>
             </div>
-
-            <!-- Selected Trade Card -->
-            <div class="details-card">
-                <div class="details-card-header">
-                    <i class="fas fa-tools"></i> Selected Trade
-                </div>
-                <div class="details-card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>Trade Code:</strong> <span id="selectedTradeCode"></span></p>
-                            <p class="mb-0"><strong>Trade:</strong> <span id="selectedTradeShort"></span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        </div>
 
             <!-- Configuration Section -->
-            <div class="details-card">
-                <div class="details-card-header">
-                    <i class="fas fa-cogs"></i> Configuration
-                </div>
-                <div class="details-card-body">
+            <div class="card form-card">
+            <div class="card-header-primary">
+                <span class="step-badge">3</span><i class="fas fa-cogs"></i> Shift &amp; Unit Configuration
+            </div>
+                <div class="card-body-custom">
                     <!-- Entries Table -->
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0" style="color: #444;">Shift & Unit Entries</h5>
-                        <button class="btn btn-success" id="addEntryBtn">
+                        <h5 class="mb-0" style="color: #1f2937; font-size: 0.95rem;">Shift &amp; Unit Entries</h5>
+                        <button class="btn btn-success-custom" id="addEntryBtn">
                             <i class="fas fa-plus me-2"></i>Add Entry
                         </button>
+                    </div>
+
+                    <!-- Live summary stats -->
+                    <div class="stat-strip">
+                        <div class="stat-card stat-entries">
+                            <div class="stat-label"><i class="fas fa-list-ol me-1"></i>Entries</div>
+                            <div class="stat-value" id="statEntries">0</div>
+                        </div>
+                        <div class="stat-card stat-strength">
+                            <div class="stat-label"><i class="fas fa-users me-1"></i>Total Strength</div>
+                            <div class="stat-value" id="statStrength">0</div>
+                        </div>
+                        <div class="stat-card stat-vacant">
+                            <div class="stat-label"><i class="fas fa-circle-check me-1"></i>Total Vacant</div>
+                            <div class="stat-value" id="statVacant">0</div>
+                        </div>
                     </div>
 
                     <div class="table-responsive">
@@ -196,7 +366,7 @@
                 <a href="${pageContext.request.contextPath}/iti-trade-selection" class="btn btn-secondary btn-back">
                     <i class="fas fa-arrow-left me-2"></i>Back to Trade Selection
                 </a>
-                <button class="btn btn-primary btn-save" id="saveBtn">
+                <button class="btn btn-success-custom btn-save" id="saveBtn">
                     <i class="fas fa-save me-2"></i>Save Configuration
                 </button>
             </div>
@@ -221,9 +391,7 @@
     </div>
 
     <!-- Global Footer -->
-    <footer>
-        <%@ include file="../footer.jsp" %>
-    </footer>
+    <%@ include file="../footer.jsp" %>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -255,6 +423,9 @@
             const errorMessage = document.getElementById("errorMessage");
             const errorText = document.getElementById("errorText");
             const entriesValidationError = document.getElementById("entriesValidationError");
+            const statEntries = document.getElementById("statEntries");
+            const statStrength = document.getElementById("statStrength");
+            const statVacant = document.getElementById("statVacant");
 
             let entries = [];
             let isSaving = false;
@@ -291,6 +462,7 @@
                 // Add event listeners
                 addEntryBtn.addEventListener("click", addEntry);
                 saveBtn.addEventListener("click", saveConfiguration);
+                entriesTableBody.addEventListener("input", updateStats);
             }
 
             function loadExistingConfiguration() {
@@ -345,6 +517,7 @@
                     emptyRowClone.id = "emptyRow";
                     emptyRowClone.innerHTML = '<td colspan="5" class="text-center">No entries configured. Click "Add Entry" to add one.</td>';
                     entriesTableBody.appendChild(emptyRowClone);
+                    updateStats();
                     return;
                 }
 
@@ -387,6 +560,27 @@
                         removeEntry(index);
                     });
                 });
+
+                updateStats();
+            }
+
+            function updateStats() {
+                const strengthInputs = entriesTableBody.querySelectorAll('.strength-input');
+                const vacantInputs = entriesTableBody.querySelectorAll('.strength-vacant-input');
+                let totalStrength = 0;
+                let totalVacant = 0;
+
+                strengthInputs.forEach((input, i) => {
+                    const strength = parseInt(input.value) || 0;
+                    totalStrength += strength;
+                    // Blank vacant means the backend defaults it to the strength.
+                    const vacantRaw = vacantInputs[i] ? vacantInputs[i].value : '';
+                    totalVacant += vacantRaw === '' ? strength : (parseInt(vacantRaw) || 0);
+                });
+
+                statEntries.textContent = strengthInputs.length;
+                statStrength.textContent = totalStrength;
+                statVacant.textContent = totalVacant;
             }
 
             function generateUnitOptions(selectedValue) {

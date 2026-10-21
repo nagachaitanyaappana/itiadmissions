@@ -23,6 +23,7 @@ import com.server.backend.DTO.DistrictWiseApplicationCountResponse;
 import com.server.backend.DTO.DscFullReportResponse;
 import com.server.backend.DTO.GovtPvtSeatsAbstractResponse;
 import com.server.backend.DTO.ITIAdmissionsReportResponse;
+import com.server.backend.DTO.ItiTradeSeatResponse;
 import com.server.backend.DTO.ItiWiseStatusResponse;
 import com.server.backend.DTO.OpenSeatsAbstractResponse;
 import com.server.backend.DTO.PhaseWiseReportResponse;
@@ -65,7 +66,8 @@ public class ReportServiceImpl implements ReportService {
             return year.trim();
         }
         try {
-            String v = jdbcTemplate.queryForObject(
+            String v = jdbcTemplate.queryForObject(            m.put("principalName", firstNonNull(row.get("principalname"), row.get("principalName")));
+
                     "SELECT value FROM public.iti_params WHERE code='7'", String.class);
             if (v != null && !v.isBlank()) {
                 return v.trim();
@@ -1845,6 +1847,58 @@ public class ReportServiceImpl implements ReportService {
         appendPhaseFilter(sql, params, phase, hstorePhase);
         Long count = jdbcTemplate.query(sql.toString(), rs -> rs.next() ? rs.getLong(1) : 0L, params.toArray());
         return count != null ? count : 0;
+    }
+
+    /**
+     * ITI + trade level seat matrix rows for the public "Seats Open" page.
+     *
+     * <p>Ported from the seniors' UnifiedApp {@code getSeatsOpen} query. The
+     * {@code strength}, {@code strength_fill} and {@code strength_vacant} columns
+     * of {@code public.iti_seatmatrix} are hstore maps of per-category counts, so
+     * each is summed across its values to obtain the ITI+trade totals. Some rows
+     * store the values single-quoted (e.g. {@code '0'}), so the digits are
+     * extracted before the integer cast.
+     */
+    @Override
+    public List<ItiTradeSeatResponse> getItiTradeSeats(String year, String govt) {
+        String effectiveYear = resolveAdmissionYear(year);
+        String sql = """
+            SELECT sm.iti_code,
+                   i.ncvt_code,
+                   i.iti_name,
+                   i.dist_code,
+                   d.dist_name,
+                   i.govt,
+                   sm.trade_code,
+                   tm.trade_name,
+                   (SELECT COALESCE(SUM(NULLIF(regexp_replace(val, '[^0-9]', '', 'g'), '')::int), 0)
+                      FROM each(sm.strength) AS e(key, val)) AS total_seats_opened,
+                   (SELECT COALESCE(SUM(NULLIF(regexp_replace(val, '[^0-9]', '', 'g'), '')::int), 0)
+                      FROM each(sm.strength_fill) AS e(key, val)) AS total_reported,
+                   (SELECT COALESCE(SUM(NULLIF(regexp_replace(val, '[^0-9]', '', 'g'), '')::int), 0)
+                      FROM each(sm.strength_vacant) AS e(key, val)) AS total_vacant
+            FROM public.iti_seatmatrix sm
+            JOIN public.iti i ON TRIM(sm.iti_code) = TRIM(i.iti_code)
+            LEFT JOIN public.dist_mst d ON TRIM(i.dist_code) = TRIM(d.dist_code)
+            LEFT JOIN public.ititrade_master tm ON sm.trade_code = tm.trade_code
+            WHERE sm.year::text = ?::text
+              AND (?::text IS NULL OR i.govt = ?::text)
+            ORDER BY d.dist_name, i.iti_name, tm.trade_name
+            """;
+        String effectiveGovt = (govt != null && !govt.isBlank() && !"All".equalsIgnoreCase(govt))
+                ? govt : null;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new ItiTradeSeatResponse(
+                rs.getString("dist_code"),
+                rs.getString("dist_name"),
+                rs.getString("iti_code"),
+                rs.getString("ncvt_code"),
+                rs.getString("iti_name"),
+                rs.getString("govt"),
+                rs.getString("trade_code"),
+                rs.getString("trade_name"),
+                rs.getInt("total_seats_opened"),
+                rs.getInt("total_reported"),
+                rs.getInt("total_vacant")), effectiveYear, effectiveGovt, effectiveGovt);
     }
 
     private String str(Object o) {

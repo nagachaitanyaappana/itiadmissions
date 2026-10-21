@@ -17,6 +17,7 @@ import com.server.backend.DTO.DscFullReportResponse;
 import com.server.backend.DTO.GovtPvtSeatsAbstractResponse;
 import com.server.backend.DTO.ITIAdmissionsReportResponse;
 import com.server.backend.DTO.ItiWiseStatusResponse;
+import com.server.backend.DTO.ItiTradeSeatResponse;
 import com.server.backend.DTO.OpenSeatsAbstractResponse;
 import com.server.backend.DTO.PhaseWiseReportResponse;
 import com.server.backend.DTO.ShiftUnitResponse;
@@ -88,6 +89,14 @@ public interface ReportService {
 
     // 14. Open Seats Abstract (District wise)
     List<OpenSeatsAbstractResponse> getOpenSeatsAbstract(String year);
+
+    /**
+     * ITI + trade level seat matrix rows (public "Seats Open" page).
+     *
+     * @param year  admission year; blank means the current {@code iti_params} year
+     * @param govt  {@code "G"} / {@code "P"} to filter, blank or {@code "All"} for both
+     */
+    List<ItiTradeSeatResponse> getItiTradeSeats(String year, String govt);
 
     // 15. Trade Duration Seats Abstract
     List<TradeDurationSeatsResponse> getTradeDurationSeats(String year, String durationMonths, String itiType);
