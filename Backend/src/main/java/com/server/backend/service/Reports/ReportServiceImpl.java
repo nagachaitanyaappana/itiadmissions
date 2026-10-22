@@ -1211,7 +1211,7 @@ public class ReportServiceImpl implements ReportService {
                 "FROM public.ranks r " +
                 "LEFT JOIN public.dist_mst d ON r.dist_code = d.dist_code " +
                 "LEFT JOIN public.iti i ON r.iti_code = i.iti_code " +
-                "WHERE r.regid = ? " +
+                "WHERE r.regid::text = ? " +
                 "ORDER BY r.phase";
         try {
             List<Map<String, Object>> meritRows = jdbcTemplate.queryForList(meritSql, finalRegid);

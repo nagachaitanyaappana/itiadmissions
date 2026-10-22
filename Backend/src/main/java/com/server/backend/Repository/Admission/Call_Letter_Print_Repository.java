@@ -44,7 +44,7 @@ public interface Call_Letter_Print_Repository extends JpaRepository<application,
     @Query(value = "SELECT r.rank, r.regid, s.name, s.fname, s.addr, s.caste, s.gender, s.phc, s.exservice "
             + "FROM public.ranks r "
             + "JOIN public.student_application s ON s.regid = r.regid "
-            + "WHERE r.regid = :regid AND r.dist_code = :distCode AND r.rank ~ '^[0-9]+$' "
+            + "WHERE r.regid::text = :regid AND r.dist_code = :distCode AND r.rank ~ '^[0-9]+$' "
             + "ORDER BY CAST(r.rank AS integer) LIMIT 1", nativeQuery = true)
     List<Object[]> findCandidateByRegid(
             @Param("regid") String regid,

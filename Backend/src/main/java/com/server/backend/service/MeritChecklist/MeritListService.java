@@ -163,6 +163,23 @@ public class MeritListService {
             dbTablename = "checklist";
             heading = "System Generated CheckList";
             
+            // A final merit list may exist for this scope + phase + year. Once it does,
+            // the checklist must stay read-only — regeneration is disabled, matching the
+            // "generate once per phase and year" rule. ranks has a year column; checklist does not,
+            // so we probe ranks (which is written by the final-merit-list path).
+            String ranksCheckQuery = String.format("SELECT EXISTS(SELECT 1 FROM ranks WHERE phase = :phase AND %s = :targetCode AND year = :year LIMIT 1)", codeColumn);
+            MapSqlParameterSource ranksParams = new MapSqlParameterSource()
+                    .addValue("phase", phase)
+                    .addValue("targetCode", targetCode)
+                    .addValue("year", year);
+            Boolean ranksExist = jdbcTemplate.queryForObject(ranksCheckQuery, ranksParams, Boolean.class);
+            if (ranksExist != null && ranksExist) {
+                throw new IllegalStateException(
+                        "Final merit list already exists for this " +
+                        (useDistCode ? "district" : "ITI") + " and phase " + phase + " year " + year +
+                        "; checklist cannot be regenerated.");
+            }
+
             // Legacy Rank_Generation_Process.jsp clears the code from either code column
             // (delete from checklist where iti_code=? or dist_code=?); checklist's primary key is
             // regid alone (no year column), so this delete is left unscoped by phase/year.
@@ -183,12 +200,15 @@ public class MeritListService {
                 throw new IllegalStateException("Checklist must be generated first for this ITI/District and Phase.");
             }
 
-            // Guard: the final merit list may be generated only once per scope + phase.
-            // The check list stays regenerable ("checklist" / "regeneratechecklist" delete
-            // and rebuild their own rows), but once ranks exist the caller must not be
-            // allowed to regenerate them.
-            String rankCheckQuery = String.format("SELECT EXISTS(SELECT 1 FROM ranks WHERE phase = :phase AND %s = :targetCode LIMIT 1)", codeColumn);
-            Boolean alreadyGenerated = jdbcTemplate.queryForObject(rankCheckQuery, checkParams, Boolean.class);
+            // Guard: the final merit list may be generated only once per scope + phase + year.
+            // ranks carries a year column, so include it; otherwise a phase 1 list generated in
+            // 2025 would wrongly block phase 1 in 2026.
+            String rankCheckQuery = String.format("SELECT EXISTS(SELECT 1 FROM ranks WHERE phase = :phase AND %s = :targetCode AND year = :year LIMIT 1)", codeColumn);
+            MapSqlParameterSource rankParams = new MapSqlParameterSource()
+                    .addValue("phase", phase)
+                    .addValue("targetCode", targetCode)
+                    .addValue("year", year);
+            Boolean alreadyGenerated = jdbcTemplate.queryForObject(rankCheckQuery, rankParams, Boolean.class);
             if (alreadyGenerated != null && alreadyGenerated) {
                 throw new IllegalStateException(
                     "Final merit list has already been generated for this " +
@@ -201,18 +221,6 @@ public class MeritListService {
             // Delete from ranks where phase = phase and codeColumn = targetCode
             String deleteQuery = String.format("DELETE FROM ranks WHERE phase = :phase AND %s = :targetCode", codeColumn);
             jdbcTemplate.update(deleteQuery, checkParams);
-
-            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, trno, app_status";
-            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :trno, app_status";
-            
-        } else if ("regeneratechecklist".equals(status)) {
-            dbTablename = "checklist";
-            heading = "Regenerated CHECK LIST";
-
-            // Legacy's regenerate branch deletes on iti_code only (Rank_Generation_Process.jsp
-            // line 111: "delete from checklist where iti_code=?").
-            String deleteQuery = "DELETE FROM checklist WHERE iti_code = :targetCode";
-            jdbcTemplate.update(deleteQuery, new MapSqlParameterSource("targetCode", targetCode));
 
             insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, trno, app_status";
             selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :trno, app_status";

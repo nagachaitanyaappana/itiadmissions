@@ -19,7 +19,7 @@ public interface candidate_profile_repository extends JpaRepository<RankEntity, 
             qual,
             app_status
         FROM ranks
-        WHERE regid = :regId
+        WHERE regid::text = :regId
         """, nativeQuery = true)
     List<Object[]> getCandidateProfile(@Param("regId") String regId);
 

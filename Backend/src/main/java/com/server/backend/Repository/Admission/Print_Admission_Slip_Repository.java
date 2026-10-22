@@ -18,7 +18,7 @@ public interface Print_Admission_Slip_Repository
 
     /** Merit rank held by the candidate for the admission phase (null when not ranked). */
     @Query(value = "SELECT r.rank FROM public.ranks r "
-            + "WHERE r.regid = :regid AND r.phase = :phase AND r.rank ~ '^[0-9]+$' "
+            + "WHERE r.regid::text = :regid AND r.phase = :phase AND r.rank ~ '^[0-9]+$' "
             + "ORDER BY CAST(r.rank AS integer) LIMIT 1", nativeQuery = true)
     String findRank(@Param("regid") String regid, @Param("phase") String phase);
 
