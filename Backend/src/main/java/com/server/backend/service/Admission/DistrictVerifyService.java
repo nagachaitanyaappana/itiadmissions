@@ -8,6 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.server.backend.Repository.Student.StudentApplicationRepository;
 import com.server.backend.entity.StudentApplication;
+import com.server.backend.service.AdmissionPhaseWindowService;
+import com.server.backend.service.AdmissionPhaseWindowService.Window;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -20,11 +22,25 @@ public class DistrictVerifyService {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final StudentApplicationRepository studentRepo;
+    private final AdmissionPhaseWindowService phaseWindows;
 
     public DistrictVerifyService(NamedParameterJdbcTemplate jdbcTemplate,
-                                 StudentApplicationRepository studentRepo) {
+                                 StudentApplicationRepository studentRepo,
+                                 AdmissionPhaseWindowService phaseWindows) {
         this.jdbcTemplate = jdbcTemplate;
         this.studentRepo = studentRepo;
+        this.phaseWindows = phaseWindows;
+    }
+
+    public Map<String, Object> windowStatus() {
+        AdmissionPhaseWindowService.Status verification = phaseWindows.status(Window.VERIFICATION);
+        AdmissionPhaseWindowService.Status reverification = phaseWindows.status(Window.REVERIFICATION);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("phase", verification.phase());
+        result.put("verificationOpen", verification.open());
+        result.put("reverificationOpen", reverification.open());
+        result.put("open", verification.open() || reverification.open());
+        return result;
     }
 
     private static String str(Object o) {
@@ -147,6 +163,15 @@ public class DistrictVerifyService {
                 String.class, rid);
         if (dists.isEmpty() || !dists.contains(dc)) {
             res.put("message", "This application has no ITI selected in your district (" + dc + ")");
+            return res;
+        }
+
+        String currentStatus = jdbcTemplate.getJdbcTemplate().queryForObject(
+                "SELECT app_status FROM student_application WHERE regid::text = ?", String.class, rid);
+        Window window = isPreviouslyVerified(currentStatus) ? Window.REVERIFICATION : Window.VERIFICATION;
+        if (!phaseWindows.isOpen(window)) {
+            res.put("code", "DATE_EXPIRED");
+            res.put("message", "Date has Expired");
             return res;
         }
 
@@ -291,6 +316,15 @@ public class DistrictVerifyService {
             return res;
         }
 
+        String currentStatus = jdbcTemplate.getJdbcTemplate().queryForObject(
+                "SELECT app_status FROM student_application WHERE regid::text = ?", String.class, rid);
+        Window window = isPreviouslyVerified(currentStatus) ? Window.REVERIFICATION : Window.VERIFICATION;
+        if (!phaseWindows.isOpen(window)) {
+            res.put("code", "DATE_EXPIRED");
+            res.put("message", "Date has Expired");
+            return res;
+        }
+
         // 1. Update student_application
         int upd = jdbcTemplate.getJdbcTemplate().update(
                 "UPDATE student_application SET app_status='R', reason=?, user_id=?, ip=?, verified_date=now(), verified_ip=? WHERE regid::text = ?",
@@ -308,6 +342,10 @@ public class DistrictVerifyService {
         res.put("message", "Application rejected successfully");
         res.put("appStatus", "R");
         return res;
+    }
+
+    private static boolean isPreviouslyVerified(String appStatus) {
+        return "A".equalsIgnoreCase(str(appStatus)) || "R".equalsIgnoreCase(str(appStatus));
     }
 
     /**

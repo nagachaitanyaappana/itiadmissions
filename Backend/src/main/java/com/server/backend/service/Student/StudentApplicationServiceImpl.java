@@ -16,8 +16,12 @@ import com.server.backend.entity.CasteMasterPublic;
 import com.server.backend.entity.SubCasteMasterPublic;
 import com.server.backend.Repository.MeritChecklist.CasteMasterRepository;
 import com.server.backend.Repository.Student.SubCasteMasterPublicRepository;
+import com.server.backend.service.AdmissionPhaseWindowService;
+import com.server.backend.service.AdmissionPhaseWindowService.Window;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,15 +38,18 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
     private final CasteMasterRepository casteMasterRepository;
     private final SubCasteMasterPublicRepository subCasteMasterRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final AdmissionPhaseWindowService phaseWindows;
 
     public StudentApplicationServiceImpl(StudentApplicationRepository repository,
             CasteMasterRepository casteMasterRepository,
             SubCasteMasterPublicRepository subCasteMasterRepository,
-            JdbcTemplate jdbcTemplate) {
+            JdbcTemplate jdbcTemplate,
+            AdmissionPhaseWindowService phaseWindows) {
         this.repository = repository;
         this.casteMasterRepository = casteMasterRepository;
         this.subCasteMasterRepository = subCasteMasterRepository;
         this.jdbcTemplate = jdbcTemplate;
+        this.phaseWindows = phaseWindows;
     }
 
     /**
@@ -111,13 +118,7 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
     public Map<String, Object> applyGate(Integer regid, String dob, String sscRegNo) {
         Map<String, Object> result = new LinkedHashMap<>();
 
-        // Window guard: legacy reads application_to_date from admissions.admission_phase and treats
-        // the window as open until one day after it (Calendar.DAY_OF_MONTH += 1).
-        Timestamp toDate = jdbcTemplate.query(
-                "SELECT application_to_date FROM admissions.admission_phase LIMIT 1",
-                rs -> rs.next() ? rs.getTimestamp("application_to_date") : null);
-        if (toDate != null
-                && LocalDateTime.now().isAfter(toDate.toLocalDateTime().plusDays(1))) {
+        if (!phaseWindows.isOpen(Window.APPLICATION)) {
             result.put("status", "expired");
             return result;
         }
@@ -200,6 +201,9 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public StudentApplicationDto register(StudentApplicationDto dto, byte[] photo, String photoContentType) {
+        if (!phaseWindows.isOpen(Window.APPLICATION)) {
+            throw new ResponseStatusException(HttpStatus.GONE, "Date has Expired");
+        }
         boolean isUpdate = dto.getRegid() != null;
 
         // Reference to the submitting client, equivalent to the legacy logTrace + request.getRemoteAddr().
@@ -451,6 +455,10 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
 
     @Override
 public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto dto) {
+
+    if (!phaseWindows.isOpen(Window.APPLICATION)) {
+        throw new ResponseStatusException(HttpStatus.GONE, "Date has Expired");
+    }
 
     StudentApplication entity = repository.findById(regid)
             .orElseThrow(() -> new RuntimeException("Student Not Found"));

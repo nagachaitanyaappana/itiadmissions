@@ -1575,21 +1575,19 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public CurrentAdmissionPhaseResponse getCurrentAdmissionPhase() {
         // Mirrors legacy beans.MyUtil.LastDate(): the application window stays open until
-        // one day after application_to_date of the current phase.
-        String sql = "SELECT year, phase, application_to_date FROM admissions.admission_phase WHERE current = true LIMIT 1";
+        // one second after application_to_date. Use the database clock and the current row.
+        String sql = "SELECT year, phase, application_to_date, "
+                + "COALESCE(application_to_date IS NOT NULL AND "
+                + "now() <= application_to_date + interval '1 second', false) AS open "
+                + "FROM admissions.admission_phase WHERE current = 'true' "
+                + "ORDER BY year DESC LIMIT 1";
         List<CurrentAdmissionPhaseResponse> results = jdbcTemplate.query(sql, (rs, rowNum) -> {
             java.sql.Timestamp toDate = rs.getTimestamp("application_to_date");
             String toDateStr = toDate == null ? null : toDate.toString();
-            boolean open = true;
-            if (toDate != null) {
-                java.util.Calendar cal = java.util.Calendar.getInstance();
-                cal.setTimeInMillis(toDate.getTime());
-                cal.add(java.util.Calendar.DAY_OF_MONTH, 1);
-                open = !new java.sql.Timestamp(System.currentTimeMillis()).after(new java.sql.Timestamp(cal.getTimeInMillis()));
-            }
-            return new CurrentAdmissionPhaseResponse(rs.getString("year"), rs.getInt("phase"), toDateStr, open);
+            return new CurrentAdmissionPhaseResponse(rs.getString("year"), rs.getInt("phase"), toDateStr,
+                    rs.getBoolean("open"));
         });
-        return results.isEmpty() ? null : results.get(0);
+        return results.isEmpty() ? new CurrentAdmissionPhaseResponse(null, 0, null, false) : results.get(0);
     }
 
     // 27. Students Not Admitted

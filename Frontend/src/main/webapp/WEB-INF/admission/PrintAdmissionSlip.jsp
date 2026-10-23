@@ -18,11 +18,11 @@
   .submit-btn { background-color:#4CAF50; border:none; color:#fff; padding:6px 42px; font-size:15px; font-weight:bold; cursor:pointer; }
   .submit-btn:disabled { opacity:.55; cursor:default; }
   .reset-btn { background-color:#c0392b; border:none; color:#fff; padding:6px 42px; font-size:15px; font-weight:bold; cursor:pointer; margin-left:8px; }
-  .print-btn { background-color:#0E4878; border:none; color:#fff; padding:6px 42px; font-size:15px; font-weight:bold; cursor:pointer; margin-left:8px; }
+  .print-btn { background-color:#0E4878; border:none; color:#fff; padding:6px 42px; font-size:15px; font-weight:bold; cursor:pointer; }
   .err { color:red; font-size:12px; display:block; }
-  .act-row { text-align:center; margin:12px 0; }
+  .act-row { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:12px 0 24px; padding:0 12px; }
   .msg-err { color:red; text-align:center; }
-  #footer { position:fixed; bottom:0; width:100%; padding:8px; text-align:center; background:#0E4878; font-size:12px; color:#fff; font-family:arial,verdana; }
+  #footer { box-sizing:border-box; width:100%; margin-top:24px; padding:8px; text-align:center; background:#0E4878; font-size:12px; color:#fff; font-family:arial,verdana; }
   #footer a { color:#fff; }
 
   /* ---- admission memo ---- */
@@ -38,11 +38,13 @@
   .sign-row td { text-align:left; padding:26px 12px 8px; }
   .sign-row .pr { text-align:right; font-weight:bold; }
   .convener { text-align:right; font-weight:bold; padding:8px 12px 18px; }
+  @page { size:auto; margin:12mm; }
   @media print {
-    #screen1, #footer, .act-row, .no-print { display:none !important; }
-    #screen2 { display:block !important; }
-    body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    body { margin:0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    body > :not(#screen2) { display:none !important; }
     .memo-wrap { width:100%; max-width:none; }
+    .act-row, .no-print { display:none !important; }
+    #screen2 { display:block !important; }
   }
 </style>
 </head>

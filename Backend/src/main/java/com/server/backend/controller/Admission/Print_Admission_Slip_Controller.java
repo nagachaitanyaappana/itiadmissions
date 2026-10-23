@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.ModelAndView;
 
 import com.server.backend.DTO.Print_Admission_slip_DTO;
 import com.server.backend.service.Admission.Print_Admission_Slip_Service;
@@ -34,4 +35,11 @@ public class Print_Admission_Slip_Controller {
                     HttpStatus.NOT_FOUND, ex.getMessage());
         }
     }
+
+    @GetMapping("/admissions/print-admission-slip")
+    public ModelAndView printAdmissionSlipPage() {
+        ModelAndView mv = new ModelAndView("checkmeritschedule/admissionIntialization");
+        return mv;
+    }
+
 }

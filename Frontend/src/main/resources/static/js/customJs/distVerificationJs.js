@@ -8,6 +8,7 @@ let getSSCBoards = null;
 let getCastes = null;
 
 let admissionPhaseData = null;
+let verificationWindows = { verificationOpen: false, reverificationOpen: false };
 
 // District code -> name lookup (cached). getCandidateAppliedDetails renders
 // district names via getDistName(), which legacy defined per-page.
@@ -49,15 +50,49 @@ function getReady(){
 		$("#admYearPhaseDiv").hide(); 
 		$("#printOptions").hide(); 
 		
-		getAllSSCBoards(function(boards) {
-			getSSCBoards = boards;
-			getAllCastes(function(castes) {
-				getCastes = castes;
-				getDistVerificationList(insCode);
+		getVerificationWindowStatus(function(status, error) {
+			if (!status) {
+				showVerificationWindowMessage(error || "Unable to verify the configured date window.");
+				return;
+			}
+			verificationWindows = status;
+			if (!status.verificationOpen && !status.reverificationOpen) {
+				showVerificationWindowMessage("Date has Expired");
+				return;
+			}
+			getAllSSCBoards(function(boards) {
+				getSSCBoards = boards;
+				getAllCastes(function(castes) {
+					getCastes = castes;
+					getDistVerificationList(insCode);
+				});
 			});
 		});
 		
 	}
+}
+
+function showVerificationWindowMessage(message) {
+	$("#navbar").hide();
+	$("#contentDiv").hide();
+	$("#formTwo").hide();
+	$("#admYearPhaseDiv").hide();
+	$("#verificationWindowExpired").text(message).show();
+}
+
+function getVerificationWindowStatus(callback) {
+	$.ajax({
+		type: 'get',
+		url: API_BASE_URL + '/api/dv/window-status',
+		cache: false,
+		timeout: 600000,
+		success: function(resp) {
+			callback(resp || null, null);
+		},
+		error: function() {
+			callback(null, "Unable to verify the configured date window. Please retry.");
+		}
+	});
 }
 
 function getDistVerificationList(insCode){
@@ -86,15 +121,21 @@ function getDistVerificationList(insCode){
 				var reverify = '';
 				// Unverified covers legacy NULL/'' as well as 'N' (staging default).
 				if(app_statuss == null || app_statuss == "" || app_statuss == 'N'){
-					app_statuss = '<a href="javascript:editApplication(\''+bean.ssc_regno+'\',\''+bean.regid+'\',\''+bean.dob+'\')">VERIFY</a>'; 
+					app_statuss = verificationWindows.verificationOpen
+						? '<a href="javascript:editApplication(\''+bean.ssc_regno+'\',\''+bean.regid+'\',\''+bean.dob+'\')">VERIFY</a>'
+						: 'VERIFYING CLOSED';
 				}
 				if(app_statuss == 'A'){ 
 					app_statuss = 'APPROVED';
-					reverify = '<a href="javascript:editApplication(\''+bean.ssc_regno+'\',\''+bean.regid+'\',\''+bean.dob+'\')">RE-VERIFY</a>'; 
+					reverify = verificationWindows.reverificationOpen
+						? '<a href="javascript:editApplication(\''+bean.ssc_regno+'\',\''+bean.regid+'\',\''+bean.dob+'\')">RE-VERIFY</a>'
+						: 'RE-VERIFYING CLOSED';
 				}
 				if(app_statuss == 'R'){ 
 					app_statuss = 'REJECTED'; 
-					reverify = '<a href="javascript:editApplication(\''+bean.ssc_regno+'\',\''+bean.regid+'\',\''+bean.dob+'\')">RE-VERIFY</a>'; 
+					reverify = verificationWindows.reverificationOpen
+						? '<a href="javascript:editApplication(\''+bean.ssc_regno+'\',\''+bean.regid+'\',\''+bean.dob+'\')">RE-VERIFY</a>'
+						: 'RE-VERIFYING CLOSED';
 				} 
 				 
 				

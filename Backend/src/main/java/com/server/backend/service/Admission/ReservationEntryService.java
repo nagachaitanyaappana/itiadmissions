@@ -1,6 +1,7 @@
 package com.server.backend.service.Admission;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -479,15 +480,19 @@ public class ReservationEntryService {
                         + " FROM iti_seatmatrix"
                         + " WHERE iti_code = ? AND trade_code = ? AND year = ? AND phase = ?",
                 itiCode, tradeCode, year, phase);
+        // No row for this year/phase means the breakup has not been entered yet; the
+        // categories stay at 0 (legacy behaviour) and the operator fills them in.
         for (Map<String, Object> row : rows) {
-            String strengthHstore = row.get("strength") == null ? null
-                    : String.valueOf(row.get("strength"));
-            String fillHstore = row.get("strength_fill") == null ? null
-                    : String.valueOf(row.get("strength_fill"));
-            Map<String, String> strengthMap = parseHstoreToMap(strengthHstore);
-            Map<String, String> fillMap = parseHstoreToMap(fillHstore);
-            // We need to combine the keys from both maps; assume they have the same keys.
-            // We'll iterate over the union of keys.
+            // PostgreSQL JDBC driver returns hstore as java.util.HashMap directly.
+            Map<String, String> strengthMap = (Map<String, String>) row.get("strength");
+            Map<String, String> fillMap = (Map<String, String>) row.get("strength_fill");
+            if (strengthMap == null) {
+                strengthMap = new HashMap<>();
+            }
+            if (fillMap == null) {
+                fillMap = new HashMap<>();
+            }
+            // Combine keys from both maps; assume they have the same keys.
             Set<String> keys = new LinkedHashSet<>(strengthMap.keySet());
             keys.addAll(fillMap.keySet());
             for (String code : keys) {
@@ -507,38 +512,6 @@ public class ReservationEntryService {
         } catch (NumberFormatException e) {
             return 0;
         }
-    }
-    private static Map<String, String> parseHstoreToMap(String hstoreString) {
-        Map<String, String> map = new LinkedHashMap<>();
-        if (hstoreString == null || hstoreString.isEmpty()) {
-            return map;
-        }
-        String text = hstoreString.trim();
-        if (text.isEmpty() || "null".equalsIgnoreCase(text)) {
-            return map;
-        }
-        // Expect format: {key1=>value1,key2=>value2,...}
-        if (text.startsWith("{") && text.endsWith("}")) {
-            String inner = text.substring(1, text.length() - 1);
-            if (inner.isEmpty()) {
-                return map;
-            }
-            String[] pairs = inner.split(",");
-            for (String pair : pairs) {
-                String[] kv = pair.split("=>", 2);
-                if (kv.length == 2) {
-                    String key = kv[0].trim();
-                    String val = kv[1].trim();
-                    // Remove surrounding quotes if present
-                    if (val.startsWith("\"") && val.endsWith("\"") && val.length() > 1) {
-                        val = val.substring(1, val.length() - 1);
-                    }
-                    map.put(key, val);
-                }
-            }
-        }
-        // If not hstore format, treat as a single value? Not expected.
-        return map;
     }
     private List<String[]> categoryList() {
         List<Map<String, Object>> rows = jdbc.getJdbcTemplate().queryForList(

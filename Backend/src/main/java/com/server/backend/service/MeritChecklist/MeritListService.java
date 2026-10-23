@@ -2,6 +2,8 @@ package com.server.backend.service.MeritChecklist;
 import java.util.List;
 import com.server.backend.DTO.MeritListRow;
 import com.server.backend.DTO.UserPrincipal;
+import com.server.backend.service.AdmissionPhaseWindowService;
+import com.server.backend.service.AdmissionPhaseWindowService.Window;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +15,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import java.util.Date;
 import java.util.Map;
 @Service
 public class MeritListService {
@@ -22,12 +23,13 @@ public class MeritListService {
 
     private final MeritListRepository meritListRepository;
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final AdmissionPhaseWindowService phaseWindows;
 
-    
-
-    public MeritListService(MeritListRepository meritListRepository,NamedParameterJdbcTemplate jdbcTemplate) {
+    public MeritListService(MeritListRepository meritListRepository, NamedParameterJdbcTemplate jdbcTemplate,
+                            AdmissionPhaseWindowService phaseWindows) {
         this.meritListRepository = meritListRepository;
-                this.jdbcTemplate = jdbcTemplate;
+        this.jdbcTemplate = jdbcTemplate;
+        this.phaseWindows = phaseWindows;
 
     }
 
@@ -66,6 +68,16 @@ public class MeritListService {
     public List<RankEntity> getMeritListByAppStatusIsNull() {
         return meritListRepository.findByAppStatusIsNull();
     }
+
+    public Map<String, Object> meritListWindowStatus() {
+        AdmissionPhaseWindowService.Status window = phaseWindows.status(Window.MERIT_LIST);
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("phase", window.phase());
+        result.put("open", window.open());
+        result.put("starts_at", window.start());
+        result.put("ends_at", window.end());
+        return result;
+    }
     public RankEntity saveMeritList(RankEntity meritList) {
         return meritListRepository.save(meritList);
     }
@@ -89,9 +101,9 @@ public class MeritListService {
         List<String> paramYears = jdbcTemplate.getJdbcTemplate().queryForList(paramYearQuery, String.class);
         String paramYear = paramYears.isEmpty() ? null : paramYears.get(0);
 
-        String phaseQuery = "SELECT year, phase, meritliststartdate, meritlisttodate " +
+        String phaseQuery = "SELECT year, phase " +
                 "FROM admissions.admission_phase " +
-                "WHERE current = 'true'";
+                "WHERE current = 'true' ORDER BY year DESC LIMIT 1";
         List<Map<String, Object>> phases =
                 jdbcTemplate.queryForList(phaseQuery, new MapSqlParameterSource());
         if (phases.isEmpty()) {
@@ -105,16 +117,8 @@ public class MeritListService {
             logger.warn("iti_params code '7' year {} does not match the current admission_phase year {}; using admission_phase",
                     paramYear, year);
         }
-        Date meritliststartdate = (Date) phaseInfo.get("meritliststartdate");
-        Date meritlisttodate = (Date) phaseInfo.get("meritlisttodate");
-
-        // 1.3 Date Range Check
-        Date now = new Date();
-        if (meritliststartdate != null && now.before(meritliststartdate)) {
-            throw new IllegalStateException(String.format("Merit list generation for phase %s has not started yet (Starts: %s)", phase, meritliststartdate));
-        }
-        if (meritlisttodate != null && now.after(meritlisttodate)) {
-            throw new IllegalStateException(String.format("Merit list generation for phase %s has ended (Ended: %s)", phase, meritlisttodate));
+        if (!phaseWindows.isOpen(Window.MERIT_LIST)) {
+            throw new IllegalStateException("Merit-list date has expired or is not configured.");
         }
 
         // 2. The caller's own role sets the scope: role 3 = whole district, role 4 = one ITI.
@@ -201,13 +205,11 @@ public class MeritListService {
             }
 
             // Guard: the final merit list may be generated only once per scope + phase + year.
-            // ranks carries a year column, so include it; otherwise a phase 1 list generated in
-            // 2025 would wrongly block phase 1 in 2026.
-            String rankCheckQuery = String.format("SELECT EXISTS(SELECT 1 FROM ranks WHERE phase = :phase AND %s = :targetCode AND year = :year LIMIT 1)", codeColumn);
+            // Note: ranks table does not reliably store year, so we check only for phase and code.
+            String rankCheckQuery = String.format("SELECT EXISTS(SELECT 1 FROM ranks WHERE phase = :phase AND %s = :targetCode LIMIT 1)", codeColumn);
             MapSqlParameterSource rankParams = new MapSqlParameterSource()
                     .addValue("phase", phase)
-                    .addValue("targetCode", targetCode)
-                    .addValue("year", year);
+                    .addValue("targetCode", targetCode);
             Boolean alreadyGenerated = jdbcTemplate.queryForObject(rankCheckQuery, rankParams, Boolean.class);
             if (alreadyGenerated != null && alreadyGenerated) {
                 throw new IllegalStateException(
@@ -341,4 +343,3 @@ public class MeritListService {
         );
     }
 }
-

@@ -10,7 +10,7 @@
     <body>
         <center>
             Candiate Admitted with Admission Number:${adm_num}<br><br>
-            <a href="${pageContext.request.contextPath}/admissions/print-admission-slip" target="_blank;">Click here to PRINT ADMISSION SLIP</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <a href="${pageContext.request.contextPath}/admissions/print-admission-slip?admissionNumber=${adm_num}" target="_blank">Click here to PRINT ADMISSION SLIP</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <a href="${pageContext.request.contextPath}/AdmissionPhase">Click here to TAKE ANOTHER ADMISSION </a>
         </center>
     </body>

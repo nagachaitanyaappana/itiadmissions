@@ -20,6 +20,11 @@ public class DistrictVerifyController {
         this.service = service;
     }
 
+    @GetMapping("/window-status")
+    public Map<String, Object> windowStatus() {
+        return service.windowStatus();
+    }
+
     @GetMapping("/lookup")
     public Map<String, Object> lookup(@RequestParam String regid,
                                        @RequestParam(required = false) String distCode) {

@@ -35,6 +35,13 @@ public class MeritListController {
     public MeritListController(MeritListService meritListService) {
         this.meritListService = meritListService;
     }
+
+    @Operation(summary = "Current merit-list date-window status")
+    @GetMapping("/window-status")
+    public Map<String, Object> meritListWindowStatus() {
+        return meritListService.meritListWindowStatus();
+    }
+
     @Operation(summary = "Get all merit lists")
     @GetMapping
     public List<RankEntity> getAllMeritList() {

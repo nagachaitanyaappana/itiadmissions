@@ -75,6 +75,7 @@
 var CTX = '${pageContext.request.contextPath}';
 var DIST = '${sessionScope.insCode}';
 var current = null;
+var RES_READY = false;
 function esc(s){ if(s===null||s===undefined) return ''; return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function setErr(id,m){ document.getElementById(id).innerHTML = esc(m); }
 function num(v){ v = parseInt(v,10); return isNaN(v) ? 0 : v; }
@@ -82,6 +83,7 @@ function num(v){ v = parseInt(v,10); return isNaN(v) ? 0 : v; }
 function loadItis(){
   if(!DIST){ DIST = localStorage.getItem('insCode') || ''; }
   var sel = document.getElementById('itiSel');
+  var keep = sel.value;
   if(!DIST){ setErr('itiError', 'District not found in session.'); return Promise.reject(); }
   return fetch(CTX + '/ReservationEntry/api/district/' + encodeURIComponent(DIST) + '/itis')
     .then(function(r){ return r.json(); })
@@ -91,7 +93,24 @@ function loadItis(){
         h += '<option value="' + esc(x.itiCode) + '">' + esc(x.itiCode) + ' - ' + esc(x.itiName) + '</option>';
       });
       sel.innerHTML = h;
+      // Keep an ITI that was deep-linked selected, even when the district list does
+      // not contain it - the deep link must not be undone by the list refresh.
+      if(keep){ selectIti(keep); }
     }).catch(function(){ setErr('itiError', 'Unable to load ITIs.'); });
+}
+
+/** Put an ITI in the ITI dropdown and select it (adds the option when missing). */
+function selectIti(itiCode){
+  var sel = document.getElementById('itiSel');
+  if(!sel || !itiCode){ return; }
+  var found = false;
+  for(var i = 0; i < sel.options.length; i++){
+    if(sel.options[i].value === itiCode){ found = true; break; }
+  }
+  if(!found){
+    sel.appendChild(new Option(itiCode + ' - ' + itiCode, itiCode, true, true));
+  }
+  sel.value = itiCode;
 }
 
 
@@ -111,21 +130,28 @@ function loadTrades(){
     fetch(CTX + '/ReservationEntry/api/iti/' + encodeURIComponent(iti) + '/readiness')
       .then(function(r){ return r.json(); })
       .then(function(rd){
-        if(!rd || !rd.ready){
-          gate.className = 'gate-banner block';
-          gate.innerHTML = esc((rd && rd.message) ? rd.message : 'Reservation Entry is not open for this ITI.')
-            + ' <a href="' + CTX + '/iti-trade-selection">DGT Permitted Shift Units</a>'
-            + ' | <a href="' + CTX + '/AddTrade">Add Trade</a>';
-          sel.innerHTML = '<option value="">--select--</option>';
-          goBtn.disabled = true;
-          resolve();
-          return;
-        }
-        gate.className = 'gate-banner ok';
-        gate.innerHTML = esc(rd.message || 'Reservation Entry is open.');
-        loadTradesList(iti).then(resolve, reject);
+        var ready = !!(rd && rd.ready);
+        RES_READY = ready;
+        // Always list the approved trades. The page has to be able to explain itself even
+        // when the ITI is not ready yet, and a deep link (Add Trade -> Reservation Entry)
+        // must be able to preselect the trade it was opened with. Blanking the dropdown
+        // here used to leave it empty and surface a bogus "Trade is required." error.
+        return loadTradesList(iti).then(function(){
+          if(ready){
+            gate.className = 'gate-banner ok';
+            gate.innerHTML = esc(rd.message || 'Reservation Entry is open.');
+          } else {
+            gate.className = 'gate-banner block';
+            gate.innerHTML = esc((rd && rd.message) ? rd.message : 'Reservation Entry is not open for this ITI.')
+              + ' <a href="' + CTX + '/iti-trade-selection">DGT Permitted Shift Units</a>'
+              + ' | <a href="' + CTX + '/AddTrade">Add Trade</a>';
+            goBtn.disabled = true;
+          }
+        });
       })
-      .catch(function(){ setErr('tradeError', 'Unable to check Reservation Entry readiness.'); reject(); });
+      // resolve only after the trade list is in place, so that a caller which
+      // preselects a trade right after loadTrades() sees the populated dropdown.
+      .then(resolve, function(){ setErr('tradeError', 'Unable to check Reservation Entry readiness.'); reject(); });
   });
 }
 
@@ -156,7 +182,10 @@ function loadReservation(){
   var iti = document.getElementById('itiSel').value;
   var trade = document.getElementById('tradeSel').value;
   setErr('itiError', iti ? '' : 'ITI is required.');
-  setErr('tradeError', trade ? '' : 'Trade is required.');
+  // "Trade is required." only makes sense when the dropdown is actually usable. When the
+  // ITI is not ready yet, say why the screen is blocked instead of blaming the dropdown.
+  setErr('tradeError', trade ? '' : (RES_READY ? 'Trade is required.'
+        : 'Reservation Entry is not open for this ITI yet — see the notice above.'));
   if(!iti || !trade) return;
   var btn = document.getElementById('goBtn');
   var area = document.getElementById('resultArea');
@@ -166,7 +195,7 @@ function loadReservation(){
     .then(function(r){ return r.json(); })
     .then(function(d){ render(d); })
     .catch(function(){ area.innerHTML = '<p class="err" style="text-align:center;">Unable to load reservation breakup.</p>'; })
-    .finally(function(){ btn.disabled = false; btn.value = 'Submit'; });
+    .finally(function(){ btn.disabled = !RES_READY; btn.value = 'Submit'; });
 }
 
 function render(d){
@@ -192,7 +221,9 @@ function render(d){
     + '</tr></thead><tbody>' + rows + '</tbody></table>'
     + '<div class="total-box">Sanctioned Strength : <input type="text" id="sanctioned" value="' + num(d.totalStrength) + '" readonly="readonly"/></div>'
     + '<div class="total-box">Cumulative Total : <input type="text" id="total" value="0" readonly="readonly"/></div>'
-    + '<div class="act-row"><input type="button" class="save-purple" id="saveBtn" value="Update/Insert Details" onclick="saveReservation();"/></div>'
+    + '<div class="act-row"><input type="button" class="save-purple" id="saveBtn" value="Update/Insert Details" onclick="saveReservation();"' + (RES_READY ? '' : ' disabled="disabled"') + '/></div>'
+    + (RES_READY ? '' : '<div class="note">Saving is disabled: Reservation Entry is not open for this ITI yet. '
+       + 'Complete DGT Permitted Shift Units and Approve All in Add Trade first.</div>')
     + '<div class="act-row"><span class="err" id="saveError"></span><span class="ok" id="saveOk"></span></div>'
     + '<div class="note">Sum of the category strengths must not exceed the sanctioned strength (ititrade). '
     + 'Already filled seats are preserved automatically.</div>';
@@ -260,28 +291,38 @@ function initFromParams() {
     const url = new URL(window.location);
     const itiParam = url.searchParams.get('itiCode');
     const tradeParam = url.searchParams.get('tradeCode');
-    if (itiParam) {
-        // Came from Add Trade -> Reservation Entry link: load ITIs, then select this ITI,
-        // load its trades, then select the trade and load the reservation breakup.
-        loadItis().then(function() {
-            document.getElementById('itiSel').value = itiParam;
-            return loadTrades();
-        }).then(function() {
-            if (tradeParam) {
-                document.getElementById('tradeSel').value = tradeParam;
+    if (!itiParam) { loadItis(); return; }
+
+    // Deep link from the Add Trade -> "Reservation Entry" link. Select the ITI straight
+    // away, then load its approved trades, preselect the requested trade and load the
+    // reservation breakup - all automatically, without the user touching anything.
+    // The district ITI list is only needed to complete the dropdown, so it must never
+    // gate the deep link (an empty/missing district scope used to break it).
+    selectIti(itiParam);
+    loadTrades().then(function () {
+        if (!tradeParam) { return; }
+        var sel = document.getElementById('tradeSel');
+        var want = parseInt(tradeParam, 10);
+        for (var i = 0; i < sel.options.length; i++) {
+            if (parseInt(sel.options[i].value, 10) === want) {
+                sel.selectedIndex = i;
+                sel.options[i].defaultSelected = true;   // reflect the selection in the DOM
                 loadReservation();
+                return;
             }
-        }).catch(function() {
-            // Best effort: still try to select and load
-            try { document.getElementById('itiSel').value = itiParam; } catch(e) {}
-            if (tradeParam) {
-                try { document.getElementById('tradeSel').value = tradeParam; } catch(e) {}
-                loadReservation();
-            }
-        });
-    } else {
-        loadItis();
-    }
+        }
+        // The trade is not in the list of approved trades - explain that instead of
+        // letting loadReservation() complain that the dropdown is empty.
+        setErr('tradeError', 'Trade ' + tradeParam + ' is not available for Reservation Entry yet '
+              + '— it must be approved in Add Trade (Approve All) first.');
+    }).catch(function () {
+        setErr('tradeError', 'Unable to load trades for ITI ' + itiParam + '.');
+    });
+
+    // Complete the ITI dropdown in the background; it does not block the deep link.
+    loadItis().catch(function () {}).then(function () {
+        selectIti(itiParam);
+    });
 }
 initFromParams();
 </script>
