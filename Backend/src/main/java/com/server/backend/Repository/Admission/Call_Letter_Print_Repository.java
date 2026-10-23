@@ -27,12 +27,30 @@ public interface Call_Letter_Print_Repository extends JpaRepository<application,
     @Query(value = "SELECT r.rank, r.regid, s.name, s.fname, s.addr, s.caste, s.gender, s.phc, s.exservice "
             + "FROM public.ranks r "
             + "JOIN public.student_application s ON s.regid = r.regid "
-            + "WHERE r.dist_code = :distCode "
+            + "WHERE r.dist_code = :distCode AND r.phase = :phase AND r.year = :year "
+            + "AND s.year = :year AND s.phase = :phase "
             + "AND r.rank ~ '^[0-9]+$' "
             + "AND CAST(r.rank AS integer) BETWEEN :fromRank AND :toRank "
             + "ORDER BY CAST(r.rank AS integer)", nativeQuery = true)
-    List<Object[]> findCandidatesByRankRange(
+    List<Object[]> findCandidatesByDistrictRankRange(
             @Param("distCode") String distCode,
+            @Param("phase") String phase,
+            @Param("year") String year,
+            @Param("fromRank") int fromRank,
+            @Param("toRank") int toRank);
+
+    @Query(value = "SELECT r.rank, r.regid, s.name, s.fname, s.addr, s.caste, s.gender, s.phc, s.exservice "
+            + "FROM public.ranks r "
+            + "JOIN public.student_application s ON s.regid = r.regid "
+            + "WHERE r.iti_code = :itiCode AND r.phase = :phase AND r.year = :year "
+            + "AND s.year = :year AND s.phase = :phase "
+            + "AND r.rank ~ '^[0-9]+$' "
+            + "AND CAST(r.rank AS integer) BETWEEN :fromRank AND :toRank "
+            + "ORDER BY CAST(r.rank AS integer)", nativeQuery = true)
+    List<Object[]> findCandidatesByItiRankRange(
+            @Param("itiCode") String itiCode,
+            @Param("phase") String phase,
+            @Param("year") String year,
             @Param("fromRank") int fromRank,
             @Param("toRank") int toRank);
 
@@ -44,11 +62,28 @@ public interface Call_Letter_Print_Repository extends JpaRepository<application,
     @Query(value = "SELECT r.rank, r.regid, s.name, s.fname, s.addr, s.caste, s.gender, s.phc, s.exservice "
             + "FROM public.ranks r "
             + "JOIN public.student_application s ON s.regid = r.regid "
-            + "WHERE r.regid::text = :regid AND r.dist_code = :distCode AND r.rank ~ '^[0-9]+$' "
+            + "WHERE r.regid::text = :regid AND r.dist_code = :distCode "
+            + "AND r.phase = :phase AND r.year = :year AND s.year = :year AND s.phase = :phase "
+            + "AND r.rank ~ '^[0-9]+$' "
             + "ORDER BY CAST(r.rank AS integer) LIMIT 1", nativeQuery = true)
-    List<Object[]> findCandidateByRegid(
+    List<Object[]> findDistrictCandidateByRegid(
             @Param("regid") String regid,
-            @Param("distCode") String distCode);
+            @Param("distCode") String distCode,
+            @Param("phase") String phase,
+            @Param("year") String year);
+
+    @Query(value = "SELECT r.rank, r.regid, s.name, s.fname, s.addr, s.caste, s.gender, s.phc, s.exservice "
+            + "FROM public.ranks r "
+            + "JOIN public.student_application s ON s.regid = r.regid "
+            + "WHERE r.regid::text = :regid AND r.iti_code = :itiCode "
+            + "AND r.phase = :phase AND r.year = :year AND s.year = :year AND s.phase = :phase "
+            + "AND r.rank ~ '^[0-9]+$' "
+            + "ORDER BY CAST(r.rank AS integer) LIMIT 1", nativeQuery = true)
+    List<Object[]> findItiCandidateByRegid(
+            @Param("regid") String regid,
+            @Param("itiCode") String itiCode,
+            @Param("phase") String phase,
+            @Param("year") String year);
 
     /**
      * Reporting slots for a district. Columns: merit_from, merit_to, cal_date (dd-mm-yyyy),
@@ -56,8 +91,21 @@ public interface Call_Letter_Print_Repository extends JpaRepository<application,
      */
     @Query(value = "SELECT merit_from, merit_to, to_char(cal_date, 'DD-MM-YYYY'), "
             + "to_char(cal_time, 'HH12:MI AM') "
-            + "FROM public.admission_timings WHERE dist_code = :distCode ORDER BY merit_from", nativeQuery = true)
-    List<Object[]> findTimings(@Param("distCode") String distCode);
+            + "FROM public.admission_timings WHERE dist_code = :distCode "
+            + "AND phase = :phase AND year = :year ORDER BY merit_from", nativeQuery = true)
+    List<Object[]> findDistrictTimings(
+            @Param("distCode") String distCode,
+            @Param("phase") String phase,
+            @Param("year") String year);
+
+    @Query(value = "SELECT merit_from, merit_to, to_char(cal_date, 'DD-MM-YYYY'), "
+            + "to_char(cal_time, 'HH12:MI AM') "
+            + "FROM public.admission_timings WHERE iti_code = :itiCode "
+            + "AND phase = :phase AND year = :year ORDER BY merit_from", nativeQuery = true)
+    List<Object[]> findItiTimings(
+            @Param("itiCode") String itiCode,
+            @Param("phase") String phase,
+            @Param("year") String year);
 
     /** A single {@code iti_params} value by code (15/16/17/18-21). */
     @Query(value = "SELECT value FROM public.iti_params WHERE code = :code LIMIT 1", nativeQuery = true)
@@ -67,7 +115,6 @@ public interface Call_Letter_Print_Repository extends JpaRepository<application,
     @Query(value = "SELECT dist_name, statecode FROM public.dist_mst WHERE dist_code = :distCode LIMIT 1", nativeQuery = true)
     List<Object[]> findDistrict(@Param("distCode") String distCode);
 
-    /** The single row flagged {@code current} in admissions.admission_phase. Columns: year, phase. */
-    @Query(value = "SELECT year, phase FROM admissions.admission_phase WHERE current = true LIMIT 1", nativeQuery = true)
-    List<Object[]> findCurrentYearPhase();
+    @Query(value = "SELECT dist_code FROM public.iti WHERE iti_code = :itiCode LIMIT 1", nativeQuery = true)
+    String findDistrictByIti(@Param("itiCode") String itiCode);
 }

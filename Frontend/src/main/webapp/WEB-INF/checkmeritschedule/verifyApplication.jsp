@@ -13,6 +13,7 @@
         const SESSION_INS_CODE = '${sessionScope.insCode}';
         const SESSION_USERNAME = '${sessionScope.username}';
         const SESSION_DIST_NAME = '${sessionScope.distName}';
+        const VERIFY_API_BASE = '${pageContext.request.contextPath}/VerifyApplication/api';
     </script>
     <style>
         body { margin: 0; font-family: Verdana, Arial, sans-serif; background: #fff; }

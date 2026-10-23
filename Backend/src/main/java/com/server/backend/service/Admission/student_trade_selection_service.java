@@ -38,7 +38,7 @@ import com.server.backend.service.ITI.TradeSelectionService;
  *       where {@code temp_code <> dist_code});</li>
  *   <li>{@code iti_code} — the chosen ITI, so the row is the choice;</li>
  *   <li>{@code phase} — {@code hstore(<phase>, 'true')};</li>
- *   <li>{@code year} — {@code iti_params} code '7';</li>
+ *   <li>{@code year} — the year on the active {@code admissions.admission_phase} row;</li>
  *   <li>{@code trno} — audit trace number (prod takes it from {@code trno_seq}, whose last_value
  *       sits just above the archived {@code trno} values);</li>
  *   <li>{@code temp} — surrogate that the legacy INSERT omits and lets the column default fill.
@@ -47,14 +47,9 @@ import com.server.backend.service.ITI.TradeSelectionService;
  *       column back.</li>
  * </ul>
  *
- * <p>Legacy parity for re-saves: {@code open_Application_InterfaceAction} and the edit-screen
- * actions ({@code OpeneditviewPageAction}, {@code OpeneditviewPageAction_phase2}) only ever
- * INSERTED — re-submitting appends the new choices and leaves the stored ones alone. Per-row
- * removal is a separate action ({@code deletedist.jsp} / {@code deleteiti.jsp}), ported as
- * {@link #removeSelectionByDist} / {@link #removeSelection}. The legacy primary key
- * {@code (iti_code, regid)} is gone from this schema (dropped while fixing the district-only
- * rows, which all carry {@code iti_code = ''}), so the port enforces the same shape by skipping
- * codes already stored instead of relying on a constraint.
+ * <p>Re-saves are scoped to the active cycle and upsert on the current schema key
+ * {@code (regid, dist_code)}. Phase membership for older cycles is retained in the hstore; removal
+ * deletes only the active phase key.
  */
 @Service
 public class student_trade_selection_service {
@@ -82,8 +77,10 @@ public class student_trade_selection_service {
                LEFT JOIN iti i      ON i.iti_code  = s.iti_code
                LEFT JOIN dist_mst d ON d.dist_code = s.dist_code
               WHERE s.regid = :regid
-              ORDER BY s.temp
-             """;
+                AND s.year = :year
+                AND hstore(s.phase)->:phase = 'true'
+               ORDER BY s.temp
+              """;
 
     /**
      * The legacy insert, with {@code temp} made explicit.
@@ -97,6 +94,13 @@ public class student_trade_selection_service {
             VALUES      (:regid, :distCode, :distCode, :trno,
                          hstore(ARRAY[:phase], ARRAY['true']), :year, :itiCode,
                          nextval('temp_seq'), :freezee)
+            ON CONFLICT (regid, dist_code) DO UPDATE SET
+                temp_code = EXCLUDED.temp_code,
+                trno = EXCLUDED.trno,
+                phase = COALESCE(student_trade_sel.phase, ''::hstore) || EXCLUDED.phase,
+                year = EXCLUDED.year,
+                iti_code = EXCLUDED.iti_code,
+                freezee = EXCLUDED.freezee
             """;
 
     private static final RowMapper<student_trade_selection_dto> ROW_MAPPER =
@@ -131,16 +135,19 @@ public class student_trade_selection_service {
     @Transactional(readOnly = true)
     public List<student_trade_selection_dto> getSelections(Integer regid) {
         requireRegid(regid);
-        // student_trade_sel.regid is character varying (mirrors student_application.regid)
+        String year = tradeSelectionService.resolveYear();
+        String phase = tradeSelectionService.resolvePhase(year);
         return jdbcTemplate.query(SELECT_SQL,
-                new MapSqlParameterSource("regid", regid), ROW_MAPPER);
+                new MapSqlParameterSource("regid", regid)
+                        .addValue("year", year)
+                        .addValue("phase", phase), ROW_MAPPER);
     }
 
     /**
-     * Appends the posted choices to the candidate's saved list (legacy INSERT-only parity).
+     * Saves the posted choices using the active admission year and phase.
      *
      * <p>Order of operations (all in one transaction): validate the candidate and every ITI,
-     * skip codes already stored ({@code dist_code|iti_code}), insert the remaining rows.
+     * validate the candidate and every ITI, then upsert the current-cycle rows.
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> saveSelections(Integer regId,
@@ -168,10 +175,18 @@ public class student_trade_selection_service {
 
         requireCandidateExists(regid);
 
-        String year = request.getYear() == null || request.getYear().isBlank()
-                ? tradeSelectionService.resolveYear() : request.getYear().trim();
-        String phase = request.getPhase() == null || request.getPhase().isBlank()
-                ? tradeSelectionService.resolvePhase(year) : request.getPhase().trim();
+        String year = tradeSelectionService.resolveYear();
+        String phase = tradeSelectionService.resolvePhase(year);
+        if (request.getYear() != null && !request.getYear().isBlank()
+                && !year.equals(request.getYear().trim())) {
+            logger.warn("Ignoring submitted year {} for trade selection; current cycle is {} phase {}",
+                    request.getYear(), year, phase);
+        }
+        if (request.getPhase() != null && !request.getPhase().isBlank()
+                && !phase.equals(request.getPhase().trim())) {
+            logger.warn("Ignoring submitted phase {} for trade selection; current cycle is {} phase {}",
+                    request.getPhase(), year, phase);
+        }
 
         // Phase 1 is district-only (legacy student_trade_sel2025phase1 rows carry iti_code='' with
         // dist_code set); phase 2+ selects district + ITI.
@@ -180,35 +195,15 @@ public class student_trade_selection_service {
                 ? resolveDistrictChoices(choices)
                 : resolveItiChoices(choices);
 
-        // Legacy parity: re-saving in the edit flow is INSERT-ONLY (OpeneditviewPageAction /
-        // OpeneditviewPageAction_phase2). Existing rows survive; per-row removal goes through
-        // removeSelection (deletedist.jsp / deleteiti.jsp). Only skip codes already stored so
-        // a re-submit cannot produce duplicate rows.
-        Set<String> existingCodes = new LinkedHashSet<>();
-        jdbcTemplate.query("SELECT dist_code, iti_code FROM student_trade_sel WHERE regid = :regid",
-                new MapSqlParameterSource("regid", regid),
-                (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
-                    existingCodes.add(rs.getString("dist_code") + "|" + rs.getString("iti_code"));
-                });
-
-        List<Row> newRows = new ArrayList<>(rows.size());
-        for (Row row : rows) {
-            String key = row.distCode() + "|" + row.itiCode();
-            if (existingCodes.contains(key)) {
-                continue;
-            }
-            existingCodes.add(key);
-            newRows.add(row);
-        }
-        rows = newRows;
-
         insertRows(regid, year, phase, rows, request.getFreezee());
 
-        // Legacy also stamps the application on every save
-        // (OpeneditviewPageAction "update student_application set entry_date=? where regid=?").
+        // Keep the staged application on the same current-cycle stamp as the choices.
         jdbcTemplate.update(
-                "UPDATE student_application SET entry_date = now() WHERE regid = :regid",
-                new MapSqlParameterSource("regid", regid));
+                "UPDATE student_application SET entry_date = now(), year = :year, phase = :phase "
+                        + "WHERE regid = :regid",
+                new MapSqlParameterSource("regid", regid)
+                        .addValue("year", year)
+                        .addValue("phase", phase));
 
         logger.info("Saved {} {}selection(s) for regid {} (year {}, phase {}, {} already present)",
                 rows.size(), districtOnly ? "district " : "ITI ", regid, year, phase, request.getChoices().size() - rows.size());
@@ -282,8 +277,14 @@ public class student_trade_selection_service {
         Map<String, String> districtByIti = resolveDistricts(choices);
 
         List<Row> rows = new ArrayList<>(itiCodes.size());
+        Set<String> selectedDistricts = new LinkedHashSet<>();
         for (String itiCode : itiCodes) {
-            rows.add(new Row(districtByIti.get(itiCode), itiCode));
+            String district = districtByIti.get(itiCode);
+            if (!selectedDistricts.add(district)) {
+                throw new IllegalArgumentException(
+                        "Only one ITI can be selected per district in the current application.");
+            }
+            rows.add(new Row(district, itiCode));
         }
         return rows;
     }
@@ -381,8 +382,10 @@ public class student_trade_selection_service {
         }
 
         int rows = jdbcTemplate.update(
-                "DELETE FROM student_trade_sel WHERE regid = :regid AND iti_code = :itiCode",
-                new MapSqlParameterSource("regid", regid).addValue("itiCode", itiCode.trim()));
+                "UPDATE student_trade_sel SET phase = delete(phase, array[:phase]) "
+                        + "WHERE regid = :regid AND iti_code = :itiCode AND year = :year "
+                        + "AND hstore(phase)->:phase = 'true'",
+                currentCycleParams(regid).addValue("itiCode", itiCode.trim()));
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
@@ -400,8 +403,10 @@ public class student_trade_selection_service {
             throw new IllegalArgumentException("distCode is required");
         }
         int rows = jdbcTemplate.update(
-                "DELETE FROM student_trade_sel WHERE regid = :regid AND dist_code = :distCode",
-                new MapSqlParameterSource("regid", regid).addValue("distCode", distCode.trim()));
+                "UPDATE student_trade_sel SET phase = delete(phase, array[:phase]) "
+                        + "WHERE regid = :regid AND dist_code = :distCode AND year = :year "
+                        + "AND hstore(phase)->:phase = 'true'",
+                currentCycleParams(regid).addValue("distCode", distCode.trim()));
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
         result.put("regid", regid);
@@ -415,14 +420,24 @@ public class student_trade_selection_service {
     public Map<String, Object> clearSelections(Integer regid) {
         requireRegid(regid);
 
-        int rows = jdbcTemplate.update("DELETE FROM student_trade_sel WHERE regid = :regid",
-                new MapSqlParameterSource("regid", regid));
+        int rows = jdbcTemplate.update(
+                "UPDATE student_trade_sel SET phase = delete(phase, array[:phase]) "
+                        + "WHERE regid = :regid AND year = :year AND hstore(phase)->:phase = 'true'",
+                currentCycleParams(regid));
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
         result.put("regid", regid);
         result.put("rowsAffected", rows);
         return result;
+    }
+
+    private MapSqlParameterSource currentCycleParams(Integer regid) {
+        String year = tradeSelectionService.resolveYear();
+        String phase = tradeSelectionService.resolvePhase(year);
+        return new MapSqlParameterSource("regid", regid)
+                .addValue("year", year)
+                .addValue("phase", phase);
     }
 
     private static void requireRegid(Integer regid) {

@@ -7,13 +7,17 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -46,7 +50,15 @@ public class CallLetterViewController {
 
     /** Screen 1 - From Rank + To Rank + Caste selection form. */
     @GetMapping({ "", "/", "/Interface" })
-    public String callLetterView() {
+    public String callLetterView(HttpServletRequest request) {
+        var session = request.getSession(false);
+        if (session == null || session.getAttribute("sessionUser") == null) {
+            return "redirect:/?error=session";
+        }
+        Object role = session.getAttribute("roleId");
+        if (role == null || (!"3".equals(String.valueOf(role)) && !"4".equals(String.valueOf(role)))) {
+            return "redirect:/?error=session";
+        }
         return "admission/callLetterView";
     }
 
@@ -114,18 +126,31 @@ public class CallLetterViewController {
     /**
      * Same-origin proxy for the printable call letter.
      * Single mode: {@code regid}. Bulk mode: {@code fromRank}/{@code toRank}/{@code caste}.
-     * Always requires {@code distCode} (the logged-in district from the page session).
+     * District/ITI scope is derived from the authenticated session, never from request input.
      */
     @GetMapping("/api/call-letter/print")
     @ResponseBody
-    public ResponseEntity<Object> callLetterPrint(@RequestParam("distCode") String distCode,
+    public ResponseEntity<Object> callLetterPrint(
             @RequestParam(value = "regid", required = false) String regid,
             @RequestParam(value = "fromRank", required = false) String fromRank,
             @RequestParam(value = "toRank", required = false) String toRank,
-            @RequestParam(value = "caste", required = false) String caste) {
-        String dist = distCode == null ? "" : distCode.trim();
-        if (dist.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "District is required."));
+            @RequestParam(value = "caste", required = false) String caste,
+            HttpServletRequest request) {
+        var session = request.getSession(false);
+        if (session == null || session.getAttribute("sessionUser") == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Login is required."));
+        }
+        String role = String.valueOf(session.getAttribute("roleId"));
+        String insCode = String.valueOf(session.getAttribute("insCode"));
+        if (!"3".equals(role) && !"4".equals(role)) {
+            return ResponseEntity.status(403).body(Map.of("error", "District or ITI login is required."));
+        }
+        String dist = "3".equals(role) ? insCode : "";
+        if ("3".equals(role) && dist.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "District is not configured for this login."));
+        }
+        if ("4".equals(role) && (insCode.isBlank() || insCode.equals("null"))) {
+            return ResponseEntity.badRequest().body(Map.of("error", "ITI is not configured for this login."));
         }
         String reg = regid == null ? "" : regid.trim();
         UriComponentsBuilder builder = UriComponentsBuilder
@@ -159,7 +184,8 @@ public class CallLetterViewController {
                     .queryParam("caste", caste == null ? "all" : caste.trim());
         }
         try {
-            ResponseEntity<Object> resp = rest.exchange(builder.toUriString(), HttpMethod.GET, null,
+            ResponseEntity<Object> resp = rest.exchange(builder.toUriString(), HttpMethod.GET,
+                    new HttpEntity<>(scopeHeaders(request)),
                     new ParameterizedTypeReference<Object>() {
                     });
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
@@ -187,5 +213,28 @@ public class CallLetterViewController {
             }
         }
         return new ArrayList<>();
+    }
+
+    private HttpHeaders scopeHeaders(HttpServletRequest request) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        var session = request.getSession(false);
+        if (session == null) {
+            return headers;
+        }
+        Object role = session.getAttribute("roleId");
+        Object ins = session.getAttribute("insCode");
+        if (role != null) {
+            headers.set("X-Role-Id", String.valueOf(role));
+        }
+        if (ins != null) {
+            headers.set("X-Ins-Code", String.valueOf(ins));
+            if ("3".equals(String.valueOf(role))) {
+                headers.set("X-Dist-Code", String.valueOf(ins));
+            } else if ("4".equals(String.valueOf(role))) {
+                headers.set("X-Iti-Code", String.valueOf(ins));
+            }
+        }
+        return headers;
     }
 }

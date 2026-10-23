@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.server.backend.DTO.Call_Letter_Letter_DTO;
 import com.server.backend.DTO.Call_Letter_Print_DTO;
 import com.server.backend.Repository.Admission.Call_Letter_Print_Repository;
+import com.server.backend.service.AdmissionPhaseWindowService;
 
 /**
  * Builds the printable call-letter payload. Mirrors the legacy generator:
@@ -22,33 +23,49 @@ import com.server.backend.Repository.Admission.Call_Letter_Print_Repository;
 public class Call_Letter_Print_ServiceImpl implements Call_Letter_Print_Service {
 
     private final Call_Letter_Print_Repository repository;
+    private final AdmissionPhaseWindowService phaseWindows;
 
-    public Call_Letter_Print_ServiceImpl(Call_Letter_Print_Repository repository) {
+    public Call_Letter_Print_ServiceImpl(Call_Letter_Print_Repository repository,
+            AdmissionPhaseWindowService phaseWindows) {
         this.repository = repository;
+        this.phaseWindows = phaseWindows;
     }
 
     @Override
     public Call_Letter_Print_DTO getCallLetterPrint(
-            String distCode, String regid, String fromRank, String toRank, String caste) {
+            String distCode, String itiCode, String roleId, String regid,
+            String fromRank, String toRank, String caste) {
 
         String dist = trim(distCode);
-        if (dist.isEmpty()) {
-            throw new IllegalArgumentException("District is required.");
+        String iti = trim(itiCode);
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        if (cycle == null || cycle.year() == null || cycle.phase() == null) {
+            throw new IllegalStateException(
+                    "No current admission year and phase found in admissions.admission_phase.");
         }
-
-        String year = null;
-        String phase = null;
-        List<Object[]> yp = repository.findCurrentYearPhase();
-        if (!yp.isEmpty() && yp.get(0) != null) {
-            Object[] r = yp.get(0);
-            year = r[0] == null ? null : r[0].toString();
-            phase = r[1] == null ? null : r[1].toString();
+        String year = cycle.year();
+        String phase = cycle.phase();
+        boolean itiScoped = !"1".equals(phase);
+        if (itiScoped) {
+            if (!"4".equals(roleId) || iti.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Phase 2 and later call letters require the logged-in ITI scope.");
+            }
+            String resolvedDistrict = repository.findDistrictByIti(iti);
+            if (resolvedDistrict == null || resolvedDistrict.isBlank()) {
+                throw new IllegalArgumentException("Unknown ITI code " + iti);
+            }
+            dist = resolvedDistrict.trim();
+        } else if (dist.isEmpty()) {
+            throw new IllegalArgumentException("District is required.");
         }
 
         String singleRegid = trim(regid);
         List<Object[]> rows;
         if (!singleRegid.isEmpty()) {
-            rows = repository.findCandidateByRegid(singleRegid, dist);
+            rows = itiScoped
+                    ? repository.findItiCandidateByRegid(singleRegid, iti, phase, year)
+                    : repository.findDistrictCandidateByRegid(singleRegid, dist, phase, year);
         } else {
             Integer from = parseInt(fromRank);
             Integer to = parseInt(toRank);
@@ -58,10 +75,14 @@ public class Call_Letter_Print_ServiceImpl implements Call_Letter_Print_Service 
             if (from <= 0 || to <= 0 || from > to) {
                 throw new IllegalArgumentException("Invalid merit rank range.");
             }
-            rows = repository.findCandidatesByRankRange(dist, from, to);
+            rows = itiScoped
+                    ? repository.findCandidatesByItiRankRange(iti, phase, year, from, to)
+                    : repository.findCandidatesByDistrictRankRange(dist, phase, year, from, to);
         }
 
-        List<Object[]> timings = repository.findTimings(dist);
+        List<Object[]> timings = itiScoped
+                ? repository.findItiTimings(iti, phase, year)
+                : repository.findDistrictTimings(dist, phase, year);
 
         Call_Letter_Print_DTO out = new Call_Letter_Print_DTO();
         out.setYear(year);

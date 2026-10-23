@@ -117,19 +117,6 @@ public class HomeController {
         return "checkmeritschedule/distVerification";
     }
 
-    @GetMapping("/VerifyApplication")
-    public String verifyApplication(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("sessionUser") == null) {
-            return "redirect:/?error=session";
-        }
-        Object roleId = session.getAttribute("roleId");
-        if (roleId == null || !"3".equals(String.valueOf(roleId))) {
-            return "redirect:/?error=session";
-        }
-        return "checkmeritschedule/verifyApplication";
-    }
-
     @GetMapping("/PrintAdmissionSlip")
     public String printAdmissionSlip(HttpServletRequest request) {
         if (notLoggedIn(request)) {

@@ -46,11 +46,12 @@ body{font-family:Verdana,Arial,sans-serif;background:#fff;}
 <c:choose><c:when test="${not empty sessionScope.roleId}"><%@ include file="/WEB-INF/reports/header.jsp" %></c:when><c:otherwise><%@ include file="/WEB-INF/bannernew.jsp" %><%@ include file="/WEB-INF/navbars/openNavbar.jsp" %></c:otherwise></c:choose>
 <div class="page-title">Admission Counseling</div>
 <div class="sub-line no-print">Enter the merit rank for the running phase. Candidate and seat matrix are resolved from the live admission database.</div>
-<div class="rank-box no-print"><table>
+<c:if test="${not admissionWindowOpen}"><div class="notice no-print">Admission Date is Expired or no admission window is configured.</div></c:if>
+<div class="rank-box no-print" ${not admissionWindowOpen ? 'style="display:none;"' : ''}><table>
 <tr><td class="cand-head" colspan="2">Enter Rank for process counseling</td></tr>
 <tr><td class="label">Enter Rank :</td><td><input type="text" id="rank" value="${param.rank}" maxlength="6" /></td></tr>
-<tr><td class="label">Phase :</td><td><input type="text" id="phase" value="${not empty param.phase ? param.phase : currentPhase}" maxlength="2" /></td></tr>
-<tr><td class="label">Year :</td><td><input type="text" id="year" value="${not empty param.year ? param.year : currentYear}" maxlength="4" /></td></tr>
+<tr><td class="label">Phase :</td><td><input type="text" id="phase" value="${currentPhase}" maxlength="2" readonly="readonly" /></td></tr>
+<tr><td class="label">Year :</td><td><input type="text" id="year" value="${currentYear}" maxlength="4" readonly="readonly" /></td></tr>
 <tr class="btn-row"><td colspan="2"><input type="button" class="submit-btn" value="Submit" onclick="lookupRank();" /> <span class="err" id="rankError"></span></td></tr>
 </table></div>
 <div id="resultArea" style="width:96%;margin:0 auto;"></div>

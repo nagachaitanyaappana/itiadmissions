@@ -14,22 +14,24 @@ import java.util.HashMap;
 import java.util.List;
 import com.server.backend.entity.AdmissionTiming;
 import com.server.backend.Repository.MeritChecklist.AdmissionTimingRepository;
-import com.server.backend.entity.AdmissionTimingId;
 import com.server.backend.DTO.*;
+import com.server.backend.service.AdmissionPhaseWindowService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Date;
 @Service
 public class AdmissionTimingService {
     private final AdmissionTimingRepository admissionTimingRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final AdmissionPhaseWindowService phaseWindows;
     private static final Logger logger = LoggerFactory.getLogger(AdmissionTimingService.class);
-    public AdmissionTimingService(AdmissionTimingRepository admissionTimingRepository, JdbcTemplate jdbcTemplate) {
+    public AdmissionTimingService(AdmissionTimingRepository admissionTimingRepository, JdbcTemplate jdbcTemplate,
+            AdmissionPhaseWindowService phaseWindows) {
         this.admissionTimingRepository = admissionTimingRepository;
         this.jdbcTemplate = jdbcTemplate;
+        this.phaseWindows = phaseWindows;
     }
 
     /**
@@ -61,51 +63,29 @@ public class AdmissionTimingService {
     }
 
     /**
-     * The running admission year.
-     *
-     * <p>{@code iti_params} code '7' is advisory: it currently reads 2026 while
-     * {@code admissions.admission_phase} holds its only current row under 2025, so trusting the param
-     * made {@code /api/status} and every schedule lookup fail with
-     * "No current phase found for year 2026". {@code admission_phase} is the authority — the same
-     * decision {@code MeritListService} and {@code TradeSelectionService.resolvePhase} already
-     * document — and the param is only a fallback when no current phase row exists.
+     * The running year is read from the active {@code admissions.admission_phase} row.
      */
     private String resolveCurrentYear() {
-        Optional<String> currentYear = admissionTimingRepository.findCurrentPhaseYear();
-        if (currentYear.isPresent() && currentYear.get() != null && !currentYear.get().isBlank()) {
-            String phaseYear = currentYear.get().trim();
-            String paramYear = admissionTimingRepository.findCurrentYearVal();
-            if (paramYear != null && !paramYear.trim().equals(phaseYear)) {
-                logger.warn("iti_params code '7' year {} does not match the current admission_phase "
-                        + "year {}; using admission_phase", paramYear.trim(), phaseYear);
-            }
-            return phaseYear;
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        if (cycle == null || cycle.year() == null || cycle.year().isBlank()
+                || cycle.phase() == null || cycle.phase().isBlank()) {
+            throw new IllegalArgumentException(
+                    "No current admission year and phase found in admissions.admission_phase.");
         }
-
-        String yearStr = admissionTimingRepository.findCurrentYearVal();
-        if (yearStr == null || yearStr.isBlank()) {
-            throw new IllegalArgumentException("Current year value is missing from the system configuration.");
+        String paramYear = admissionTimingRepository.findCurrentYearVal();
+        if (paramYear != null && !paramYear.trim().equals(cycle.year().trim())) {
+            logger.warn("iti_params code '7' year {} does not match current admission_phase year {}; "
+                    + "using admission_phase", paramYear.trim(), cycle.year().trim());
         }
-        return yearStr.trim();
+        return cycle.year().trim();
     }
 
     private String resolveCurrentPhase(String year) {
-        String yearStr = year != null ? String.valueOf(year) : null;
-        Optional<String> byYear = admissionTimingRepository.findCurrentPhaseVal(yearStr);
-        if (byYear.isPresent()) {
-            return byYear.get();
+        String currentYear = resolveCurrentYear();
+        if (year != null && !year.trim().equals(currentYear)) {
+            throw new IllegalArgumentException("Submitted year does not match the active admission cycle.");
         }
-
-        // Fall back to the current phase row even when the parameter year disagrees, so a stale
-        // iti_params value cannot break the page (see resolveCurrentYear).
-        Optional<String> current = admissionTimingRepository.findCurrentPhaseAnyYear();
-        if (current.isPresent() && current.get() != null && !current.get().isBlank()) {
-            String phase = current.get().trim();
-            logger.warn("No current admission_phase row for year {}; using the current phase {}",
-                    year, phase);
-            return phase;
-        }
-        throw new IllegalArgumentException("No current phase found for year " + year);
+        return phaseWindows.currentCycle().phase().trim();
     }
 
     /**
@@ -194,23 +174,49 @@ public class AdmissionTimingService {
     }
 
     public AdmissionTiming createAdmissionTiming(AdmissionTiming admissionTiming) {
+        String year = resolveCurrentYear();
+        String phase = resolveCurrentPhase(year);
+        admissionTiming.setYear(year);
+        admissionTiming.setPhase(phase);
         return admissionTimingRepository.save(admissionTiming);
     }
     public List<AdmissionTiming> getAllAdmissionTimings() {
-        return admissionTimingRepository.findAll();
+        String year = resolveCurrentYear();
+        String phase = resolveCurrentPhase(year);
+        return admissionTimingRepository.findByPhaseAndYear(phase, year);
     }
     public AdmissionTiming getById(String itiCode, String phase) {
-        AdmissionTimingId id = new AdmissionTimingId(itiCode, phase);
-        return admissionTimingRepository.findById(id).orElse(null);
+        String year = resolveCurrentYear();
+        String currentPhase = resolveCurrentPhase(year);
+        return admissionTimingRepository.findByItiCodeAndPhaseAndYear(itiCode, currentPhase, year)
+                .stream().findFirst().orElse(null);
     }
     public void delete(String itiCode, String phase) {
-        AdmissionTimingId id = new AdmissionTimingId(itiCode, phase);
-        admissionTimingRepository.deleteById(id);
+        AdmissionTiming current = getById(itiCode, phase);
+        if (current != null) {
+            admissionTimingRepository.delete(current);
+        }
     }
     public AdmissionTiming updateAdmissionTiming(String itiCode, String phase, AdmissionTiming updatedAdmissionTiming) {
-        updatedAdmissionTiming.setItiCode(itiCode);
-        updatedAdmissionTiming.setPhase(phase);
-        return admissionTimingRepository.save(updatedAdmissionTiming);
+        AdmissionTiming current = getById(itiCode, phase);
+        if (current == null) {
+            throw new IllegalArgumentException("No schedule entry exists for the current admission cycle.");
+        }
+        current.setMinqul(updatedAdmissionTiming.getMinqul());
+        current.setMeritFrom(updatedAdmissionTiming.getMeritFrom());
+        current.setMeritTo(updatedAdmissionTiming.getMeritTo());
+        current.setCalDate(updatedAdmissionTiming.getCalDate());
+        current.setCalTime(updatedAdmissionTiming.getCalTime());
+        current.setDistCode(updatedAdmissionTiming.getDistCode());
+        current.setCaste(updatedAdmissionTiming.getCaste());
+        current.setTrno(updatedAdmissionTiming.getTrno());
+        current.setTempPk(updatedAdmissionTiming.getTempPk());
+        String year = resolveCurrentYear();
+        String currentPhase = resolveCurrentPhase(year);
+        current.setYear(year);
+        current.setPhase(currentPhase);
+        current.setItiCode(itiCode);
+        return admissionTimingRepository.save(current);
     }
     @Transactional
 public Map<String, Object> createScheduleEntry(CreateEntryRequest req, CurrentUser user) {
@@ -646,6 +652,12 @@ public Map<String,Object> getCurrentStatus(){
      }
      String phase = parts[0];
      String year = parts[1];
+     String activeYear = resolveCurrentYear();
+     String activePhase = resolveCurrentPhase(activeYear);
+     if (!activeYear.equals(year) || !activePhase.equals(phase)) {
+         throw new IllegalArgumentException(
+                 "Schedule id does not belong to the current admission phase and year.");
+     }
      String distCode = blankToNull(parts[2]);
      String itiCode = blankToNull(parts[3]);
      String caste = parts[4];

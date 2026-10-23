@@ -8,17 +8,21 @@ import org.springframework.stereotype.Service;
 
 import com.server.backend.DTO.Call_Letter_DTO;
 import com.server.backend.Repository.Admission.Call_Letter_Repository;
+import com.server.backend.service.AdmissionPhaseWindowService;
 
 @Service
 public class Call_Letter_ServiceImpl
         implements Call_Letter_Service {
 
     private final Call_Letter_Repository repository;
+    private final AdmissionPhaseWindowService phaseWindows;
 
     public Call_Letter_ServiceImpl(
-            Call_Letter_Repository repository) {
+            Call_Letter_Repository repository,
+            AdmissionPhaseWindowService phaseWindows) {
 
         this.repository = repository;
+        this.phaseWindows = phaseWindows;
     }
 
     @Override
@@ -26,8 +30,13 @@ public class Call_Letter_ServiceImpl
             String rank,
             String caste) {
 
-        List<Object[]> results =
-                repository.findCallLetterData(rank, caste);
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        if (cycle == null || cycle.phase() == null || cycle.year() == null) {
+            throw new IllegalStateException(
+                    "No current admission year and phase found in admissions.admission_phase.");
+        }
+        List<Object[]> results = repository.findCallLetterData(
+                rank, caste, cycle.phase(), cycle.year());
 
         List<Call_Letter_DTO> response =
                 new ArrayList<>();

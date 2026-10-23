@@ -169,8 +169,8 @@ public class MeritListService {
             
             // A final merit list may exist for this scope + phase + year. Once it does,
             // the checklist must stay read-only — regeneration is disabled, matching the
-            // "generate once per phase and year" rule. ranks has a year column; checklist does not,
-            // so we probe ranks (which is written by the final-merit-list path).
+            // "generate once per phase and year" rule. The checklist and ranks tables both
+            // identify the active cycle by year and phase.
             String ranksCheckQuery = String.format("SELECT EXISTS(SELECT 1 FROM ranks WHERE phase = :phase AND %s = :targetCode AND year = :year LIMIT 1)", codeColumn);
             MapSqlParameterSource ranksParams = new MapSqlParameterSource()
                     .addValue("phase", phase)
@@ -184,48 +184,53 @@ public class MeritListService {
                         "; checklist cannot be regenerated.");
             }
 
-            // Legacy Rank_Generation_Process.jsp clears the code from either code column
-            // (delete from checklist where iti_code=? or dist_code=?); checklist's primary key is
-            // regid alone (no year column), so this delete is left unscoped by phase/year.
-            String deleteQuery = "DELETE FROM checklist WHERE iti_code = :targetCode OR dist_code = :targetCode";
-            jdbcTemplate.update(deleteQuery, new MapSqlParameterSource("targetCode", targetCode));
+            String deleteQuery = "DELETE FROM checklist c WHERE c.phase = :phase AND c.year = :year "
+                    + "AND (c.iti_code = :targetCode OR c.dist_code = :targetCode)";
+            jdbcTemplate.update(deleteQuery, new MapSqlParameterSource("targetCode", targetCode)
+                    .addValue("phase", phase)
+                    .addValue("year", year));
 
-            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, trno, app_status";
-            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :trno, app_status";
+            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, year, trno, app_status";
+            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :year, :trno, app_status";
             
         } else if ("finalmeritlist".equals(status)) {
             // Check if checklist exists
-            String checkQuery = String.format("SELECT EXISTS(SELECT 1 FROM checklist WHERE phase = :phase AND %s = :targetCode LIMIT 1)", codeColumn);
+            String checkQuery = String.format(
+                    "SELECT EXISTS(SELECT 1 FROM checklist WHERE phase = :phase AND year = :year "
+                            + "AND %s = :targetCode LIMIT 1)", codeColumn);
             MapSqlParameterSource checkParams = new MapSqlParameterSource()
                     .addValue("phase", phase)
-                    .addValue("targetCode", targetCode);
+                    .addValue("targetCode", targetCode)
+                    .addValue("year", year);
             Boolean checklistExists = jdbcTemplate.queryForObject(checkQuery, checkParams, Boolean.class);
             if (checklistExists == null || !checklistExists) {
                 throw new IllegalStateException("Checklist must be generated first for this ITI/District and Phase.");
             }
 
-            // Guard: the final merit list may be generated only once per scope + phase + year.
-            // Note: ranks table does not reliably store year, so we check only for phase and code.
-            String rankCheckQuery = String.format("SELECT EXISTS(SELECT 1 FROM ranks WHERE phase = :phase AND %s = :targetCode LIMIT 1)", codeColumn);
+            // A final merit list is unique within its scope and active year/phase.
+            String rankCheckQuery = String.format("SELECT EXISTS(SELECT 1 FROM ranks WHERE phase = :phase AND year = :year AND %s = :targetCode LIMIT 1)", codeColumn);
             MapSqlParameterSource rankParams = new MapSqlParameterSource()
                     .addValue("phase", phase)
-                    .addValue("targetCode", targetCode);
+                    .addValue("targetCode", targetCode)
+                    .addValue("year", year);
             Boolean alreadyGenerated = jdbcTemplate.queryForObject(rankCheckQuery, rankParams, Boolean.class);
             if (alreadyGenerated != null && alreadyGenerated) {
                 throw new IllegalStateException(
                     "Final merit list has already been generated for this " +
-                    (useDistCode ? "district" : "ITI") + " and phase; it cannot be regenerated.");
+                    (useDistCode ? "district" : "ITI") + " and phase " + phase
+                            + " year " + year + "; it cannot be regenerated.");
             }
 
             dbTablename = "ranks";
             heading = "FINAL MERIT LIST";
 
-            // Delete from ranks where phase = phase and codeColumn = targetCode
-            String deleteQuery = String.format("DELETE FROM ranks WHERE phase = :phase AND %s = :targetCode", codeColumn);
+            String deleteQuery = String.format(
+                    "DELETE FROM ranks WHERE phase = :phase AND year = :year AND %s = :targetCode",
+                    codeColumn);
             jdbcTemplate.update(deleteQuery, checkParams);
 
-            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, trno, app_status";
-            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :trno, app_status";
+            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, year, trno, app_status";
+            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :year, :trno, app_status";
             
         } else {
             throw new IllegalArgumentException("Invalid status value provided: " + status);
@@ -238,9 +243,10 @@ public class MeritListService {
         String safeGpa = "nullif(regexp_replace(%s, '[^0-9.]', '', 'g'), '')::real";
 
         // Build Optimized SQL Query with safe parameters and dynamic schema interpolation
+        String yearFilter = " AND year = :year";
         String sql = String.format(
             "WITH existing_check AS (\n" +
-            "    SELECT EXISTS (SELECT 1 FROM %s WHERE phase = :phase AND %s = :targetCode) as already_exists\n" +
+            "    SELECT EXISTS (SELECT 1 FROM %s WHERE phase = :phase AND %s = :targetCode%s) as already_exists\n" +
             "),\n" +
             "rank_generation AS (\n" +
             "    SELECT \n" +
@@ -268,11 +274,13 @@ public class MeritListService {
             // Legacy Rank_Generation_Process.jsp inner-joins application to cand_marks (a, b).
             "        JOIN (SELECT DISTINCT * FROM cand_marks) b ON a.regid::character varying = b.regid\n" +
             "        WHERE hstore(a.phase)->:phase = 'true'\n" +
+            "        AND a.year = :year\n" +
             "        AND a.app_status = 'A'\n" +
             "        AND EXISTS (\n" +
             "            SELECT 1 FROM trade_sel t \n" +
             "            WHERE t.regid = a.regid::character varying \n" +
             "            AND t.%s = :targetCode \n" +
+            "            AND t.year = :year \n" +
             "            AND hstore(t.phase)->:phase = 'true'\n" +
             "        )\n" +
             "    ) sub\n" +
@@ -289,6 +297,7 @@ public class MeritListService {
             "    UNION ALL\n" +
             "    SELECT rank::text, regid FROM %s \n" +
             "    WHERE phase = :phase AND %s = :targetCode\n" +
+            "    %s\n" +
             "    AND (SELECT already_exists FROM existing_check)\n" +
             ")\n" +
             "SELECT \n" +
@@ -307,7 +316,8 @@ public class MeritListService {
             "JOIN application b ON r.regid::text = b.regid::text\n" +
             "LEFT JOIN (SELECT DISTINCT regid, ssc_tot_gpa FROM cand_marks) cm ON cm.regid = r.regid::text\n" +
             "ORDER BY r.rank::integer;",
-            dbTablename, codeColumn, codeColumn, dbTablename, insertColumns, selectValues, dbTablename, codeColumn
+            dbTablename, codeColumn, yearFilter, codeColumn, dbTablename, insertColumns, selectValues,
+            dbTablename, codeColumn, yearFilter
         );
 
         MapSqlParameterSource queryParams = new MapSqlParameterSource()
@@ -316,6 +326,7 @@ public class MeritListService {
                 .addValue("targetCode", targetCode)
                 .addValue("itiCode", user.itiCode())
                 .addValue("distCode", user.distCode())
+                .addValue("year", year)
                 .addValue("trno", trno);
 
         List<MeritListRow> results = jdbcTemplate.query(sql, queryParams, (rs, rowNum) -> new MeritListRow(

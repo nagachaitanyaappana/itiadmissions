@@ -54,6 +54,18 @@ public class AdmissionPhaseController {
             return "redirect:/?error=session";
         }
         populateAdmissionWindow(request, model);
+        int phase = parseInt(model.asMap().get("phase"), 0);
+        if (phase > 1) {
+            HttpSession session = request.getSession(false);
+            String roleId = session == null || session.getAttribute("roleId") == null
+                    ? "" : String.valueOf(session.getAttribute("roleId"));
+            if ("4".equals(roleId)) {
+                return "redirect:/AdmissionCounseling/Start";
+            }
+            model.addAttribute("phase2RoleMessage",
+                    "Phase 2 and later admissions are processed by the ITI login for that ITI.");
+            return "admission/phase2RoleRequired";
+        }
         model.addAttribute("casteOptions", fetchCasteOptions());
         model.addAttribute("timingOptions", fetchTodayTimings(request));
         return "checkmeritschedule/AdmissionPhase";
@@ -437,5 +449,16 @@ public class AdmissionPhaseController {
     private static boolean notLoggedIn(HttpServletRequest request) {
         HttpSession s = request.getSession(false);
         return s == null || s.getAttribute("sessionUser") == null;
+    }
+
+    private static int parseInt(Object value, int fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException ex) {
+            return fallback;
+        }
     }
 }

@@ -11,6 +11,8 @@ public interface ChecklistRepository extends JpaRepository<Checklist, Integer> {
 
     List<Checklist> findByPhase(String phase);
 
+    List<Checklist> findByPhaseAndYear(String phase, String year);
+
     List<Checklist> findByItiCode(String iti_code);
 
     List<Checklist> findByAppStatus(String app_status);

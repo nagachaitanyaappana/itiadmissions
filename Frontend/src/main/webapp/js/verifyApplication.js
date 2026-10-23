@@ -3,13 +3,11 @@ let modalCallback = null;
 
 function initPage() {
     const roleId = SESSION_ROLE_ID;
-    const insCode = SESSION_INS_CODE;
-    const distName = SESSION_DIST_NAME;
 
-    if (!roleId || roleId !== "3") {
+    if (!roleId || (roleId !== "3" && roleId !== "4")) {
         document.getElementById('verifyForm').style.display = 'none';
         document.getElementById('resultSection').style.display = 'none';
-        document.body.innerHTML += '<div style="max-width:600px;margin:40px auto;padding:20px;background:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;color:#721c24;text-align:center;">Access denied: District login required.</div>';
+        document.body.innerHTML += '<div style="max-width:600px;margin:40px auto;padding:20px;background:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;color:#721c24;text-align:center;">Access denied: District or ITI login required.</div>';
         return;
     }
 }
@@ -40,9 +38,7 @@ function searchApplication() {
     msgEl.textContent = 'Searching...';
     msgEl.style.color = '#0056b3';
 
-    const insCode = SESSION_INS_CODE || '';
-
-    fetch(`${API_BASE_URL}/api/dv/lookup?regid=${encodeURIComponent(regid)}&distCode=${encodeURIComponent(insCode)}`)
+    fetch(`${VERIFY_API_BASE}/lookup?regid=${encodeURIComponent(regid)}`)
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -333,13 +329,12 @@ function submitDecision(action) {
 
     const payload = {
         regid: currentRegid,
-        distCode: SESSION_INS_CODE,
         username: SESSION_USERNAME,
         decision: 'Approve',
         documents: docData
     };
 
-    fetch(`${API_BASE_URL}/api/dv/approve`, {
+    fetch(`${VERIFY_API_BASE}/approve`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(payload)
@@ -391,13 +386,12 @@ function confirmReject() {
 
     const payload = {
         regid: currentRegid,
-        distCode: SESSION_INS_CODE,
         username: SESSION_USERNAME,
         decision: 'Reject',
         reason: reason
     };
 
-    fetch(`${API_BASE_URL}/api/dv/reject`, {
+    fetch(`${VERIFY_API_BASE}/reject`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(payload)

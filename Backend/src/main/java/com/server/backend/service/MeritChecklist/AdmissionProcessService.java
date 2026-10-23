@@ -40,9 +40,8 @@ import com.server.backend.service.AdmissionPhaseWindowService.Window;
  *
  * <p>Published domain configuration:
  * <ul>
- *   <li>Legacy derives the running year from {@code iti_params} code '7' and the phase from
- *       {@code admissions.admission_phase} (year + current=true). Where a seat-matrix row is
- *       keyed, the year/phase pair from that config is used.</li>
+ *   <li>The running year, phase, and seat-matrix phase come from the row flagged current in
+ *       {@code admissions.admission_phase}; caller-supplied values are not used for writes.</li>
  *   <li>The seat matrix stores category buckets in hstore columns ({@code strength},
  *       {@code strength_fill}, {@code strength_vacant}) keyed by caste code (OC, OC-W, PH,
  *       PH-W, EX-S, EX-SW, IM/IMC, and the reservation caste codes).</li>
@@ -83,10 +82,11 @@ public class AdmissionProcessService {
 
     public Map<String, Object> admissionWindowStatus() {
         AdmissionPhaseWindowService.Status window = phaseWindows.status(Window.ADMISSIONS);
-        boolean phaseOne = "1".equals(window.phase());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("phase", window.phase());
-        result.put("open", phaseOne && window.open());
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        result.put("year", cycle == null ? null : cycle.year());
+        result.put("open", window.open());
         result.put("starts_at", window.start());
         result.put("ends_at", window.end());
         return result;
@@ -97,36 +97,26 @@ public class AdmissionProcessService {
         return "1".equals(window.phase()) && window.open();
     }
 
+    private boolean isAdmissionWindowOpen() {
+        return phaseWindows.status(Window.ADMISSIONS).open();
+    }
+
     // ------------------------------------------------------------------ phase config
 
     /**
-     * The running year / phase / seat-matrix phase. Legacy reads the year from
-     * {@code iti_params code=7} and the phase from {@code admissions.admission_phase}
-     * (year + current=true). The seat-matrix phase equals the admission phase in the legacy
-     * {@code checkForVacencies} / council queries, so it is derived the same way here.
+     * The running year, phase, and seat-matrix phase from the active admission configuration.
      */
     private Map<String, Object> currentPhaseConfig() {
-        String year = jdbc.getJdbcTemplate().queryForObject(
-                // public.iti_params.code is character varying in the reference schema
-                "SELECT value FROM public.iti_params WHERE code = '7'", String.class);
-        if (blank(year)) {
-            throw new IllegalStateException("iti_params code 7 has no year value");
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        if (cycle == null || blank(cycle.year()) || blank(cycle.phase())) {
+            throw new IllegalStateException(
+                    "No current admission year and phase found in admissions.admission_phase");
         }
-        List<Map<String, Object>> rows = jdbc.queryForList(
-                "SELECT year, phase, seatmatrix_phase FROM admissions.admission_phase "
-                        + "WHERE year = :year AND current = 'true'",
-                new MapSqlParameterSource("year", year.trim()));
         Map<String, Object> config = new HashMap<>();
-        config.put("year", year.trim());
-        if (rows.isEmpty()) {
-            config.put("phase", "1");
-            config.put("seatmatrix_phase", 1);
-        } else {
-            Map<String, Object> row = rows.get(0);
-            config.put("phase", text(row.get("phase")));
-            Object smp = row.get("seatmatrix_phase");
-            config.put("seatmatrix_phase", smp == null ? number(row.get("phase"), 1) : number(smp, 1));
-        }
+        config.put("year", cycle.year().trim());
+        config.put("phase", cycle.phase().trim());
+        config.put("seatmatrix_phase", blank(cycle.seatMatrixPhase())
+                ? number(cycle.phase(), 1) : number(cycle.seatMatrixPhase(), 1));
         return config;
     }
 
@@ -318,7 +308,7 @@ public class AdmissionProcessService {
         }
         for (Map<String, Object> rankedCandidate : rankedCandidates) {
             String rankedRegid = text(rankedCandidate.get("regid"));
-            Map<String, Object> admission = findAdmission(rankedRegid);
+            Map<String, Object> admission = findAdmission(rankedRegid, year, String.valueOf(phase));
             if (admission != null) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
@@ -901,7 +891,7 @@ public class AdmissionProcessService {
     // ------------------------------------------------------------------ rank lookup (profile)
 
     public Map<String, Object> lookupRank(String rank, UserPrincipal user) {
-        if (!isPhaseOneAdmissionOpen()) {
+        if (!isAdmissionWindowOpen()) {
             return status("ADMISSION_EXPIRED", "Admission Date is Expired");
         }
         if (blank(rank) || !rank.trim().matches(NUMERIC)) {
@@ -913,6 +903,10 @@ public class AdmissionProcessService {
         String year = currentYear(config);
         int phase = currentPhase(config);
         int seatMatrixPhase = currentSeatMatrixPhase(config);
+        if (phase > 1 && !"4".equals(user.roleid())) {
+            return status("ITI_LOGIN_REQUIRED", "Phase " + phase
+                    + " admissions must be processed by the ITI login.");
+        }
 
         String itiCode = blank(user.itiCode()) ? null : user.itiCode().trim();
         String distCode = blank(user.distCode()) ? null : user.distCode().trim();
@@ -924,17 +918,18 @@ public class AdmissionProcessService {
                     "No district code is available for this login; cannot resolve the rank");
         }
 
-        // Legacy resolves the rank with rank + district + phase only (MyUtil.getOptionValue on
-        // ranks, no year predicate): the rank list is per-phase, not per-year, and existing rows
-        // carry a NULL year — filtering on year finds nothing.
+        String itiPredicate = phase > 1 ? " AND r.iti_code = :itiCode" : "";
         List<Map<String, Object>> rankRows = jdbc.queryForList(
                 "SELECT DISTINCT r.regid AS regid, r.rank AS rank FROM public.ranks r "
                         + "WHERE r.rank::text = :rank AND r.dist_code = :distCode "
-                        + " AND r.phase = :phase LIMIT 1",
+                        + " AND r.phase = :phase AND r.year = :year"
+                        + itiPredicate + " LIMIT 1",
                 new MapSqlParameterSource()
                         .addValue("rank", wantedRank)
                         .addValue("distCode", distCode)
-                        .addValue("phase", String.valueOf(phase)));
+                        .addValue("phase", String.valueOf(phase))
+                        .addValue("year", year)
+                        .addValue("itiCode", itiCode));
         if (rankRows.isEmpty()) {
             return notFound("No candidate holds rank " + wantedRank + " in district " + distCode
                     + " for year " + year + " phase " + phase);
@@ -952,7 +947,7 @@ public class AdmissionProcessService {
                     + ", which has no application row in " + candidateTable);
         }
         Map<String, Object> candidate = candidates.get(0);
-        Map<String, Object> admission = findAdmission(regid);
+        Map<String, Object> admission = findAdmission(regid, year, String.valueOf(phase));
 
         Map<String, Object> student = new LinkedHashMap<>();
         student.put("regid", regid);
@@ -1012,16 +1007,19 @@ public class AdmissionProcessService {
         return String.format("%02d", (value + 1) % 100);
     }
 
-    private Map<String, Object> findAdmission(String regid) {
+    private Map<String, Object> findAdmission(String regid, String year, String phase) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT ia.adm_num, ia.iti_code, ia.trade_code, ia.date_of_admission, "
                         + "       i.iti_name, COALESCE(m.trade_name, m.trade_short) AS trade_name "
                         + "FROM admissions.iti_admissions ia "
                         + "LEFT JOIN public.iti i ON i.iti_code = ia.iti_code "
                         + "LEFT JOIN public.ititrade_master m ON m.trade_code = ia.trade_code "
-                        + "WHERE ia.regid = :regid "
+                        + "WHERE ia.regid = :regid AND ia.phase::text = :phase "
+                        + "AND ia.year_of_admission = :year "
                         + "ORDER BY ia.date_of_admission DESC NULLS LAST LIMIT 1",
-                new MapSqlParameterSource("regid", regid));
+                new MapSqlParameterSource("regid", regid)
+                        .addValue("phase", phase)
+                        .addValue("year", year));
         if (rows.isEmpty()) {
             return null;
         }
@@ -1081,7 +1079,7 @@ public class AdmissionProcessService {
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> takeAdmission(TakeAdmissionRequest request, UserPrincipal user) {
-        if (!isPhaseOneAdmissionOpen()) {
+        if (!isAdmissionWindowOpen()) {
             return status("ADMISSION_EXPIRED", "Admission Date is Expired");
         }
         if (request == null) {
@@ -1130,6 +1128,10 @@ public class AdmissionProcessService {
         String year = currentYear(config);
         int phase = currentPhase(config);
         int seatMatrixPhase = currentSeatMatrixPhase(config);
+        if (phase > 1 && !"4".equals(user.roleid())) {
+            return status("ITI_LOGIN_REQUIRED", "Phase " + phase
+                    + " admissions must be processed by the ITI login.");
+        }
 
         String typeAdmission = emptyToNull(request.typeAdmission());
         if (typeAdmission == null) {
@@ -1137,10 +1139,27 @@ public class AdmissionProcessService {
                     "type_admission (Type of Admission) is required to record an admission");
         }
 
-        Map<String, Object> existing = findAdmission(regid);
+        Map<String, Object> existing = findAdmission(regid, year, String.valueOf(phase));
         if (existing != null) {
             return failure("Candidate " + regid + " is already admitted (admission number "
                     + existing.get("adm_num") + ")");
+        }
+
+        String candidateRankScope = phase == 1
+                ? "dist_code = :distCode" : "iti_code = :itiCode";
+        MapSqlParameterSource rankScopeParams = new MapSqlParameterSource()
+                .addValue("regid", regid)
+                .addValue("phase", String.valueOf(phase))
+                .addValue("year", year)
+                .addValue("distCode", distCode)
+                .addValue("itiCode", itiCode);
+        Boolean rankedForCurrentCycle = jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM public.ranks WHERE regid::text = :regid "
+                        + "AND phase = :phase AND year = :year AND " + candidateRankScope + ")",
+                rankScopeParams, Boolean.class);
+        if (!Boolean.TRUE.equals(rankedForCurrentCycle)) {
+            throw new IllegalArgumentException("Candidate " + regid
+                    + " is not ranked for this ITI in the current admission phase and year.");
         }
 
         List<Map<String, Object>> trades = jdbc.queryForList(

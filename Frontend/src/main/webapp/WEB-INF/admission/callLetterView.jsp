@@ -99,8 +99,8 @@
 <script>
 var CTX = "${pageContext.request.contextPath}";
 var API_BASE = "${backendBaseUrl}";
+var ROLE = "${sessionScope.roleId}";
 var DIST = "${sessionScope.insCode}";
-if(!DIST){ DIST = localStorage.getItem('insCode') || ''; }
 
 function esc(v){ if(v===null||v===undefined) return ""; return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function val(id){ return document.getElementById(id).value.trim(); }
@@ -137,7 +137,10 @@ function loadCastes(){
 
 function getCallLetter(){
   var mode = currentMode();
-  if(!DIST){ alert('District not found in session. Please log in as a district user.'); return; }
+  if((ROLE !== '3' && ROLE !== '4') || !DIST){
+    alert('District or ITI login is required to print call letters.');
+    return;
+  }
   var fromErr="", toErr="", regErr="";
   if(mode==='single'){
     var reg = val('regid');
@@ -165,16 +168,16 @@ function getCallLetter(){
   document.getElementById('screen2').style.display = 'block';
   area.innerHTML = "<p class='msg'>Loading call letter records...</p>";
 
-  var url;
+  var params;
   if(mode==='single'){
-    url = CTX + '/CallLetterView/api/call-letter/print?distCode=' + encodeURIComponent(DIST)
-        + '&regid=' + encodeURIComponent(val('regid'));
+    params = 'regid=' + encodeURIComponent(val('regid'));
   } else {
-    url = CTX + '/CallLetterView/api/call-letter/print?distCode=' + encodeURIComponent(DIST)
-        + '&fromRank=' + encodeURIComponent(val('fromRank'))
+    params = 'fromRank=' + encodeURIComponent(val('fromRank'))
         + '&toRank=' + encodeURIComponent(val('toRank'))
         + '&caste=' + encodeURIComponent(val('casteSel'));
   }
+  if(ROLE === '3') params += '&distCode=' + encodeURIComponent(DIST);
+  var url = CTX + '/CallLetterView/api/call-letter/print?' + params;
   fetch(url)
     .then(function(r){ return r.json().then(function(b){ return {s:r.status, b:b}; }); })
     .then(function(x){ renderResult(x); })
