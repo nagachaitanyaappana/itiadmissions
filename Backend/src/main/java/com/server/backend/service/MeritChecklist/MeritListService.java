@@ -167,10 +167,8 @@ public class MeritListService {
             dbTablename = "checklist";
             heading = "System Generated CheckList";
             
-            // A final merit list may exist for this scope + phase + year. Once it does,
-            // the checklist must stay read-only — regeneration is disabled, matching the
-            // "generate once per phase and year" rule. The checklist and ranks tables both
-            // identify the active cycle by year and phase.
+            // Checklist rows are identified by phase only; the active cycle year is still
+            // used for the source applications and the ranks table.
             String ranksCheckQuery = String.format("SELECT EXISTS(SELECT 1 FROM ranks WHERE phase = :phase AND %s = :targetCode AND year = :year LIMIT 1)", codeColumn);
             MapSqlParameterSource ranksParams = new MapSqlParameterSource()
                     .addValue("phase", phase)
@@ -184,25 +182,24 @@ public class MeritListService {
                         "; checklist cannot be regenerated.");
             }
 
-            String deleteQuery = "DELETE FROM checklist c WHERE c.phase = :phase AND c.year = :year "
-                    + "AND (c.iti_code = :targetCode OR c.dist_code = :targetCode)";
+            String deleteQuery = String.format(
+                    "DELETE FROM checklist c WHERE c.phase = :phase AND c.%s = :targetCode",
+                    codeColumn);
             jdbcTemplate.update(deleteQuery, new MapSqlParameterSource("targetCode", targetCode)
-                    .addValue("phase", phase)
-                    .addValue("year", year));
+                    .addValue("phase", phase));
 
-            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, year, trno, app_status";
-            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :year, :trno, app_status";
+            insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, trno, app_status";
+            selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :trno, app_status";
             
         } else if ("finalmeritlist".equals(status)) {
             // Check if checklist exists
             String checkQuery = String.format(
-                    "SELECT EXISTS(SELECT 1 FROM checklist WHERE phase = :phase AND year = :year "
+                    "SELECT EXISTS(SELECT 1 FROM checklist WHERE phase = :phase "
                             + "AND %s = :targetCode LIMIT 1)", codeColumn);
-            MapSqlParameterSource checkParams = new MapSqlParameterSource()
+            MapSqlParameterSource checklistParams = new MapSqlParameterSource()
                     .addValue("phase", phase)
-                    .addValue("targetCode", targetCode)
-                    .addValue("year", year);
-            Boolean checklistExists = jdbcTemplate.queryForObject(checkQuery, checkParams, Boolean.class);
+                    .addValue("targetCode", targetCode);
+            Boolean checklistExists = jdbcTemplate.queryForObject(checkQuery, checklistParams, Boolean.class);
             if (checklistExists == null || !checklistExists) {
                 throw new IllegalStateException("Checklist must be generated first for this ITI/District and Phase.");
             }
@@ -227,7 +224,7 @@ public class MeritListService {
             String deleteQuery = String.format(
                     "DELETE FROM ranks WHERE phase = :phase AND year = :year AND %s = :targetCode",
                     codeColumn);
-            jdbcTemplate.update(deleteQuery, checkParams);
+            jdbcTemplate.update(deleteQuery, rankParams);
 
             insertColumns = "dist_code, regid, rank, iti_code, qual, temp_pk, phase, year, trno, app_status";
             selectValues = ":distCode, regid, generated_rank::text, :itiCode, :qual, :targetCode, :phase, :year, :trno, app_status";
@@ -243,7 +240,7 @@ public class MeritListService {
         String safeGpa = "nullif(regexp_replace(%s, '[^0-9.]', '', 'g'), '')::real";
 
         // Build Optimized SQL Query with safe parameters and dynamic schema interpolation
-        String yearFilter = " AND year = :year";
+        String yearFilter = "checklist".equals(status) ? "" : " AND year = :year";
         String sql = String.format(
             "WITH existing_check AS (\n" +
             "    SELECT EXISTS (SELECT 1 FROM %s WHERE phase = :phase AND %s = :targetCode%s) as already_exists\n" +

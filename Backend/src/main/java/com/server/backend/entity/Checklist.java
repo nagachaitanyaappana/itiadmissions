@@ -33,9 +33,6 @@ public class Checklist
     @Column(name = "phase")
     private String phase;
 
-    @Column(name = "year")
-    private String year;
-
     @Column(name = "trno")
     private Long trno;
 
@@ -43,7 +40,6 @@ public class Checklist
     private String appStatus;
 
 }
-
 
 
 

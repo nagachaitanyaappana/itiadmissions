@@ -95,13 +95,19 @@
         #rejectReasonDiv textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; box-sizing: border-box; }
         #rejectReasonDiv .btn-row { margin-top: 8px; }
 
-        /* Toast */
+        /* Decision feedback */
         #verifyMsg { margin-bottom: 16px; }
-        .toast { padding: 10px; border-radius: 4px; margin-bottom: 12px; }
-        .toast-success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
-        .toast-danger { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
-        .toast-warning { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
-        .toast-info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .decision-notice {
+            display: flex; align-items: center; gap: 14px;
+            padding: 18px 20px; border: 2px solid; border-radius: 8px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.16);
+        }
+        .decision-notice-success { background: #e3f5e8; border-color: #218838; color: #155724; }
+        .decision-notice-danger { background: #fde8e8; border-color: #c82333; color: #721c24; }
+        .decision-notice-icon { flex: 0 0 auto; font-size: 32px; font-weight: bold; line-height: 1; }
+        .decision-notice-content { display: flex; flex-direction: column; gap: 4px; }
+        .decision-notice-heading { font-size: 21px; font-weight: 800; letter-spacing: 0.04em; }
+        .decision-notice-details { font-size: 15px; }
 
         /* Modal */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
@@ -304,7 +310,7 @@
                     <label for="rejectReason"><strong>Rejection Reason <span style="color:#dc3545;">*</span></strong></label>
                     <textarea id="rejectReason" class="form-control" rows="3" placeholder="Enter reason for rejection..."></textarea>
                     <div style="margin-top: 8px;">
-                        <button type="button" onclick="confirmReject()" style="background:#dc3545;color:#fff;border:1px solid #bd2130;padding:8px 16px;border-radius:4px;font-weight:bold;cursor:pointer;margin-right:8px;">Confirm Reject</button>
+                        <button type="button" id="btnConfirmReject" onclick="confirmReject()" style="background:#dc3545;color:#fff;border:1px solid #bd2130;padding:8px 16px;border-radius:4px;font-weight:bold;cursor:pointer;margin-right:8px;">Confirm Reject</button>
                         <button type="button" onclick="hideRejectReason()" class="btn-cancel">Cancel</button>
                     </div>
                 </div>
@@ -314,7 +320,6 @@
                     <button type="button" id="btnReject" class="btn-reject" onclick="showRejectReason()" disabled>Reject (R)</button>
                 </div>
 
-                <div id="verifyMsg" style="margin-top: 16px;"></div>
             </div>
         </div>
     </div>

@@ -33,10 +33,6 @@ public List<Checklist> getAllChecklist() {
         return checklistRepository.findByPhase(phase);
     }
 
-    public List<Checklist> getChecklistByPhaseAndYear(String phase, String year) {
-        return checklistRepository.findByPhaseAndYear(phase, year);
-    }
-
     public List<Checklist> getChecklistByItiCode(String iti_code) {
         return checklistRepository.findByItiCode(iti_code);
     }
@@ -62,7 +58,6 @@ public Checklist updateChecklist(Integer regid, Checklist checklist) {
 
     existing.setDistCode(checklist.getDistCode());
     existing.setPhase(checklist.getPhase());
-    existing.setYear(checklist.getYear());
     existing.setItiCode(checklist.getItiCode());
     existing.setAppStatus(checklist.getAppStatus());
     existing.setRank(checklist.getRank());
