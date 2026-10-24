@@ -9,15 +9,18 @@ import java.beans.PropertyDescriptor;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import com.server.backend.entity.CasteMasterPublic;
 import com.server.backend.entity.SubCasteMasterPublic;
 import com.server.backend.Repository.MeritChecklist.CasteMasterRepository;
 import com.server.backend.Repository.Student.SubCasteMasterPublicRepository;
+import com.server.backend.service.AdmissionPhaseWindowService;
+import com.server.backend.service.AdmissionPhaseWindowService.Window;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,6 +28,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -34,30 +38,18 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
     private final CasteMasterRepository casteMasterRepository;
     private final SubCasteMasterPublicRepository subCasteMasterRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final AdmissionPhaseWindowService phaseWindows;
 
     public StudentApplicationServiceImpl(StudentApplicationRepository repository,
             CasteMasterRepository casteMasterRepository,
             SubCasteMasterPublicRepository subCasteMasterRepository,
-            JdbcTemplate jdbcTemplate) {
+            JdbcTemplate jdbcTemplate,
+            AdmissionPhaseWindowService phaseWindows) {
         this.repository = repository;
         this.casteMasterRepository = casteMasterRepository;
         this.subCasteMasterRepository = subCasteMasterRepository;
         this.jdbcTemplate = jdbcTemplate;
-    }
-
-    /**
-     * The phase a candidate applies under is the phase currently in force (the single
-     * admissions.admission_phase row with current='true'), exactly as the legacy
-     * open_Application_InterfaceAction_Student resolved it. It is stored as a scalar code here
-     * because DistrictVerifyService.approve wraps it into an hstore when promoting to
-     * application.phase. Hard-coding "REGISTRATION" left application.phase keyed on
-     * "REGISTRATION" instead of the phase number, so the merit query
-     * (hstore(a.phase)->'1' = 'true') never matched a UI-submitted candidate.
-     */
-    private String resolveCurrentPhase() {
-        List<String> phases = jdbcTemplate.queryForList(
-                "SELECT phase::text FROM admissions.admission_phase WHERE current = 'true'", String.class);
-        return phases.isEmpty() ? null : phases.get(0);
+        this.phaseWindows = phaseWindows;
     }
 
     @Override
@@ -111,13 +103,7 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
     public Map<String, Object> applyGate(Integer regid, String dob, String sscRegNo) {
         Map<String, Object> result = new LinkedHashMap<>();
 
-        // Window guard: legacy reads application_to_date from admissions.admission_phase and treats
-        // the window as open until one day after it (Calendar.DAY_OF_MONTH += 1).
-        Timestamp toDate = jdbcTemplate.query(
-                "SELECT application_to_date FROM admissions.admission_phase LIMIT 1",
-                rs -> rs.next() ? rs.getTimestamp("application_to_date") : null);
-        if (toDate != null
-                && LocalDateTime.now().isAfter(toDate.toLocalDateTime().plusDays(1))) {
+        if (!phaseWindows.isOpen(Window.APPLICATION)) {
             result.put("status", "expired");
             return result;
         }
@@ -200,6 +186,9 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public StudentApplicationDto register(StudentApplicationDto dto, byte[] photo, String photoContentType) {
+        if (!phaseWindows.isOpen(Window.APPLICATION)) {
+            throw new ResponseStatusException(HttpStatus.GONE, "Date has Expired");
+        }
         boolean isUpdate = dto.getRegid() != null;
 
         // Reference to the submitting client, equivalent to the legacy logTrace + request.getRemoteAddr().
@@ -234,18 +223,14 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
                 ip == null ? "" : ip, userId, referer == null ? "" : referer,
                 isUpdate ? "Update" : "Insert", sessionId, new Timestamp(System.currentTimeMillis()).toString());
 
-        String year = firstOrNull(jdbcTemplate.queryForList(
-                // public.iti_params.code is character varying in the reference schema
-                "SELECT value FROM public.iti_params WHERE code = ?", String.class, "7"));
-        String phase = null;
-        if (year != null) {
-            phase = firstOrNull(jdbcTemplate.queryForList(
-                    "SELECT phase::text FROM admissions.admission_phase WHERE year = ? AND current = 'true'",
-                    String.class, year));
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        if (cycle == null || cycle.year() == null || cycle.year().isBlank()
+                || cycle.phase() == null || cycle.phase().isBlank()) {
+            throw new IllegalStateException(
+                    "No current admission year and phase found in admissions.admission_phase");
         }
-        if (phase == null) {
-            phase = resolveCurrentPhase();
-        }
+        String year = cycle.year();
+        String phase = cycle.phase();
 
         StudentApplication entity = isUpdate
                 ? repository.findById(dto.getRegid())
@@ -274,12 +259,14 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
         entity.setSscBoard(filterBad(dto.getSscBoard()));
         entity.setSscYear(filterBad(dto.getSscYear()));
         entity.setSscMonth(filterBad(dto.getSscMonth()));
+        entity.setYear(year);
+        entity.setPhase(phase);
 
         if (isUpdate) {
             // Legacy update branch sets app_status='A'. The two-step resume flow loses the
             // sub-category/EWS entries otherwise (they are only collected in the final form),
-            // so those two columns are set here as well; the rest of the insert-only columns
-            // (year/phase/entryDate/ip/dataFlag) stay untouched on resume.
+            // so those two columns are set here as well. The cycle is always restamped from the
+            // active admission_phase row, never retained from a previous cycle.
             entity.setAppStatus("A");
             entity.setSubCaste(filterBad(dto.getSubCaste()));
             entity.setEconomicWeakerSection(Boolean.TRUE.equals(dto.getEconomicWeakerSection()));
@@ -295,8 +282,6 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
             entity.setPwdCategory(filterBad(dto.getPwdCategory()));
             entity.setEconomicWeakerSection(Boolean.TRUE.equals(dto.getEconomicWeakerSection()));
             entity.setSubCaste(filterBad(dto.getSubCaste()));
-            entity.setYear(year);
-            entity.setPhase(phase);
             entity.setEntryDate(LocalDateTime.now());
             entity.setIp(ip);
             entity.setAppStatus("N");
@@ -420,10 +405,6 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
         }
     }
 
-    private static String firstOrNull(List<String> values) {
-        return (values == null || values.isEmpty()) ? null : values.get(0);
-    }
-
     /** Port of beans.MyUtil.filterBad (strips SQL keywords and quote/operator characters). */
     private static String filterBad(String str) {
         if (str == null) {
@@ -451,6 +432,10 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
 
     @Override
 public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto dto) {
+
+    if (!phaseWindows.isOpen(Window.APPLICATION)) {
+        throw new ResponseStatusException(HttpStatus.GONE, "Date has Expired");
+    }
 
     StudentApplication entity = repository.findById(regid)
             .orElseThrow(() -> new RuntimeException("Student Not Found"));
@@ -481,11 +466,14 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
         }
     }
 
-    // Stamp the phase the candidate is applying under, server-side (never the client's).
-    String currentPhase = resolveCurrentPhase();
-    if (currentPhase != null) {
-        entity.setPhase(currentPhase);
+    AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+    if (cycle == null || cycle.year() == null || cycle.year().isBlank()
+            || cycle.phase() == null || cycle.phase().isBlank()) {
+        throw new IllegalStateException(
+                "No current admission year and phase found in admissions.admission_phase");
     }
+    entity.setPhase(cycle.phase());
+    entity.setYear(cycle.year());
 
     // Phone / e-mail / Aadhaar must be unique across candidates (legacy
     // open_Application_InterfaceAction_Student). Exclude the candidate's own regid so an edit

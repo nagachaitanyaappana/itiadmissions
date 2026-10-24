@@ -3,6 +3,9 @@ package com.server.frontend.controller.checkmeritschedulecontroller;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
@@ -19,6 +22,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 /**
@@ -41,13 +46,26 @@ public class AdmissionPhaseController {
     private String backendBase;
 
     private final RestTemplate rest = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @GetMapping
     public String show(HttpServletRequest request, Model model) {
         if (notLoggedIn(request)) {
             return "redirect:/?error=session";
         }
-        model.addAttribute("phase", fetchPhase());
+        populateAdmissionWindow(request, model);
+        int phase = parseInt(model.asMap().get("phase"), 0);
+        if (phase > 1) {
+            HttpSession session = request.getSession(false);
+            String roleId = session == null || session.getAttribute("roleId") == null
+                    ? "" : String.valueOf(session.getAttribute("roleId"));
+            if ("4".equals(roleId)) {
+                return "redirect:/AdmissionCounseling/Start";
+            }
+            model.addAttribute("phase2RoleMessage",
+                    "Phase 2 and later admissions are processed by the ITI login for that ITI.");
+            return "admission/phase2RoleRequired";
+        }
         model.addAttribute("casteOptions", fetchCasteOptions());
         model.addAttribute("timingOptions", fetchTodayTimings(request));
         return "checkmeritschedule/AdmissionPhase";
@@ -99,9 +117,15 @@ public class AdmissionPhaseController {
 
         boolean success = resp != null && Boolean.TRUE.equals(resp.get("success"));
         if (!success) {
+            if (resp != null && "ADMISSION_EXPIRED".equals(resp.get("code"))) {
+                populateAdmissionWindow(request, model);
+                model.addAttribute("casteOptions", fetchCasteOptions());
+                model.addAttribute("timingOptions", fetchTodayTimings(request));
+                return "checkmeritschedule/AdmissionPhase";
+            }
             Object err = resp == null ? "Server error" : resp.get("message");
             model.addAttribute("errorMsg", err == null ? "No counselling window is configured for today." : err);
-            model.addAttribute("phase", fetchPhase());
+            populateAdmissionWindow(request, model);
             model.addAttribute("casteOptions", fetchCasteOptions());
             model.addAttribute("timingOptions", fetchTodayTimings(request));
             return "checkmeritschedule/AdmissionPhase";
@@ -166,7 +190,22 @@ public class AdmissionPhaseController {
             return "checkmeritschedule/DistrictAdmissionProcessOptimise";
         }
         Object err = resp == null ? "Server error" : resp.get("message");
-        model.addAttribute("errorMsg", err == null ? "No candidate found for this rank." : err);
+        if (resp != null && "ADMISSION_EXPIRED".equals(resp.get("code"))) {
+            populateAdmissionWindow(request, model);
+            model.addAttribute("casteOptions", fetchCasteOptions());
+            model.addAttribute("timingOptions", fetchTodayTimings(request));
+            return "checkmeritschedule/AdmissionPhase";
+        }
+        if (resp != null && "ALREADY_ADMITTED".equals(resp.get("code"))) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> admission = (Map<String, Object>) resp.get("admission_details");
+            Object admissionNumber = admission == null ? null : admission.get("adm_num");
+            model.addAttribute("errorMsg", admissionNumber == null
+                    ? "Student is already admitted."
+                    : "Student is already admitted with Admission Number: " + admissionNumber);
+        } else {
+            model.addAttribute("errorMsg", err == null ? "No candidate found for this rank." : err);
+        }
         model.addAttribute("currentDate", currentDate);
         model.addAttribute("merit_from", meritFrom);
         model.addAttribute("merit_to", meritTo);
@@ -233,10 +272,20 @@ public class AdmissionPhaseController {
         body.put("ssc_month", sscMonth);
         body.put("type_admission", typeAdmission);
         body.put("caste_name", casteName);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> resp = rest.postForObject(
-                backendBase + "/api/admission/take-admission", new HttpEntity<>(body, headers(request)),
-                Map.class);
+        Map<String, Object> resp;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = rest.postForObject(
+                    backendBase + "/api/admission/take-admission",
+                    new HttpEntity<>(body, headers(request)), Map.class);
+            resp = response;
+        } catch (HttpStatusCodeException ex) {
+            model.addAttribute("errorMsg", admissionError(ex));
+            return "checkmeritschedule/DistrictAdmissionEntry";
+        } catch (RestClientException ex) {
+            model.addAttribute("errorMsg", "Admission service is unavailable. Please try again.");
+            return "checkmeritschedule/DistrictAdmissionEntry";
+        }
 
         boolean success = resp != null && Boolean.TRUE.equals(resp.get("success"));
         if (success) {
@@ -247,9 +296,33 @@ public class AdmissionPhaseController {
             sessionPut(request, "adm_num", admNum);
             return "checkmeritschedule/Phase1AdmSuccess";
         }
-        Object err = resp == null ? "Server error" : resp.get("message");
+        Object err = resp == null ? "Server error"
+                : resp.containsKey("error") ? resp.get("error") : resp.get("message");
+        if (resp != null && "ADMISSION_EXPIRED".equals(resp.get("code"))) {
+            populateAdmissionWindow(request, model);
+            model.addAttribute("casteOptions", fetchCasteOptions());
+            model.addAttribute("timingOptions", fetchTodayTimings(request));
+            return "checkmeritschedule/AdmissionPhase";
+        }
         model.addAttribute("errorMsg", err == null ? "Admission could not be completed." : err);
         return "checkmeritschedule/DistrictAdmissionEntry";
+    }
+
+    private String admissionError(HttpStatusCodeException exception) {
+        try {
+            JsonNode body = objectMapper.readTree(exception.getResponseBodyAsString());
+            String error = body.path("error").asText();
+            if (!error.isBlank()) {
+                return error;
+            }
+            String message = body.path("message").asText();
+            if (!message.isBlank()) {
+                return message;
+            }
+        } catch (JsonProcessingException ignored) {
+            // Use the HTTP status below when the backend did not return JSON.
+        }
+        return "Admission failed (" + exception.getStatusCode().value() + "). Please correct the issue and try again.";
     }
 
     /** AJAX fragment: permitted shift/unit rows for an ITI+trade (mirror of getShiftUnit.jsp). */
@@ -268,7 +341,7 @@ public class AdmissionPhaseController {
         List<Map<String, Object>> options = resp == null ? null : (List<Map<String, Object>>) resp.get("shifts");
         StringBuilder sb = new StringBuilder();
         if (options == null || options.isEmpty()) {
-            sb.append("<tr><td colspan=\"3\">No data found</td></tr>");
+            sb.append("<tr><td colspan=\"5\">No permitted shift/unit seats are currently vacant for this trade.</td></tr>");
         } else {
             for (Map<String, Object> o : options) {
                 String value = o.get("shift_allowed") + "|" + o.get("unit_allowed") + "|" + o.get("strength");
@@ -327,14 +400,25 @@ public class AdmissionPhaseController {
         return h;
     }
 
-    private String fetchPhase() {
+    @SuppressWarnings("unchecked")
+    private void populateAdmissionWindow(HttpServletRequest request, Model model) {
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> resp = rest.postForObject(backendBase + "/api/status", null, Map.class);
-            Object phase = resp == null ? null : resp.get("phase");
-            return phase == null ? "1" : String.valueOf(phase);
-        } catch (Exception e) {
-            return "1";
+            Map<String, Object> status = rest.exchange(
+                    backendBase + "/api/admission/window-status", HttpMethod.GET,
+                    new HttpEntity<>(headers(request)), Map.class).getBody();
+            Object phase = status == null ? null : status.get("phase");
+            model.addAttribute("phase", phase == null ? "0" : String.valueOf(phase));
+            model.addAttribute("admissionWindowOpen",
+                    status != null && Boolean.TRUE.equals(status.get("open")));
+            if (status == null) {
+                model.addAttribute("admissionWindowError",
+                        "Unable to verify the configured admission date window.");
+            }
+        } catch (RestClientException ex) {
+            model.addAttribute("phase", "0");
+            model.addAttribute("admissionWindowOpen", false);
+            model.addAttribute("admissionWindowError",
+                    "Unable to verify the configured admission date window.");
         }
     }
 
@@ -365,5 +449,16 @@ public class AdmissionPhaseController {
     private static boolean notLoggedIn(HttpServletRequest request) {
         HttpSession s = request.getSession(false);
         return s == null || s.getAttribute("sessionUser") == null;
+    }
+
+    private static int parseInt(Object value, int fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException ex) {
+            return fallback;
+        }
     }
 }

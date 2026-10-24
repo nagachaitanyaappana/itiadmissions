@@ -88,7 +88,18 @@ public class AdmissionCounselingController {
     /** Docs screen 2/3 - Start Admission Process form. */
     @GetMapping("/Start")
     public String start(HttpServletRequest request, org.springframework.ui.Model model) {
+        if (notLoggedIn(request)) {
+            return "redirect:/?error=session";
+        }
         addCurrentPhase(model);
+        if ("1".equals(model.getAttribute("currentPhase"))) {
+            return "redirect:/AdmissionPhase";
+        }
+        if (!"4".equals(sessionValue(request, "roleId"))) {
+            model.addAttribute("phase2RoleMessage",
+                    "Phase 2 and later admissions are processed by the ITI login for that ITI.");
+            return "admission/phase2RoleRequired";
+        }
         return "admission/counselingStart";
     }
 
@@ -100,33 +111,43 @@ public class AdmissionCounselingController {
      */
     @GetMapping("/Counseling")
     public String counseling(HttpServletRequest request, org.springframework.ui.Model model) {
+        if (notLoggedIn(request)) {
+            return "redirect:/?error=session";
+        }
         addCurrentPhase(model);
+        if ("1".equals(model.getAttribute("currentPhase"))) {
+            return "redirect:/AdmissionPhase";
+        }
+        if (!"4".equals(sessionValue(request, "roleId"))) {
+            model.addAttribute("phase2RoleMessage",
+                    "Phase 2 and later admissions are processed by the ITI login for that ITI.");
+            return "admission/phase2RoleRequired";
+        }
         if (!hasCouncilToday(request)) {
             return "admission/councilDatesNotFound";
         }
         return "admission/counselingRank";
     }
 
-    /** Publishes the running phase/year (from admissions.admission_phase) to the page defaults. */
+    /** Publishes the active year and phase (from admissions.admission_phase) to the page defaults. */
     private void addCurrentPhase(org.springframework.ui.Model model) {
-        Object phase = null;
-        Object year = null;
-        try {
-            ResponseEntity<Map<String, Object>> resp = rest.exchange(
-                    backendBaseUrl + "/api/status",
-                    org.springframework.http.HttpMethod.POST,
-                    null,
-                    new ParameterizedTypeReference<Map<String, Object>>() {
-                    });
-            Map<String, Object> body = resp.getBody();
-            if (body != null) {
-                phase = body.get("phase");
-                year = body.get("year");
-            }
-        } catch (Exception ignored) {
+        ResponseEntity<Map<String, Object>> resp = rest.exchange(
+                backendBaseUrl + "/api/admission/window-status",
+                org.springframework.http.HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {
+                });
+        Map<String, Object> body = resp.getBody();
+        Object phase = body == null ? null : body.get("phase");
+        Object year = body == null ? null : body.get("year");
+        if (phase == null || year == null || String.valueOf(phase).isBlank()
+                || String.valueOf(year).isBlank()) {
+            throw new IllegalStateException(
+                    "Current admission phase and year are not configured.");
         }
-        model.addAttribute("currentPhase", phase == null ? "1" : String.valueOf(phase));
-        model.addAttribute("currentYear", year == null ? "" : String.valueOf(year));
+        model.addAttribute("currentPhase", String.valueOf(phase));
+        model.addAttribute("currentYear", String.valueOf(year));
+        model.addAttribute("admissionWindowOpen", Boolean.TRUE.equals(body.get("open")));
     }
 
     /** True when the caller's district/ITI has a counselling session scheduled for today. */
@@ -247,8 +268,28 @@ public class AdmissionCounselingController {
                                                    @RequestParam("phase") String phase,
                                                    @RequestParam("year") String year,
                                                    HttpServletRequest request) {
+        if (!"4".equals(sessionValue(request, "roleId"))) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "source", "scope",
+                    "message", "Phase 2 and later admissions require an ITI login."));
+        }
+        Map<String, Object> cycle = currentCycle();
+        phase = String.valueOf(cycle.get("phase"));
+        year = String.valueOf(cycle.get("year"));
+        if ("1".equals(phase)) {
+            return ResponseEntity.status(409).body(Map.of(
+                    "source", "phase",
+                    "candidate", null,
+                    "message", "Use the Phase 1 admission workflow for the current cycle."));
+        }
+        if (!Boolean.TRUE.equals(cycle.get("open"))) {
+            return ResponseEntity.status(410).body(Map.of(
+                    "source", "window",
+                    "candidate", null,
+                    "message", "Admission Date is Expired"));
+        }
         String ins = sessionValue(request, "insCode");
-        String key = ins + "|" + rank + "|" + phase + "|" + year;
+        String key = sessionValue(request, "roleId") + "|" + ins + "|" + rank + "|" + phase + "|" + year;
         Object cached = cacheGet(key);
         if (cached != null) return ResponseEntity.ok(cached);
 
@@ -262,11 +303,6 @@ public class AdmissionCounselingController {
             return ResponseEntity.ok(resolved);
         }
         // 2) fallback scan below (parallel student-details merit match, bounded)
-        Map<String, Object> fb = fallbackByMerit(rank, phase, year);
-        if (fb != null) {
-            cachePut(key, fb);
-            return ResponseEntity.ok(fb);
-        }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("source", "none");
         out.put("rank", rank);
@@ -327,12 +363,13 @@ public class AdmissionCounselingController {
             cand.put("rank", data.get("rank"));
             cand.put("name", data.get("name"));
             cand.put("fatherName", data.get("fname"));
+            cand.put("motherName", data.get("mname"));
             cand.put("caste", data.get("caste"));
             cand.put("gender", data.get("gender"));
             cand.put("qual", "");
             cand.put("dist_code", distCode);
             cand.put("distName", distCode);
-            cand.put("iti_code", "");
+            cand.put("iti_code", sessionValue(request, "insCode"));
             cand.put("phase", phase);
             cand.put("year", year);
             cand.put("app_status", Boolean.TRUE.equals(data.get("is_admitted")) ? "A" : "N");
@@ -340,7 +377,13 @@ public class AdmissionCounselingController {
             cand.put("phc", data.get("phc"));
             cand.put("exservice", data.get("exservice"));
             cand.put("ssc_regno", data.get("ssc_regno"));
+            cand.put("ssc_board", data.get("ssc_board"));
             cand.put("ssc_year", data.get("ssc_year"));
+            cand.put("ssc_month", data.get("ssc_month"));
+            cand.put("ssc_month_option", data.get("ssc_month_option"));
+            cand.put("email", data.get("email_id"));
+            cand.put("ews", data.get("ews"));
+            cand.put("pwd_category", data.get("pwd_category"));
             cand.put("is_admitted", data.get("is_admitted"));
             cand.put("admission_details", data.get("admission_details"));
             cand.put("photo_base64", data.get("photo_base64"));
@@ -380,6 +423,26 @@ public class AdmissionCounselingController {
         if (session == null) return null;
         Object value = session.getAttribute(name);
         return value == null ? null : String.valueOf(value);
+    }
+
+    private Map<String, Object> currentCycle() {
+        ResponseEntity<Map<String, Object>> resp = rest.exchange(
+                backendBaseUrl + "/api/admission/window-status",
+                org.springframework.http.HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {
+                });
+        Map<String, Object> body = resp.getBody();
+        if (body == null || body.get("phase") == null || body.get("year") == null) {
+            throw new IllegalStateException(
+                    "Current admission phase and year are not configured.");
+        }
+        return body;
+    }
+
+    private static boolean notLoggedIn(HttpServletRequest request) {
+        var session = request.getSession(false);
+        return session == null || session.getAttribute("sessionUser") == null;
     }
 
     /** Paged fallback: parallel meritList[].rank+phase match. Bounded by timeout. */

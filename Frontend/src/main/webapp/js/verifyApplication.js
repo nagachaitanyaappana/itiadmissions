@@ -1,15 +1,14 @@
 let currentRegid = null;
 let modalCallback = null;
+let decisionInProgress = false;
 
 function initPage() {
     const roleId = SESSION_ROLE_ID;
-    const insCode = SESSION_INS_CODE;
-    const distName = SESSION_DIST_NAME;
 
-    if (!roleId || roleId !== "3") {
+    if (!roleId || (roleId !== "3" && roleId !== "4")) {
         document.getElementById('verifyForm').style.display = 'none';
         document.getElementById('resultSection').style.display = 'none';
-        document.body.innerHTML += '<div style="max-width:600px;margin:40px auto;padding:20px;background:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;color:#721c24;text-align:center;">Access denied: District login required.</div>';
+        document.body.innerHTML += '<div style="max-width:600px;margin:40px auto;padding:20px;background:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;color:#721c24;text-align:center;">Access denied: District or ITI login required.</div>';
         return;
     }
 }
@@ -40,9 +39,7 @@ function searchApplication() {
     msgEl.textContent = 'Searching...';
     msgEl.style.color = '#0056b3';
 
-    const insCode = SESSION_INS_CODE || '';
-
-    fetch(`${API_BASE_URL}/api/dv/lookup?regid=${encodeURIComponent(regid)}&distCode=${encodeURIComponent(insCode)}`)
+    fetch(`${VERIFY_API_BASE}/lookup?regid=${encodeURIComponent(regid)}`)
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -204,15 +201,23 @@ function populateDocumentVerification(app) {
 }
 
 function disableActions() {
-    document.getElementById('btnApprove').disabled = true;
-    document.getElementById('btnReject').disabled = true;
+    const approveButton = document.getElementById('btnApprove');
+    const rejectButton = document.getElementById('btnReject');
+    approveButton.disabled = true;
+    rejectButton.disabled = true;
+    approveButton.textContent = 'Approve (A)';
+    rejectButton.textContent = 'Reject (R)';
     document.querySelectorAll('input[name="decision"]').forEach(r => r.disabled = true);
     document.querySelectorAll('.doc-radio').forEach(r => r.disabled = true);
 }
 
 function enableActions() {
-    document.getElementById('btnApprove').disabled = false;
-    document.getElementById('btnReject').disabled = false;
+    const approveButton = document.getElementById('btnApprove');
+    const rejectButton = document.getElementById('btnReject');
+    approveButton.disabled = decisionInProgress;
+    rejectButton.disabled = decisionInProgress;
+    approveButton.textContent = 'Approve (A)';
+    rejectButton.textContent = 'Reject (R)';
     document.querySelectorAll('input[name="decision"]').forEach(r => r.disabled = false);
     document.querySelectorAll('.doc-radio').forEach(r => r.disabled = false);
 }
@@ -328,27 +333,30 @@ function submitDecision(action) {
 
     // Approve
     const btn = document.getElementById('btnApprove');
+    decisionInProgress = true;
     btn.disabled = true;
     btn.textContent = 'Approving...';
 
     const payload = {
         regid: currentRegid,
-        distCode: SESSION_INS_CODE,
         username: SESSION_USERNAME,
         decision: 'Approve',
         documents: docData
     };
 
-    fetch(`${API_BASE_URL}/api/dv/approve`, {
+    fetch(`${VERIFY_API_BASE}/approve`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(payload)
     })
     .then(r => r.json())
     .then(data => {
+        decisionInProgress = false;
+        btn.textContent = 'Approve (A)';
         btn.disabled = false;
         if (data.success) {
-            showToast('success', 'Approved: ' + data.message);
+            btn.disabled = true;
+            showToast('success', data.message || 'The application has been approved.', 'Application Accepted');
             searchApplication();
         } else {
             showToast('danger', 'Approve failed: ' + (data.message || 'Unknown error'));
@@ -356,6 +364,8 @@ function submitDecision(action) {
     })
     .catch(err => {
         console.error(err);
+        decisionInProgress = false;
+        btn.textContent = 'Approve (A)';
         btn.disabled = false;
         showToast('danger', 'Network error: ' + err.message);
     });
@@ -385,29 +395,33 @@ function confirmReject() {
         return;
     }
 
-    const btn = document.getElementById('btnReject');
+    const btn = document.getElementById('btnConfirmReject');
+    decisionInProgress = true;
     btn.disabled = true;
     btn.textContent = 'Rejecting...';
 
     const payload = {
         regid: currentRegid,
-        distCode: SESSION_INS_CODE,
         username: SESSION_USERNAME,
         decision: 'Reject',
         reason: reason
     };
 
-    fetch(`${API_BASE_URL}/api/dv/reject`, {
+    fetch(`${VERIFY_API_BASE}/reject`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(payload)
     })
     .then(r => r.json())
     .then(data => {
+        decisionInProgress = false;
+        btn.textContent = 'Confirm Reject';
         btn.disabled = false;
         document.getElementById('rejectReasonDiv').style.display = 'none';
         if (data.success) {
-            showToast('success', 'Rejected: ' + data.message);
+            document.getElementById('btnApprove').disabled = true;
+            document.getElementById('btnReject').disabled = true;
+            showToast('danger', data.message || 'The application has been rejected.', 'Application Rejected');
             searchApplication();
         } else {
             showToast('danger', 'Reject failed: ' + (data.message || 'Unknown error'));
@@ -415,16 +429,36 @@ function confirmReject() {
     })
     .catch(err => {
         console.error(err);
+        decisionInProgress = false;
+        btn.textContent = 'Confirm Reject';
         btn.disabled = false;
         showToast('danger', 'Network error: ' + err.message);
     });
 }
 
-function showToast(type, message) {
+function showToast(type, message, heading) {
     const container = document.getElementById('verifyMsg');
-    const bg = type === 'success' ? '#d4edda' : '#f8d7da';
-    const border = type === 'success' ? '#c3e6cb' : '#f5c6cb';
-    const color = type === 'success' ? '#155724' : '#721c24';
-    const icon = type === 'success' ? '✓' : '✕';
-    container.innerHTML = `<div class="alert alert-${type}">${icon} ${message}</div>`;
+    const accepted = type === 'success';
+    const notice = document.createElement('div');
+    notice.className = `decision-notice decision-notice-${accepted ? 'success' : 'danger'}`;
+    notice.setAttribute('role', 'alert');
+    notice.setAttribute('aria-live', 'assertive');
+
+    const icon = document.createElement('span');
+    icon.className = 'decision-notice-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = accepted ? '✓' : '✕';
+
+    const content = document.createElement('div');
+    content.className = 'decision-notice-content';
+    const title = document.createElement('strong');
+    title.className = 'decision-notice-heading';
+    title.textContent = heading || (accepted ? 'Action Completed' : 'Action Failed');
+    const details = document.createElement('span');
+    details.className = 'decision-notice-details';
+    details.textContent = message;
+    content.append(title, details);
+    notice.append(icon, content);
+    container.replaceChildren(notice);
+    container.scrollIntoView({behavior: 'smooth', block: 'center'});
 }

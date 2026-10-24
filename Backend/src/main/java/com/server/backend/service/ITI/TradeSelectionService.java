@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.server.backend.DTO.TradeSelectionRequestDto;
+import com.server.backend.service.AdmissionPhaseWindowService;
 
 /**
  * Records a candidate's chosen ITI/trade in {@code trade_sel}.
@@ -25,7 +26,8 @@ import com.server.backend.DTO.TradeSelectionRequestDto;
  * <ul>
  *   <li>the hstore phase key is appended with {@code phase || hstore(...)} rather than overwritten,
  *       so earlier phase membership survives;</li>
- *   <li>{@code application.year} / {@code application.phase} are updated in the same step — that
+ *   <li>{@code application.year} / {@code application.phase} are updated in the same step from the
+ *       active {@code admissions.admission_phase} row — that
  *       update is the only writer of {@code application.phase} in the merit path, and the
  *       generator's {@code hstore(a.phase)->:phase='true'} predicate depends on it.</li>
  * </ul>
@@ -36,53 +38,44 @@ public class TradeSelectionService {
     private static final Logger logger = LoggerFactory.getLogger(TradeSelectionService.class);
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final AdmissionPhaseWindowService phaseWindows;
 
-    public TradeSelectionService(NamedParameterJdbcTemplate jdbcTemplate) {
+    public TradeSelectionService(NamedParameterJdbcTemplate jdbcTemplate,
+            AdmissionPhaseWindowService phaseWindows) {
         this.jdbcTemplate = jdbcTemplate;
+        this.phaseWindows = phaseWindows;
     }
 
-    /** Resolves the running admission year, as legacy did via iti_params code '7'. */
+    /** Resolves the running admission year from the single active phase configuration. */
     public String resolveYear() {
-        List<String> years = jdbcTemplate.getJdbcTemplate()
-                .queryForList("SELECT value FROM iti_params WHERE code = '7'", String.class);
-        if (years.isEmpty() || years.get(0) == null || years.get(0).isBlank()) {
-            throw new IllegalStateException("ITI param for code '7' (admission year) not found");
+        AdmissionPhaseWindowService.Cycle cycle = requireCurrentCycle();
+        return cycle.year();
+    }
+
+    private AdmissionPhaseWindowService.Cycle requireCurrentCycle() {
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        if (cycle == null || cycle.year() == null || cycle.year().isBlank()
+                || cycle.phase() == null || cycle.phase().isBlank()) {
+            throw new IllegalStateException(
+                    "No current admission year and phase found in admissions.admission_phase");
         }
-        return years.get(0);
+        return cycle;
     }
 
     /**
      * Resolves the current phase.
      *
-     * <p>{@code admissions.admission_phase} is the authority, not {@code iti_params}: the
-     * param currently reads 2026 while the only current phase row is 2025, so looking the phase
-     * up by the param year finds nothing. The param year is still used for the {@code year}
-     * column, and a disagreement is logged rather than thrown — this mirrors
-     * {@code MeritListService.resolveYear/resolvePhase}.
+     * <p>The submitted year is never authoritative. Both year and phase come from the active
+     * {@code admissions.admission_phase} row.
      */
     public String resolvePhase(String paramYear) {
-        List<Map<String, Object>> byParamYear = jdbcTemplate.queryForList(
-                "SELECT phase FROM admissions.admission_phase WHERE year = :year AND current = 'true'",
-                new MapSqlParameterSource("year", paramYear));
-        if (!byParamYear.isEmpty()) {
-            return String.valueOf(byParamYear.get(0).get("phase"));
+        AdmissionPhaseWindowService.Cycle cycle = requireCurrentCycle();
+        if (paramYear != null && !paramYear.isBlank()
+                && !paramYear.trim().equals(cycle.year())) {
+            logger.warn("Ignoring submitted admission year {}; using current admission_phase year {}",
+                    paramYear, cycle.year());
         }
-
-        List<Map<String, Object>> current = jdbcTemplate.getJdbcTemplate().queryForList(
-                "SELECT year, phase FROM admissions.admission_phase WHERE current = 'true'");
-        if (current.isEmpty()) {
-            throw new IllegalStateException(
-                    "No current admission phase found in admissions.admission_phase");
-        }
-        Map<String, Object> row = current.get(0);
-        String actualYear = String.valueOf(row.get("year"));
-        Object phase = row.get("phase");
-        if (phase == null || String.valueOf(phase).isBlank()) {
-            throw new IllegalStateException("Current admission phase is null for year " + actualYear);
-        }
-        logger.warn("iti_params code '7' year {} has no current admission_phase row; using the "
-                + "current phase (year {}) instead", paramYear, actualYear);
-        return String.valueOf(phase);
+        return cycle.phase();
     }
 
     /**
@@ -105,8 +98,9 @@ public class TradeSelectionService {
             throw new IllegalArgumentException("itiCode is required to record a trade selection");
         }
 
-        String year = resolveYear();
-        String phase = resolvePhase(year);
+        AdmissionPhaseWindowService.Cycle cycle = requireCurrentCycle();
+        String year = cycle.year();
+        String phase = cycle.phase();
         String regid = String.valueOf(dto.getRegid());
         String itiCode = scopeItiCode.trim();
         // trade_sel.dist_code is part of the primary key (regid, dist_code, iti_code) and is

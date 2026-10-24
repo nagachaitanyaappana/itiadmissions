@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.server.backend.DTO.Call_Letter_DTO;
@@ -44,7 +45,9 @@ public class Call_Letter_Controller {
      */
     @GetMapping("/call-letter/print")
     public Call_Letter_Print_DTO getCallLetterPrint(
-            @RequestParam String distCode,
+            @RequestParam(required = false) String distCode,
+            @RequestHeader(name = "X-Iti-Code", required = false) String itiCode,
+            @RequestHeader(name = "X-Role-Id", required = false) String roleId,
             @RequestParam(name = "regid", required = false) String regid,
             @RequestParam(name = "fromRank", required = false) String fromRank,
             @RequestParam(name = "toRank", required = false) String toRank,
@@ -52,6 +55,8 @@ public class Call_Letter_Controller {
 
         return printService.getCallLetterPrint(
                 distCode,
+                itiCode,
+                roleId,
                 regid,
                 fromRank,
                 toRank,

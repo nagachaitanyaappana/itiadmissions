@@ -23,7 +23,6 @@ import com.server.backend.DTO.DscFullReportResponse;
 import com.server.backend.DTO.GovtPvtSeatsAbstractResponse;
 import com.server.backend.DTO.ITIAdmissionsReportResponse;
 import com.server.backend.DTO.ItiWiseStatusResponse;
-import com.server.backend.DTO.ItiTradeSeatResponse;
 import com.server.backend.DTO.OpenSeatsAbstractResponse;
 import com.server.backend.DTO.PhaseWiseReportResponse;
 import com.server.backend.DTO.ShiftUnitResponse;
@@ -351,15 +350,6 @@ public class ReportRestController {
         return new ApiListResponse<>(reportService.getTradeWiseVacantPositions(year, distCode));
     }
 
-
-    // ========== ITI + TRADE SEAT MATRIX (public "Seats Open" page) ==========
-    @Operation(summary = "ITI + Trade wise seat matrix rows for the public Seats Open page")
-    @GetMapping("/iti-trade-seats")
-    public ApiListResponse<ItiTradeSeatResponse> getItiTradeSeats(
-            @RequestParam(required = false) String year,
-            @RequestParam(required = false, defaultValue = "All") String govt) {
-        return new ApiListResponse<>(reportService.getItiTradeSeats(year, govt));
-    }
 
     // ========== TRADE DISPLAY ==========
     @Operation(summary = "Trade Display - District Options")

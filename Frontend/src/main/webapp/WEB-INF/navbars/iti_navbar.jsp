@@ -34,7 +34,10 @@
             <li><a href="#">Admissions</a>
         <ul>
             <li><a href="${pageContext.request.contextPath}/MeritList">MeritList with GPA</a></li>
+            <li><a href="${pageContext.request.contextPath}/VerifyApplication">Verification For Online Application</a></li>
             <li><a href="${pageContext.request.contextPath}/ScheduleEntry">Schedule Entry</a></li>
+            <li><a href="${pageContext.request.contextPath}/CallLetterView">Call Letter</a></li>
+            <li><a href="${pageContext.request.contextPath}/AdmissionCounseling/Start">Admission Counselling</a></li>
             <li><a href="${pageContext.request.contextPath}/DeleteScheduleEntry">Delete Schedule Entry</a></li>
             <li><a href="${pageContext.request.contextPath}/admissions/admission-update">Admission Update</a></li>
             <li><a href="${pageContext.request.contextPath}/admissions/search">Search</a></li>

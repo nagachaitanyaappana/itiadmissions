@@ -20,10 +20,18 @@ public class DistrictVerifyController {
         this.service = service;
     }
 
+    @GetMapping("/window-status")
+    public Map<String, Object> windowStatus() {
+        return service.windowStatus();
+    }
+
     @GetMapping("/lookup")
     public Map<String, Object> lookup(@RequestParam String regid,
-                                       @RequestParam(required = false) String distCode) {
-        return service.lookup(regid, distCode);
+                                       @RequestParam(required = false) String distCode,
+                                       @RequestParam(required = false) String itiCode) {
+        return itiCode == null || itiCode.isBlank()
+                ? service.lookup(regid, distCode)
+                : service.lookupForIti(regid, itiCode);
     }
 
     @GetMapping("/list")
@@ -43,12 +51,36 @@ public class DistrictVerifyController {
         );
     }
 
+    @PostMapping("/approve-iti")
+    public Map<String, Object> approveIti(@RequestBody Map<String, Object> body,
+                                          HttpServletRequest request) {
+        return service.approveForIti(
+                (String) body.get("regid"),
+                (String) body.get("itiCode"),
+                (String) body.get("username"),
+                request.getRemoteAddr(),
+                (Map<String, String>) body.get("documents")
+        );
+    }
+
     @PostMapping("/reject")
     public Map<String, Object> reject(@RequestBody Map<String, String> body,
                                       HttpServletRequest request) {
         return service.reject(
                 body.get("regid"),
                 body.get("distCode"),
+                body.get("username"),
+                body.get("reason"),
+                request.getRemoteAddr()
+        );
+    }
+
+    @PostMapping("/reject-iti")
+    public Map<String, Object> rejectIti(@RequestBody Map<String, String> body,
+                                         HttpServletRequest request) {
+        return service.rejectForIti(
+                body.get("regid"),
+                body.get("itiCode"),
                 body.get("username"),
                 body.get("reason"),
                 request.getRemoteAddr()

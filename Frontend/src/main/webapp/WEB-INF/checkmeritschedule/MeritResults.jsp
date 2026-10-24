@@ -38,6 +38,58 @@
             background-color: #e4eeb9 !important;
             color: #000000 !important;
         }
+        @page {
+            size: landscape;
+            margin: 10mm;
+        }
+        @media print {
+            body {
+                margin: 0 !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            body > :not(.results-container) {
+                display: none !important;
+            }
+            .results-container {
+                width: 100% !important;
+                max-width: none !important;
+                margin: 0 !important;
+            }
+            .outer-border,
+            .inner-box {
+                border: 0 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+            .search-container,
+            .print-hide,
+            #noDataMsg {
+                display: none !important;
+            }
+            .table-responsive {
+                overflow: visible !important;
+            }
+            #meritTable {
+                width: 100% !important;
+                font-size: 8pt;
+                border-collapse: collapse !important;
+            }
+            #meritTable th,
+            #meritTable td {
+                padding: 3px 4px !important;
+                vertical-align: top;
+            }
+            #meritTable thead {
+                display: table-header-group;
+            }
+            #meritTable tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+        }
     </style>
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/iti-portal.css">
 </head>
@@ -66,7 +118,7 @@
                                 <option value="all">All</option>
                             </select>
                         </div>
-                        <button class="btn btn-primary btn-print-custom shadow-sm" onclick="window.print()">
+                        <button class="btn btn-primary btn-print-custom shadow-sm" onclick="printAllRanks()">
                             <i class="fas fa-print"></i> Print Report
                         </button>
                     </div>
@@ -182,6 +234,25 @@
                 String(row.fname).toLowerCase().includes(term)
             );
             renderTable(filtered, limit);
+        }
+
+        function printAllRanks() {
+            const searchField = document.getElementById('regidSearch');
+            const rowLimit = document.getElementById('rowLimit');
+            const previousSearch = searchField.value;
+            const previousLimit = rowLimit.value;
+
+            searchField.value = '';
+            rowLimit.value = 'all';
+            renderTable(allData, 'all');
+
+            window.addEventListener('afterprint', function restoreTableView() {
+                searchField.value = previousSearch;
+                rowLimit.value = previousLimit;
+                filterTable();
+            }, { once: true });
+
+            window.print();
         }
     </script>
 </body>

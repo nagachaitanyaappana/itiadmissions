@@ -7,7 +7,7 @@
         <jsp:include page="/WEB-INF/reports/header.jsp" />
         <form action="${pageContext.request.contextPath}/AdmissionPhase/itiAdmissionEntry" method="post" id="startForm">
             <c:choose>
-                <c:when test="${phase == '1'}">
+                <c:when test="${phase == '1' and admissionWindowOpen}">
             <p align="center">
                 &nbsp;</p>
             <p align="center">
@@ -61,7 +61,9 @@
                 </font></center>
                 </c:when>
                 <c:otherwise>
-                    <center><h2>Admission Date is Expired</h2></center>
+                    <center>
+                        <h2>${empty admissionWindowError ? 'Admission Date is Expired' : admissionWindowError}</h2>
+                    </center>
                 </c:otherwise>
             </c:choose>
             </form>

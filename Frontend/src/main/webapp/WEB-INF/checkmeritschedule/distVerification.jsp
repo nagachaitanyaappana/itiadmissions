@@ -42,6 +42,7 @@
 		<jsp:include page="/WEB-INF/reports/header.jsp" />
 <%-- 		<%@include file="/WEB-INF/userpages/Navbar.jsp"%> --%>
 	</div>
+	<div id="verificationWindowExpired" class="text-center text-danger mt-5" style="display:none;font-weight:bold;font-size:1.5rem;"></div>
 	
 	<div align="center">
 	</div>

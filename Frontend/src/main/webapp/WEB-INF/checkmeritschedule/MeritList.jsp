@@ -120,6 +120,7 @@
     <div class="container form-container">
         <div class="outer-border shadow-lg">
             <h2 class="page-title">Generate Merit List</h2>
+            <div id="meritWindowExpired" class="alert alert-danger text-center" style="display:none"></div>
             
             <div class="inner-box mt-2">
                 
@@ -209,7 +210,33 @@
             }, extra || {});
         }
 
+        async function checkMeritListWindow() {
+            const form = document.querySelector('.inner-box');
+            const message = document.getElementById('meritWindowExpired');
+            try {
+                const response = await fetch(NODE_API_BASE + '/api/meritlist/window-status', {
+                    credentials: 'include'
+                });
+                if (!response.ok) throw new Error('Window status request failed: ' + response.status);
+                const status = await response.json();
+                if (!status || status.open !== true) {
+                    form.style.display = 'none';
+                    message.textContent = 'Date has Expired';
+                    message.style.display = 'block';
+                    return false;
+                }
+                return true;
+            } catch (err) {
+                console.error('Failed to verify merit-list date window:', err);
+                form.style.display = 'none';
+                message.textContent = 'Unable to verify the configured merit-list date window. Please retry later.';
+                message.style.display = 'block';
+                return false;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
+            if (!await checkMeritListWindow()) return;
             // Load Caste/Category List
             try {
                 const response = await fetch(NODE_API_BASE + '/api/dsc/caste-list',{ credentials: 'include' });
@@ -259,7 +286,8 @@
                     window.location.href = "<%= request.getContextPath() %>/MeritResults";
                 } else {
                     console.error("Merit Generation Failed:", result);
-                    alert("Failed: " + (result.error || result.message || "Unknown error"));
+                    const message = result.error || result.message || "Unknown error";
+                    alert(message.toLowerCase().includes("date") ? "Date has Expired" : "Failed: " + message);
                 }
             } catch (err) {
                 console.error("Submission error:", err);

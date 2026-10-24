@@ -30,9 +30,12 @@ public interface Call_Letter_Repository
             AND r.phase = s.phase
         WHERE r.rank = :rank
           AND s.caste = :caste
+          AND r.phase = :phase
+          AND r.year = :year
         """, nativeQuery = true)
     List<Object[]> findCallLetterData(
             @Param("rank") String rank,
-            @Param("caste") String caste);
+            @Param("caste") String caste,
+            @Param("phase") String phase,
+            @Param("year") String year);
 }
-

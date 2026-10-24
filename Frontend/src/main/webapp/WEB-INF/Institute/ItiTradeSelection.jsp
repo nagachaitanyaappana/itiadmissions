@@ -8,271 +8,146 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <title>ITI TRADE SELECTION</title>
     <style>
-        /* ---- Modern admin theme (blue accent, light canvas) ---- */
-        .page-canvas {
-            background-color: #f5f7fa;
-            border: 1px solid #e8edf3;
-            border-radius: 14px;
-            padding-top: 20px;
-            padding-bottom: 26px;
-        }
-        .page-header-custom {
-            background: linear-gradient(135deg, #1d4e8f 0%, #173d70 100%);
-            color: #ffffff;
-            padding: 12px 0 14px;
-            margin-top: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(16,24,40,0.12);
-        }
-        .page-header-custom h2 {
-            font-size: 1.25rem;
+        .page-title {
+            color: #330033;
+            font-size: 28px;
             font-weight: 600;
-            letter-spacing: 0.2px;
-            margin-bottom: 2px;
         }
         .breadcrumb-text {
-            color: rgba(255,255,255,0.75);
-            font-size: 12px;
-        }
-        .form-card {
-            border: 1px solid #e4e9f0;
-            border-radius: 12px;
-            box-shadow: 0 1px 2px rgba(16,24,40,0.05);
-            overflow: hidden;
-            margin-bottom: 16px;
-            background: #fff;
-        }
-        .card-header-primary {
-            background-color: #ffffff;
-            color: #1f2937;
-            font-weight: 700;
-            font-size: 0.78rem;
-            padding: 12px 18px;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-bottom: 1px solid #eef2f7;
-        }
-        .card-header-primary i { color: #17549e; }
-        .step-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background-color: #17549e;
-            color: #ffffff;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0;
-        }
-        .card-body-custom {
-            padding: 20px;
-            background-color: #fff;
-        }
-        .form-label-custom {
-            font-weight: 600;
-            color: #334155;
-            margin-bottom: 6px;
-            font-size: 0.9rem;
-        }
-        .form-select {
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #0f172a;
-        }
-        .form-select:focus {
-            border-color: #2f6fc0 !important;
-            box-shadow: 0 0 0 0.2rem rgba(47, 111, 192, 0.15) !important;
-        }
-        .form-select option:hover {
-            background-color: #2f6fc0 !important;
-            color: #ffffff !important;
+            color: #888;
+            font-size: 14px;
         }
         .table th {
-            background-color: #eef2f7 !important;
-            color: #475569 !important;
-            padding: 10px 12px;
-            font-weight: 600;
-            font-size: 11.5px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid #e2e8f0 !important;
+            background-color: #4ab131 !important;
+            color: white !important;
+            padding: 12px;
+            font-weight: bold;
+            font-size: 13px;
         }
         .table td {
-            padding: 10px 12px;
+            padding: 10px;
             vertical-align: middle;
             font-size: 13px;
-            color: #1f2937;
-            border-bottom: 1px solid #eef2f7 !important;
         }
-        .table, .table th, .table td { border-color: #eef2f7 !important; }
+        .table, .table th, .table td { border: 1px solid #000 !important; }
         .table-striped > tbody > tr:nth-child(odd) > td,
-        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #f8fafc !important; }
-        .table-striped > tbody > tr:nth-child(even) > td,
-        .table-striped > tbody > tr:nth-child(even) > th { background-color: #ffffff !important; }
-        .table tbody tr:hover > td { background-color: #eef6ff !important; }
-        .table tbody td:nth-child(2) {
-            color: #17549e;
-            font-weight: 600;
-            font-variant-numeric: tabular-nums;
+        .table-striped > tbody > tr:nth-child(odd) > th { background-color: #ffffff !important; }
+        .selection-area {
+            background-color: #cbd6b2;
+            padding: 0;
+            border-radius: 0;
+            margin-bottom: 25px;
+            border: 2px solid #000;
         }
-        .table tbody td:nth-child(3) { color: #0f172a; }
-        .table tbody td:nth-child(4),
-        .table tbody td:nth-child(5) {
-            font-weight: 600;
-            color: #0f172a;
-            font-variant-numeric: tabular-nums;
+        .selection-area h5 {
+            background-color: #4ab131;
+            color: #fff;
+            margin: 0 0 15px;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
         }
-        .table tbody tr:has(.trade-radio:checked) > td { background-color: #e8f1fd !important; }
-        .table tbody tr:has(.trade-radio:checked) > td:first-child { box-shadow: inset 3px 0 0 #17549e; }
-        .trade-radio {
-            accent-color: #17549e;
-            width: 15px;
-            height: 15px;
-            cursor: pointer;
+        .selection-area .row { padding: 0 20px 18px; }
+        .details-area {
+            background-color: #cbd6b2;
+            padding: 20px;
+            border-radius: 0;
+            margin-bottom: 25px;
+            border: 2px solid #000;
         }
-        #tradeCount {
-            background-color: #eef4fc;
-            color: #17549e !important;
-            font-weight: 600;
-            font-size: 12.5px;
-            padding: 3px 12px;
-            border-radius: 999px;
-            display: inline-block;
-        }
-        #selectedItiCode, #selectedTradeCode { color: #17549e; font-weight: 700; }
-        #selectedItiName, #selectedTradeShort { color: #0f172a; font-weight: 600; }
         .loading-message {
             text-align: center;
-            padding: 30px;
-            color: #64748b;
-            font-size: 14px;
+            padding: 40px;
+            color: #666;
+            font-size: 16px;
         }
         .error-message {
             text-align: center;
-            padding: 30px;
-            color: #dc2626;
-            font-size: 14px;
+            padding: 40px;
+            color: #dc3545;
+            font-size: 16px;
         }
         .radio-cell {
             text-align: center;
             width: 60px;
         }
-        .btn-success-custom {
-            background-color: #17549e;
-            border: none;
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 0.875rem;
-            padding: 8px 20px;
-            border-radius: 8px;
-            transition: background-color 0.15s;
-        }
-        .btn-success-custom:hover {
-            background-color: #123f78;
-            color: #ffffff;
-        }
         .btn-continue {
-            min-width: 140px;
+            min-width: 150px;
+            background-color: green;
+            border-color: green;
         }
+        .btn-continue:hover { background-color: #056b05; border-color: #056b05; }
         .btn-continue:disabled { opacity: .55; }
-        /* Navbar dropdown items: blue palette hover */
-        body .dropdown-menu .dropdown-item:hover {
-            background-color: #17549e !important;
-            color: #ffffff !important;
-            padding-left: 25px;
-        }
-        /* Footer: solid navy blue with white text */
-        .lower-footer {
-            background-color: #0f2f5c !important;
-            color: #ffffff !important;
-        }
     </style>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
 </head>
 
 <body>
     <!-- Global Header -->
-    <jsp:include page="/WEB-INF/reports/header.jsp" />
+    <header>
+        <jsp:include page="/WEB-INF/reports/header.jsp" />
+    </header>
 
-    <!-- Portal page heading -->
-    <div class="page-header-custom">
-        <div class="container">
-            <h2>ITI Trade Selection</h2>
+    <div class="container-fluid px-5 mt-4 mb-5 lg-page" style="min-height: 50vh;">
+        <!-- Page Header & Breadcrumbs -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="page-title text-uppercase">ITI TRADE SELECTION</h2>
             <div class="breadcrumb-text">Home / ITI Trade Selection</div>
         </div>
-    </div>
 
-    <div class="container-fluid px-5 mb-5 page-canvas" style="min-height: 50vh;">
         <!-- ITI Selection Area -->
-        <div class="card form-card">
-            <div class="card-header-primary">
-                <span class="step-badge">1</span><i class="fas fa-building"></i> Select ITI
-            </div>
-            <div class="card-body-custom">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="itiSelect" class="form-label-custom">ITI:</label>
-                        <select class="form-select" id="itiSelect">
-                            <option value="">-- Select ITI --</option>
-                        </select>
-                    </div>
+        <div class="selection-area">
+            <h5 class="mb-3" style="color: #444;">Select ITI</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="itiSelect" class="form-label fw-bold">ITI:</label>
+                    <select class="form-select" id="itiSelect">
+                        <option value="">-- Select ITI --</option>
+                    </select>
                 </div>
             </div>
         </div>
 
         <!-- Selected ITI Details -->
-        <div class="card form-card" id="itiDetails" style="display: none;">
-            <div class="card-header-primary">
-                <i class="fas fa-info-circle"></i> Selected ITI Details
-            </div>
-            <div class="card-body-custom">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p class="mb-1"><strong>ITI Code:</strong> <span id="selectedItiCode"></span></p>
-                        <p class="mb-0"><strong>ITI Name:</strong> <span id="selectedItiName"></span></p>
-                    </div>
+        <div class="details-area" id="itiDetails" style="display: none;">
+            <h5 class="mb-3" style="color: #444;">Selected ITI Details</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>ITI Code:</strong> <span id="selectedItiCode"></span></p>
+                    <p class="mb-0"><strong>ITI Name:</strong> <span id="selectedItiName"></span></p>
                 </div>
             </div>
         </div>
 
         <!-- Trades Table Area -->
-        <div class="card form-card" id="tradesArea" style="display: none;">
-            <div class="card-header-primary">
-                <span class="step-badge">2</span><i class="fas fa-tools"></i> Trades Available in This ITI
+        <div id="tradesArea" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="m-0" style="color: #444;">Trades Available in This ITI</h4>
+                <div class="text-muted" id="tradeCount">Showing 0 entries</div>
             </div>
-            <div class="card-body-custom">
-                <div class="d-flex justify-content-end mb-2">
-                    <div class="text-muted" id="tradeCount">Showing 0 entries</div>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th class="radio-cell">Select</th>
-                                <th>Trade Code</th>
-                                <th>Trade</th>
-                                <th>Strength</th>
-                                <th>Duration (Months)</th>
-                                <th>Available</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tradeTableBody">
-                            <tr>
-                                <td colspan="6" class="text-center">Please select an ITI to load trades.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th class="radio-cell">Select</th>
+                            <th>Trade Code</th>
+                            <th>Trade</th>
+                            <th>Strength</th>
+                            <th>Duration (Months)</th>
+                            <th>Available</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tradeTableBody">
+                        <tr>
+                            <td colspan="6" class="text-center">Please select an ITI to load trades.</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -294,14 +169,16 @@
 
         <!-- Continue Button -->
         <div class="d-flex justify-content-end mt-4">
-            <button class="btn btn-success-custom btn-continue" id="continueBtn" disabled>
+            <button class="btn btn-primary btn-continue" id="continueBtn" disabled>
                 Continue <i class="fas fa-arrow-right ms-2"></i>
             </button>
         </div>
     </div>
 
     <!-- Global Footer -->
-    <%@ include file="../footer.jsp" %>
+    <footer>
+        <%@ include file="../footer.jsp" %>
+    </footer>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {

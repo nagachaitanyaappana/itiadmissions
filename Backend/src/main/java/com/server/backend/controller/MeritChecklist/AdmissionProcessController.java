@@ -122,6 +122,12 @@ public class AdmissionProcessController {
                 resolveUser(roleId, insCode, itiCode, distCode)));
     }
 
+    @Operation(summary = "Current Phase 1 admission date-window status")
+    @GetMapping("/window-status")
+    public ResponseEntity<Map<String, Object>> admissionWindowStatus() {
+        return ResponseEntity.ok(admissionProcessService.admissionWindowStatus());
+    }
+
     @Operation(summary = "Start admission: validate rank generation and resolve the merit window")
     @PostMapping("/council-merits")
     public ResponseEntity<Map<String, Object>> councilMerits(

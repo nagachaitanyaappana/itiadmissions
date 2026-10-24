@@ -12,6 +12,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +24,8 @@ import com.server.backend.DTO.CouncilMeritsRequest;
 import com.server.backend.DTO.ProcessOptimizeRequest;
 import com.server.backend.DTO.TakeAdmissionRequest;
 import com.server.backend.DTO.UserPrincipal;
+import com.server.backend.service.AdmissionPhaseWindowService;
+import com.server.backend.service.AdmissionPhaseWindowService.Window;
 
 /**
  * Backend for the Admission Phase 1 page ({@code /AdmissionPhase}).
@@ -33,9 +40,8 @@ import com.server.backend.DTO.UserPrincipal;
  *
  * <p>Published domain configuration:
  * <ul>
- *   <li>Legacy derives the running year from {@code iti_params} code '7' and the phase from
- *       {@code admissions.admission_phase} (year + current=true). Where a seat-matrix row is
- *       keyed, the year/phase pair from that config is used.</li>
+ *   <li>The running year, phase, and seat-matrix phase come from the row flagged current in
+ *       {@code admissions.admission_phase}; caller-supplied values are not used for writes.</li>
  *   <li>The seat matrix stores category buckets in hstore columns ({@code strength},
  *       {@code strength_fill}, {@code strength_vacant}) keyed by caste code (OC, OC-W, PH,
  *       PH-W, EX-S, EX-SW, IM/IMC, and the reservation caste codes).</li>
@@ -57,43 +63,60 @@ public class AdmissionProcessService {
     private static final String EX_S = "EX-S";
     private static final String EX_SW = "EX-SW";
     private static final String IM = "IM";
+    private static final Pattern HSTORE_INTEGER_ENTRY = Pattern.compile(
+            "(?:^|,)\\s*(?:\"((?:\\\\.|[^\"])*)\"|([^=,\\s]+))\\s*=>\\s*(?:\"((?:\\\\.|[^\"])*)\"|([^,\\s]+))\\s*(?=,|$)");
 
     private final NamedParameterJdbcTemplate jdbc;
+    private final TransactionTemplate photoTransaction;
+    private final AdmissionPhaseWindowService phaseWindows;
 
-    public AdmissionProcessService(NamedParameterJdbcTemplate jdbc) {
+    public AdmissionProcessService(
+            NamedParameterJdbcTemplate jdbc,
+            PlatformTransactionManager transactionManager,
+            AdmissionPhaseWindowService phaseWindows) {
         this.jdbc = jdbc;
+        this.phaseWindows = phaseWindows;
+        this.photoTransaction = new TransactionTemplate(transactionManager);
+        this.photoTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
+
+    public Map<String, Object> admissionWindowStatus() {
+        AdmissionPhaseWindowService.Status window = phaseWindows.status(Window.ADMISSIONS);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("phase", window.phase());
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        result.put("year", cycle == null ? null : cycle.year());
+        result.put("open", window.open());
+        result.put("starts_at", window.start());
+        result.put("ends_at", window.end());
+        return result;
+    }
+
+    private boolean isPhaseOneAdmissionOpen() {
+        AdmissionPhaseWindowService.Status window = phaseWindows.status(Window.ADMISSIONS);
+        return "1".equals(window.phase()) && window.open();
+    }
+
+    private boolean isAdmissionWindowOpen() {
+        return phaseWindows.status(Window.ADMISSIONS).open();
     }
 
     // ------------------------------------------------------------------ phase config
 
     /**
-     * The running year / phase / seat-matrix phase. Legacy reads the year from
-     * {@code iti_params code=7} and the phase from {@code admissions.admission_phase}
-     * (year + current=true). The seat-matrix phase equals the admission phase in the legacy
-     * {@code checkForVacencies} / council queries, so it is derived the same way here.
+     * The running year, phase, and seat-matrix phase from the active admission configuration.
      */
     private Map<String, Object> currentPhaseConfig() {
-        String year = jdbc.getJdbcTemplate().queryForObject(
-                // public.iti_params.code is character varying in the reference schema
-                "SELECT value FROM public.iti_params WHERE code = '7'", String.class);
-        if (blank(year)) {
-            throw new IllegalStateException("iti_params code 7 has no year value");
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        if (cycle == null || blank(cycle.year()) || blank(cycle.phase())) {
+            throw new IllegalStateException(
+                    "No current admission year and phase found in admissions.admission_phase");
         }
-        List<Map<String, Object>> rows = jdbc.queryForList(
-                "SELECT year, phase, seatmatrix_phase FROM admissions.admission_phase "
-                        + "WHERE year = :year AND current = 'true'",
-                new MapSqlParameterSource("year", year.trim()));
         Map<String, Object> config = new HashMap<>();
-        config.put("year", year.trim());
-        if (rows.isEmpty()) {
-            config.put("phase", "1");
-            config.put("seatmatrix_phase", 1);
-        } else {
-            Map<String, Object> row = rows.get(0);
-            config.put("phase", text(row.get("phase")));
-            Object smp = row.get("seatmatrix_phase");
-            config.put("seatmatrix_phase", smp == null ? number(row.get("phase"), 1) : number(smp, 1));
-        }
+        config.put("year", cycle.year().trim());
+        config.put("phase", cycle.phase().trim());
+        config.put("seatmatrix_phase", blank(cycle.seatMatrixPhase())
+                ? number(cycle.phase(), 1) : number(cycle.seatMatrixPhase(), 1));
         return config;
     }
 
@@ -138,6 +161,9 @@ public class AdmissionProcessService {
      * {@code getItiDetails1}.
      */
     public Map<String, Object> councilMerits(CouncilMeritsRequest request, UserPrincipal user) {
+        if (!isPhaseOneAdmissionOpen()) {
+            return status("ADMISSION_EXPIRED", "Admission Date is Expired");
+        }
         // 1. Rank generation check: select count(regid) from ranks must be > 0.
         Integer rankCount = jdbc.getJdbcTemplate().queryForObject(
                 "SELECT COUNT(regid) FROM public.ranks", Integer.class);
@@ -252,6 +278,9 @@ public class AdmissionProcessService {
      * reproduces the same vacancy precedence in one pass over the seat-matrix hstore buckets.
      */
     public Map<String, Object> processOptimize(ProcessOptimizeRequest request, UserPrincipal user) {
+        if (!isPhaseOneAdmissionOpen()) {
+            return status("ADMISSION_EXPIRED", "Admission Date is Expired");
+        }
         if (request == null || blank(request.rank()) || !request.rank().trim().matches(NUMERIC)) {
             throw new IllegalArgumentException("A numeric merit rank is required");
         }
@@ -260,13 +289,38 @@ public class AdmissionProcessService {
         Map<String, Object> config = currentPhaseConfig();
         String year = currentYear(config);
         int phase = currentPhase(config);
+        int seatMatrixPhase = currentSeatMatrixPhase(config);
+        String candidateTable = resolveCandidateTable(year);
 
-        // Resolve regid from the rank (getRegistrationDetails). Legacy
-        // DistrictAdmissionProcessOptimiseAction builds the predicate
-        // "a.phase='<phase>' and qual='<qual>' and dist_code" (with a leading
-        // "b.caste='<caste>' and " when a specific caste was chosen).
+        // Resolve the registration from ranks first so an existing admission is detected
+        // even if its application row no longer matches the current caste filter.
+        List<Map<String, Object>> rankedCandidates = jdbc.queryForList(
+                "SELECT DISTINCT r.regid, r.rank FROM public.ranks r "
+                        + "WHERE r.dist_code = :distCode AND r.rank::text = :rank "
+                        + "AND r.phase = :phase AND r.qual = :qual",
+                new MapSqlParameterSource()
+                        .addValue("distCode", distCode)
+                        .addValue("rank", rank)
+                        .addValue("phase", String.valueOf(phase))
+                        .addValue("qual", blank(request.qualPerform()) ? "all" : request.qualPerform().trim()));
+        if (rankedCandidates.isEmpty()) {
+            return status("RANK_NOT_FOUND", "No candidate holds rank " + rank + " in district " + distCode);
+        }
+        for (Map<String, Object> rankedCandidate : rankedCandidates) {
+            String rankedRegid = text(rankedCandidate.get("regid"));
+            Map<String, Object> admission = findAdmission(rankedRegid, year, String.valueOf(phase));
+            if (admission != null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("code", "ALREADY_ADMITTED");
+                response.put("admission_details", admission);
+                return response;
+            }
+        }
+
+        // Preserve the legacy caste filter when resolving a candidate who is not admitted.
         StringBuilder regSql = new StringBuilder(
-                "SELECT a.regid, b.caste FROM public.ranks a JOIN public.application b "
+                "SELECT a.regid, b.caste FROM public.ranks a JOIN public." + candidateTable + " b "
                         + "ON a.regid::integer = b.regid WHERE a.dist_code = :distCode "
                         + "AND a.rank::text = :rank AND a.phase = :phase AND a.qual = :qual");
         MapSqlParameterSource regParams = new MapSqlParameterSource()
@@ -286,21 +340,11 @@ public class AdmissionProcessService {
         }
         String regid = text(regRows.get(0).get("regid"));
 
-        // Already admitted?
-        Map<String, Object> admission = findAdmission(regid);
-        if (admission != null) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("code", "ALREADY_ADMITTED");
-            response.put("admission_details", admission);
-            return response;
-        }
-
         // Application profile (getApplicationDetails).
         List<Map<String, Object>> candidates = jdbc.queryForList(
-                "SELECT regid, name, fname, caste, gender, dob, phc, exservice, ssc_regno, ssc_year, "
+                "SELECT regid, name, fname, caste, gender, dob, phc, exservice, ssc_regno, ssc_year, ssc_month, "
                         + "email, economic_weaker_section, ewsv, pwd_category "
-                        + "FROM public.application WHERE regid = CAST(:regid AS integer) LIMIT 1",
+                        + "FROM public." + candidateTable + " WHERE regid = CAST(:regid AS integer) LIMIT 1",
                 new MapSqlParameterSource("regid", regid));
         if (candidates.isEmpty()) {
             return status("APP_NOT_FOUND", "No application record for registration " + regid);
@@ -333,7 +377,7 @@ public class AdmissionProcessService {
         boolean isOc = OC.equalsIgnoreCase(casteCode);
 
         // Compute the check code per (iti, trade) by vacancy precedence.
-        List<Map<String, Object>> rows = seatMatrixRowsForDistrict(distCode, year, phase);
+        List<Map<String, Object>> rows = seatMatrixRowsForDistrict(distCode, year, seatMatrixPhase);
         List<Map<String, Object>> data = new ArrayList<>();
         String prevIti = null;
         for (Map<String, Object> row : rows) {
@@ -397,6 +441,8 @@ public class AdmissionProcessService {
         student.put("current_date", java.time.LocalDate.now().toString());
         student.put("ssc_regno", text(candidate.get("ssc_regno")));
         student.put("ssc_year", text(candidate.get("ssc_year")));
+        student.put("ssc_month", text(candidate.get("ssc_month")));
+        student.put("ssc_month_option", normalizeSscMonth(candidate.get("ssc_month")));
         student.put("email_id", text(candidate.get("email")));
         student.put("ews", isYes(candidate.get("economic_weaker_section")) ? "Yes" : "No");
         student.put("pwd_category", isYes(candidate.get("pwd_category")) ? "Yes" : "No");
@@ -468,7 +514,7 @@ public class AdmissionProcessService {
                             + "FROM public.shift_unit_permitted "
                             + "WHERE iti_code = :itiCode AND trade_code = :tradeCode "
                             + "  AND available_year = true "
-                            + "  AND (strength_vacant <> 0 OR strength_vacant IS NULL) "
+                            + "  AND strength_vacant > 0 "
                             + "ORDER BY shift_allowed, unit_allowed",
                     new MapSqlParameterSource("itiCode", itiCode).addValue("tradeCode", tradeCode));
             Map<String, Object> entry = new LinkedHashMap<>();
@@ -569,7 +615,8 @@ public class AdmissionProcessService {
      * joining the hstore buckets. Mirrors the legacy council-district queries
      * ({@code available_for_year='1'} and {@code strength>0}).
      */
-    private List<Map<String, Object>> seatMatrixRowsForDistrict(String distCode, String year, int phase) {
+    private List<Map<String, Object>> seatMatrixRowsForDistrict(
+            String distCode, String year, int seatMatrixPhase) {
         return jdbc.queryForList(
                 "SELECT d.iti_name, b.iti_code, a.trade_code, b.trade_short, "
                         + "       COALESCE(c.trade_name, b.trade_short) AS trade_name, "
@@ -580,11 +627,11 @@ public class AdmissionProcessService {
                         + "LEFT JOIN public.ititrade_master c ON b.trade_short = c.trade_short "
                         + "JOIN public.iti d ON b.iti_code = d.iti_code "
                         + "WHERE d.dist_code = :distCode AND b.available_for_year = '1' "
-                        + "  AND b.strength > 0 AND a.phase = :phase AND a.year = :year "
+                        + "  AND b.strength > 0 AND a.phase = :seatMatrixPhase AND a.year = :year "
                         + "ORDER BY b.iti_code, b.trade_code",
                 new MapSqlParameterSource()
                         .addValue("distCode", distCode)
-                        .addValue("phase", phase)
+                        .addValue("seatMatrixPhase", seatMatrixPhase)
                         .addValue("year", year));
     }
 
@@ -844,6 +891,9 @@ public class AdmissionProcessService {
     // ------------------------------------------------------------------ rank lookup (profile)
 
     public Map<String, Object> lookupRank(String rank, UserPrincipal user) {
+        if (!isAdmissionWindowOpen()) {
+            return status("ADMISSION_EXPIRED", "Admission Date is Expired");
+        }
         if (blank(rank) || !rank.trim().matches(NUMERIC)) {
             throw new IllegalArgumentException("A numeric merit rank is required");
         }
@@ -852,6 +902,11 @@ public class AdmissionProcessService {
         Map<String, Object> config = currentPhaseConfig();
         String year = currentYear(config);
         int phase = currentPhase(config);
+        int seatMatrixPhase = currentSeatMatrixPhase(config);
+        if (phase > 1 && !"4".equals(user.roleid())) {
+            return status("ITI_LOGIN_REQUIRED", "Phase " + phase
+                    + " admissions must be processed by the ITI login.");
+        }
 
         String itiCode = blank(user.itiCode()) ? null : user.itiCode().trim();
         String distCode = blank(user.distCode()) ? null : user.distCode().trim();
@@ -863,17 +918,18 @@ public class AdmissionProcessService {
                     "No district code is available for this login; cannot resolve the rank");
         }
 
-        // Legacy resolves the rank with rank + district + phase only (MyUtil.getOptionValue on
-        // ranks, no year predicate): the rank list is per-phase, not per-year, and existing rows
-        // carry a NULL year — filtering on year finds nothing.
+        String itiPredicate = phase > 1 ? " AND r.iti_code = :itiCode" : "";
         List<Map<String, Object>> rankRows = jdbc.queryForList(
                 "SELECT DISTINCT r.regid AS regid, r.rank AS rank FROM public.ranks r "
                         + "WHERE r.rank::text = :rank AND r.dist_code = :distCode "
-                        + " AND r.phase = :phase LIMIT 1",
+                        + " AND r.phase = :phase AND r.year = :year"
+                        + itiPredicate + " LIMIT 1",
                 new MapSqlParameterSource()
                         .addValue("rank", wantedRank)
                         .addValue("distCode", distCode)
-                        .addValue("phase", String.valueOf(phase)));
+                        .addValue("phase", String.valueOf(phase))
+                        .addValue("year", year)
+                        .addValue("itiCode", itiCode));
         if (rankRows.isEmpty()) {
             return notFound("No candidate holds rank " + wantedRank + " in district " + distCode
                     + " for year " + year + " phase " + phase);
@@ -882,7 +938,8 @@ public class AdmissionProcessService {
         String regid = text(rankRows.get(0).get("regid"));
         String candidateTable = resolveCandidateTable(year);
         List<Map<String, Object>> candidates = jdbc.queryForList(
-                "SELECT regid, name, fname, caste, gender, dob, phc, exservice, ssc_regno, ssc_year, "
+                "SELECT regid, name, fname, mname, caste, gender, dob, phc, exservice, ssc_regno, "
+                        + "ssc_board, ssc_year, ssc_month, "
                         + "email, economic_weaker_section, ewsv, pwd_category "
                         + "FROM public." + candidateTable + " WHERE regid = CAST(:regid AS integer) LIMIT 1",
                 new MapSqlParameterSource("regid", regid));
@@ -891,13 +948,14 @@ public class AdmissionProcessService {
                     + ", which has no application row in " + candidateTable);
         }
         Map<String, Object> candidate = candidates.get(0);
-        Map<String, Object> admission = findAdmission(regid);
+        Map<String, Object> admission = findAdmission(regid, year, String.valueOf(phase));
 
         Map<String, Object> student = new LinkedHashMap<>();
         student.put("regid", regid);
         student.put("rank", number(rankRows.get(0).get("rank"), 0));
         student.put("name", text(candidate.get("name")));
         student.put("fname", text(candidate.get("fname")));
+        student.put("mname", text(candidate.get("mname")));
         student.put("caste", text(candidate.get("caste")));
         student.put("gender", text(candidate.get("gender")));
         student.put("dob", candidate.get("dob"));
@@ -905,7 +963,10 @@ public class AdmissionProcessService {
         student.put("exservice", isYes(candidate.get("exservice")) ? "Yes" : "No");
         student.put("year_of_admission", year + "-" + academicYearSuffix(year));
         student.put("ssc_regno", text(candidate.get("ssc_regno")));
+        student.put("ssc_board", text(candidate.get("ssc_board")));
         student.put("ssc_year", text(candidate.get("ssc_year")));
+        student.put("ssc_month", text(candidate.get("ssc_month")));
+        student.put("ssc_month_option", normalizeSscMonth(candidate.get("ssc_month")));
         student.put("email_id", text(candidate.get("email")));
         student.put("ews", isYes(candidate.get("economic_weaker_section")) ? "Yes" : "No");
         student.put("pwd_category", isYes(candidate.get("pwd_category")) ? "Yes" : "No");
@@ -951,16 +1012,19 @@ public class AdmissionProcessService {
         return String.format("%02d", (value + 1) % 100);
     }
 
-    private Map<String, Object> findAdmission(String regid) {
+    private Map<String, Object> findAdmission(String regid, String year, String phase) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT ia.adm_num, ia.iti_code, ia.trade_code, ia.date_of_admission, "
                         + "       i.iti_name, COALESCE(m.trade_name, m.trade_short) AS trade_name "
                         + "FROM admissions.iti_admissions ia "
                         + "LEFT JOIN public.iti i ON i.iti_code = ia.iti_code "
                         + "LEFT JOIN public.ititrade_master m ON m.trade_code = ia.trade_code "
-                        + "WHERE ia.regid = :regid "
+                        + "WHERE ia.regid = :regid AND ia.phase::text = :phase "
+                        + "AND ia.year_of_admission = :year "
                         + "ORDER BY ia.date_of_admission DESC NULLS LAST LIMIT 1",
-                new MapSqlParameterSource("regid", regid));
+                new MapSqlParameterSource("regid", regid)
+                        .addValue("phase", phase)
+                        .addValue("year", year));
         if (rows.isEmpty()) {
             return null;
         }
@@ -1020,6 +1084,9 @@ public class AdmissionProcessService {
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> takeAdmission(TakeAdmissionRequest request, UserPrincipal user) {
+        if (!isAdmissionWindowOpen()) {
+            return status("ADMISSION_EXPIRED", "Admission Date is Expired");
+        }
         if (request == null) {
             throw new IllegalArgumentException("Request body is required");
         }
@@ -1065,6 +1132,11 @@ public class AdmissionProcessService {
         Map<String, Object> config = currentPhaseConfig();
         String year = currentYear(config);
         int phase = currentPhase(config);
+        int seatMatrixPhase = currentSeatMatrixPhase(config);
+        if (phase > 1 && !"4".equals(user.roleid())) {
+            return status("ITI_LOGIN_REQUIRED", "Phase " + phase
+                    + " admissions must be processed by the ITI login.");
+        }
 
         String typeAdmission = emptyToNull(request.typeAdmission());
         if (typeAdmission == null) {
@@ -1072,10 +1144,27 @@ public class AdmissionProcessService {
                     "type_admission (Type of Admission) is required to record an admission");
         }
 
-        Map<String, Object> existing = findAdmission(regid);
+        Map<String, Object> existing = findAdmission(regid, year, String.valueOf(phase));
         if (existing != null) {
             return failure("Candidate " + regid + " is already admitted (admission number "
                     + existing.get("adm_num") + ")");
+        }
+
+        String candidateRankScope = phase == 1
+                ? "dist_code = :distCode" : "iti_code = :itiCode";
+        MapSqlParameterSource rankScopeParams = new MapSqlParameterSource()
+                .addValue("regid", regid)
+                .addValue("phase", String.valueOf(phase))
+                .addValue("year", year)
+                .addValue("distCode", distCode)
+                .addValue("itiCode", itiCode);
+        Boolean rankedForCurrentCycle = jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM public.ranks WHERE regid::text = :regid "
+                        + "AND phase = :phase AND year = :year AND " + candidateRankScope + ")",
+                rankScopeParams, Boolean.class);
+        if (!Boolean.TRUE.equals(rankedForCurrentCycle)) {
+            throw new IllegalArgumentException("Candidate " + regid
+                    + " is not ranked for this ITI in the current admission phase and year.");
         }
 
         List<Map<String, Object>> trades = jdbc.queryForList(
@@ -1183,14 +1272,21 @@ public class AdmissionProcessService {
             throw new IllegalStateException("Expected to admit exactly one candidate but wrote " + inserted);
         }
 
-        // Seat-matrix fill (legacy SqlUpdate, no year/phase filter - matches DistrictAdmissionAction line 352).
-        fillSeat(itiCode, tradeCode, resCategory);
+        // Keep the admission and both capacity counters atomic; never report success if a
+        // matching seat-matrix row was not updated.
+        if (!fillSeat(itiCode, tradeCode, resCategory, seatMatrixPhase, year)) {
+            throw new IllegalStateException("Admission could not update the seat matrix for ITI "
+                    + itiCode + " and trade " + tradeCode + " (category " + resCategory + ")");
+        }
 
         // Shift/unit decrement (sqlShiftUnitPermit, available_year=true).
-        consumeShiftUnit(itiCode, String.valueOf(tradeCode), shift, unit);
+        if (!consumeShiftUnit(itiCode, String.valueOf(tradeCode), shift, unit)) {
+            throw new IllegalStateException("Admission could not update vacant seats for ITI "
+                    + itiCode + ", trade " + tradeCode + ", shift " + shift + ", unit " + unit);
+        }
 
         // Copy the candidate photo into exams.img_cand_photos_exams (legacy lines 475-488).
-        copyPhotoToExams(admNum, regid, year);
+        copyPhotoAfterAdmissionCommits(admNum, regid, year);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -1257,7 +1353,7 @@ public class AdmissionProcessService {
     /** {@code checkForVacencies}: {@code strength_vacant->category} on the seat-matrix row. */
     private int checkVacancies(String itiCode, int tradeCode, String category, Map<String, Object> config) {
         String year = currentYear(config);
-        int phase = currentPhase(config);
+        int phase = currentSeatMatrixPhase(config);
         List<Integer> values = jdbc.queryForList(
                 "SELECT COALESCE(strength_vacant -> :category, '0')::int FROM public.iti_seatmatrix "
                         + "WHERE iti_code = :itiCode AND trade_code = :tradeCode "
@@ -1317,7 +1413,7 @@ public class AdmissionProcessService {
      * only row for that ITI/trade in the running year). Uses {@code exist()} so a bucket the hstore
      * does not carry is left untouched rather than guessed at.
      */
-    private boolean fillSeat(String itiCode, int tradeCode, String category) {
+    private boolean fillSeat(String itiCode, int tradeCode, String category, int seatMatrixPhase, String year) {
         if (category == null) {
             return false;
         }
@@ -1328,12 +1424,16 @@ public class AdmissionProcessService {
                         + "strength_vacant = strength_vacant || hstore(CAST(:category AS text), "
                         + "            ((COALESCE(strength_vacant -> :category, '0')::int) - 1)::text) "
                         + "WHERE iti_code = :itiCode AND trade_code = :tradeCode "
+                        + "  AND phase = :seatMatrixPhase AND year = :year "
+                        + "  AND COALESCE(strength_vacant -> :category, '0')::int > 0 "
                         + "  AND exist(strength_fill, CAST(:category AS text))",
                 new MapSqlParameterSource()
                         .addValue("category", category)
                         .addValue("itiCode", itiCode)
-                        .addValue("tradeCode", tradeCode));
-        return updated > 0;
+                        .addValue("tradeCode", tradeCode)
+                        .addValue("seatMatrixPhase", seatMatrixPhase)
+                        .addValue("year", year));
+        return updated == 1;
     }
 
     /** {@code sqlShiftUnitPermit}: decrement {@code strength_vacant} for the chosen shift/unit. */
@@ -1344,13 +1444,14 @@ public class AdmissionProcessService {
         int updated = jdbc.update(
                 "UPDATE public.shift_unit_permitted SET strength_vacant = COALESCE(strength_vacant, 0) - 1 "
                         + "WHERE iti_code = :itiCode AND trade_code = :tradeCode "
-                        + "  AND shift_allowed = :shift AND unit_allowed = :unit AND available_year = true",
+                        + "  AND shift_allowed = :shift AND unit_allowed = :unit AND available_year = true "
+                        + "  AND strength_vacant > 0",
                 new MapSqlParameterSource()
                         .addValue("itiCode", itiCode)
                         .addValue("tradeCode", tradeCode)
                         .addValue("shift", shift)
                         .addValue("unit", unit));
-        return updated > 0;
+        return updated == 1;
     }
 
     /**
@@ -1358,28 +1459,33 @@ public class AdmissionProcessService {
      * {@code adm_num} and academic year (legacy DistrictAdmissionAction lines 475-488). No-ops
      * when the exams schema or the source photo is unavailable.
      */
-    private void copyPhotoToExams(String admNum, String regid, String year) {
-        try {
-            // The exams schema is optional. Probe first so a missing table cannot abort the
-            // admission transaction (a failed statement poisons the PostgreSQL transaction, and
-            // the subsequent commit would silently roll the whole admission back).
-            String present = jdbc.getJdbcTemplate().queryForObject(
-                    "SELECT to_regclass('exams.img_cand_photos_exams')::text", String.class);
-            if (present == null) {
-                return;
+    private void copyPhotoAfterAdmissionCommits(String admNum, String regid, String year) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    photoTransaction.executeWithoutResult(status -> copyPhotoToExams(admNum, regid, year));
+                } catch (RuntimeException ex) {
+                    logger.warn("Admission {} was saved, but copying its photo to exams failed", admNum, ex);
+                }
             }
-            String yearOfAdmission = year + "-" + academicYearSuffix(year);
-            jdbc.update(
-                    "INSERT INTO exams.img_cand_photos_exams (adm_num, image, year_of_admission) "
-                            + "SELECT :admNum, pic, :yearOfAdmission FROM public.img_cand_photos "
-                            + "WHERE regid = CAST(:regid AS integer)",
-                    new MapSqlParameterSource()
-                            .addValue("admNum", admNum)
-                            .addValue("yearOfAdmission", yearOfAdmission)
-                            .addValue("regid", regid));
-        } catch (Exception ex) {
-            logger.debug("photo copy to exams skipped: {}", ex.getMessage());
+        });
+    }
+
+    private void copyPhotoToExams(String admNum, String regid, String year) {
+        String present = jdbc.getJdbcTemplate().queryForObject(
+                "SELECT to_regclass('exams.img_cand_photos_exams')::text", String.class);
+        if (present == null) {
+            return;
         }
+        jdbc.update(
+                "INSERT INTO exams.img_cand_photos_exams (adm_num, image, year_of_admission) "
+                        + "SELECT :admNum, pic, :year FROM public.img_cand_photos "
+                        + "WHERE regid = CAST(:regid AS integer)",
+                new MapSqlParameterSource()
+                        .addValue("admNum", admNum)
+                        .addValue("year", year)
+                        .addValue("regid", regid));
     }
 
     /** Shift/unit options the admission page may offer for an ITI/trade ({@code getShiftUnit.jsp}). */
@@ -1389,7 +1495,7 @@ public class AdmissionProcessService {
                         + "FROM public.shift_unit_permitted "
                         + "WHERE iti_code = :itiCode AND trade_code = :tradeCode "
                         + "  AND available_year = true "
-                        + "  AND (strength_vacant <> 0 OR strength_vacant IS NULL) "
+                        + "  AND strength_vacant > 0 "
                         + "ORDER BY shift_allowed, unit_allowed",
                 new MapSqlParameterSource("itiCode", itiCode).addValue("tradeCode", tradeCode));
     }
@@ -1439,15 +1545,37 @@ public class AdmissionProcessService {
             Object bucket = map.get(key);
             return bucket == null ? 0 : parseIntSafe(bucket.toString());
         }
-        // hstore loaded as a string like "key=>value,key2=>value2"
-        String text = value.toString();
-        for (String pair : text.split(",")) {
-            String[] kv = pair.split("=>", 2);
-            if (kv.length == 2 && kv[0].trim().equals(key)) {
-                return parseIntSafe(kv[1].trim());
+        // PostgreSQL's hstore text format quotes keys and values, e.g. "OC"=>"2".
+        var matcher = HSTORE_INTEGER_ENTRY.matcher(value.toString());
+        while (matcher.find()) {
+            String entryKey = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+            if (key.equals(unescapeHstore(entryKey))) {
+                String entryValue = matcher.group(3) != null ? matcher.group(3) : matcher.group(4);
+                return parseIntSafe(unescapeHstore(entryValue));
             }
         }
         return 0;
+    }
+
+    private static String unescapeHstore(String value) {
+        return value.replace("\\\"", "\"").replace("\\\\", "\\");
+    }
+
+    private static String normalizeSscMonth(Object value) {
+        String month = text(value);
+        if (blank(month)) {
+            return "";
+        }
+        String normalized = month.trim().toUpperCase(Locale.ROOT);
+        if (normalized.equals("03") || normalized.equals("3") || normalized.contains("MAR")) {
+            return "03";
+        }
+        if (normalized.equals("04") || normalized.equals("4") || normalized.equals("10")
+                || normalized.contains("SUPPLY") || normalized.contains("SUPPLEMENT")
+                || normalized.contains("SUPPL") || normalized.contains("JUN")) {
+            return "04";
+        }
+        return "";
     }
 
     private static int parseIntSafe(String value) {
@@ -1505,10 +1633,23 @@ public class AdmissionProcessService {
     }
 
     private String resolveDistCode(UserPrincipal user) {
-        if (!blank(user.distCode())) {
-            return user.distCode().trim();
+        if (user == null) {
+            throw new IllegalArgumentException("A logged-in user is required to scope admission trades");
         }
-        return districtOf(user.itiCode());
+        String loginDistCode = blank(user.distCode()) ? null : user.distCode().trim();
+        String loginItiCode = blank(user.itiCode()) ? null : user.itiCode().trim();
+        String itiDistCode = loginItiCode == null ? null : districtOf(loginItiCode);
+
+        if (loginDistCode != null && itiDistCode != null && !loginDistCode.equals(itiDistCode)) {
+            throw new IllegalArgumentException(
+                    "The logged-in ITI does not belong to the supplied district");
+        }
+        String resolvedDistCode = loginDistCode != null ? loginDistCode : itiDistCode;
+        if (blank(resolvedDistCode)) {
+            throw new IllegalArgumentException(
+                    "Unable to resolve the logged-in user's district for admission trades");
+        }
+        return resolvedDistCode;
     }
 
     private String districtOf(String itiCode) {

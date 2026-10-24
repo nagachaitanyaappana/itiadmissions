@@ -10,6 +10,9 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 public interface AdmissionTimingRepository extends JpaRepository<AdmissionTiming, AdmissionTimingId> {
+
+List<AdmissionTiming> findByPhaseAndYear(String phase, String year);
+List<AdmissionTiming> findByItiCodeAndPhaseAndYear(String itiCode, String phase, String year);
     
 
 // Add these native queries to find Year/Phase, Max ID, and Entity Names

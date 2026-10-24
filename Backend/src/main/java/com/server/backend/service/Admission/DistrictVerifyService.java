@@ -8,6 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.server.backend.Repository.Student.StudentApplicationRepository;
 import com.server.backend.entity.StudentApplication;
+import com.server.backend.service.AdmissionPhaseWindowService;
+import com.server.backend.service.AdmissionPhaseWindowService.Window;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -20,11 +22,27 @@ public class DistrictVerifyService {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final StudentApplicationRepository studentRepo;
+    private final AdmissionPhaseWindowService phaseWindows;
 
     public DistrictVerifyService(NamedParameterJdbcTemplate jdbcTemplate,
-                                 StudentApplicationRepository studentRepo) {
+                                 StudentApplicationRepository studentRepo,
+                                 AdmissionPhaseWindowService phaseWindows) {
         this.jdbcTemplate = jdbcTemplate;
         this.studentRepo = studentRepo;
+        this.phaseWindows = phaseWindows;
+    }
+
+    public Map<String, Object> windowStatus() {
+        AdmissionPhaseWindowService.Status verification = phaseWindows.status(Window.VERIFICATION);
+        AdmissionPhaseWindowService.Status reverification = phaseWindows.status(Window.REVERIFICATION);
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("phase", verification.phase());
+        result.put("year", cycle == null ? null : cycle.year());
+        result.put("verificationOpen", verification.open());
+        result.put("reverificationOpen", reverification.open());
+        result.put("open", verification.open() || reverification.open());
+        return result;
     }
 
     private static String str(Object o) {
@@ -46,6 +64,19 @@ public class DistrictVerifyService {
      * and district scope information.
      */
     public Map<String, Object> lookup(String regid, String distCode) {
+        return lookupScoped(regid, distCode, null);
+    }
+
+    public Map<String, Object> lookupForIti(String regid, String itiCode) {
+        AdmissionPhaseWindowService.Cycle cycle = requireCurrentCycle();
+        String district = resolveItiDistrict(regid, itiCode, cycle);
+        if (district == null) {
+            return failed("This student has not selected your ITI for the current admission phase.");
+        }
+        return lookupScoped(regid, district, itiCode);
+    }
+
+    private Map<String, Object> lookupScoped(String regid, String distCode, String itiCode) {
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("success", false);
 
@@ -59,10 +90,11 @@ public class DistrictVerifyService {
         }
         String rid = regid.trim();
         String dc = distCode.trim();
+        AdmissionPhaseWindowService.Cycle cycle = requireCurrentCycle();
 
         List<Map<String, Object>> apps = jdbcTemplate.getJdbcTemplate().queryForList(
-                "SELECT * FROM student_application WHERE regid::text = ?",
-                rid);
+                "SELECT * FROM student_application WHERE regid::text = ? AND year = ? AND phase = ?",
+                rid, cycle.year(), cycle.phase());
         if (apps.isEmpty()) {
             res.put("message", "No student application found with regid " + rid);
             return res;
@@ -72,16 +104,28 @@ public class DistrictVerifyService {
         if (appStatus.isEmpty()) appStatus = "N";
 
         // Get only trades for THIS district (district-scoping)
-        List<Map<String, Object>> trades = jdbcTemplate.getJdbcTemplate().queryForList(
+        String tradesSql =
                 "SELECT st.regid, st.iti_code, st.dist_code, st.temp, st.temp_code, st.trno, st.year, st.phase::text AS phase_text, st.freezee, " +
                 " i.iti_name, d.dist_name " +
                 " FROM student_trade_sel st " +
                 " LEFT JOIN iti i ON i.iti_code = st.iti_code " +
                 " LEFT JOIN dist_mst d ON d.dist_code = st.dist_code " +
-                " WHERE st.regid::text = ? AND st.dist_code = ? ORDER BY st.temp", rid, dc);
+                " WHERE st.regid::text = ? AND st.dist_code = ? AND st.year = ? "
+                        + "AND hstore(st.phase)->? = 'true'";
+        List<Object> tradeArgs = new java.util.ArrayList<>(
+                List.of(rid, dc, cycle.year(), cycle.phase()));
+        if (itiCode != null && !itiCode.isBlank()) {
+            tradesSql += " AND st.iti_code = ?";
+            tradeArgs.add(itiCode.trim());
+        }
+        tradesSql += " ORDER BY st.temp";
+        List<Map<String, Object>> trades = jdbcTemplate.getJdbcTemplate()
+                .queryForList(tradesSql, tradeArgs.toArray());
 
         if (trades.isEmpty()) {
-            res.put("message", "This student has no ITI selected in your district (" + dc + ")");
+            res.put("message", itiCode == null
+                    ? "This student has no ITI selected in your district (" + dc + ")"
+                    : "This student has not selected your ITI for the current admission phase.");
             return res;
         }
 
@@ -114,6 +158,19 @@ public class DistrictVerifyService {
         return res;
     }
 
+    private String resolveItiDistrict(String regid, String itiCode,
+                                      AdmissionPhaseWindowService.Cycle cycle) {
+        if (regid == null || regid.isBlank() || itiCode == null || itiCode.isBlank()) {
+            return null;
+        }
+        List<String> districts = jdbcTemplate.getJdbcTemplate().queryForList(
+                "SELECT DISTINCT dist_code FROM student_trade_sel WHERE regid::text = ? "
+                        + "AND iti_code = ? AND year = ? AND hstore(phase)->? = 'true' "
+                        + "AND dist_code IS NOT NULL",
+                String.class, regid.trim(), itiCode.trim(), cycle.year(), cycle.phase());
+        return districts.size() == 1 ? districts.get(0) : null;
+    }
+
     /**
      * Approve a student application: copy to admission tables (application, cand_marks, trade_sel)
      * and set app_status='A' on the staging row.
@@ -121,6 +178,23 @@ public class DistrictVerifyService {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> approve(String regid, String distCode, String username, String ip,
                                        Map<String, String> documents) {
+        return approveScoped(regid, distCode, null, username, ip, documents);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> approveForIti(String regid, String itiCode, String username,
+                                              String ip, Map<String, String> documents) {
+        AdmissionPhaseWindowService.Cycle cycle = requireCurrentCycle();
+        String district = resolveItiDistrict(regid, itiCode, cycle);
+        if (district == null) {
+            return failed("This student has not selected your ITI for the current admission phase.");
+        }
+        return approveScoped(regid, district, itiCode, username, ip, documents);
+    }
+
+    private Map<String, Object> approveScoped(String regid, String distCode, String itiCode,
+                                               String username, String ip,
+                                               Map<String, String> documents) {
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("success", false);
 
@@ -134,6 +208,7 @@ public class DistrictVerifyService {
             return res;
         }
         String dc = distCode.trim();
+        AdmissionPhaseWindowService.Cycle cycle = requireCurrentCycle();
 
         // Verify candidate exists and belongs to the district
         Optional<StudentApplication> opt = parseRegid(rid).flatMap(studentRepo::findById);
@@ -142,11 +217,29 @@ public class DistrictVerifyService {
             return res;
         }
 
-        List<String> dists = jdbcTemplate.getJdbcTemplate().queryForList(
-                "SELECT DISTINCT dist_code FROM student_trade_sel WHERE regid::text = ? AND dist_code IS NOT NULL",
-                String.class, rid);
+        String selectionsSql =
+                "SELECT DISTINCT dist_code FROM student_trade_sel WHERE regid::text = ? "
+                        + "AND dist_code IS NOT NULL AND year = ? AND hstore(phase)->? = 'true'";
+        List<Object> selectionArgs = new java.util.ArrayList<>(
+                List.of(rid, cycle.year(), cycle.phase()));
+        if (itiCode != null) {
+            selectionsSql += " AND iti_code = ?";
+            selectionArgs.add(itiCode);
+        }
+        List<String> dists = jdbcTemplate.getJdbcTemplate()
+                .queryForList(selectionsSql, String.class, selectionArgs.toArray());
         if (dists.isEmpty() || !dists.contains(dc)) {
             res.put("message", "This application has no ITI selected in your district (" + dc + ")");
+            return res;
+        }
+
+        String currentStatus = jdbcTemplate.getJdbcTemplate().queryForObject(
+                "SELECT app_status FROM student_application WHERE regid::text = ? AND year = ? AND phase = ?",
+                String.class, rid, cycle.year(), cycle.phase());
+        Window window = isPreviouslyVerified(currentStatus) ? Window.REVERIFICATION : Window.VERIFICATION;
+        if (!phaseWindows.isOpen(window)) {
+            res.put("code", "DATE_EXPIRED");
+            res.put("message", "Date has Expired");
             return res;
         }
 
@@ -169,14 +262,14 @@ public class DistrictVerifyService {
                 "UPDATE student_application SET app_status='A', user_id=?, ip=?, verified_date=now(), verified_ip=?, " +
                 "ssc_eq_marks=?, tc=?, caste_certificate=?, ph_challenge=?, ex_service=?, " +
                 "study_certificate=?, nativity_certificate=?, uidv=?, ewsv=?, age_21=?, experience=?, est=? " +
-                "WHERE regid::text = ?",
-                dc, ip, ip, sscEq, tc, cc, pc, exsv, sc, nc, uidv, ewsv, age21, exp, est, rid);
+                "WHERE regid::text = ? AND year = ? AND phase = ?",
+                dc, ip, ip, sscEq, tc, cc, pc, exsv, sc, nc, uidv, ewsv, age21, exp, est, rid,
+                cycle.year(), cycle.phase());
         if (upd != 1) {
             throw new IllegalStateException("Failed to update student_application for regid " + rid);
         }
 
         // 2. Copy to application (DELETE then INSERT)
-        jdbcTemplate.getJdbcTemplate().update("DELETE FROM application WHERE regid::text = ?", rid);
         String appInsert = """
             INSERT INTO application (
                 regid, name, fname, addr, mname, phno, adarno, gender, caste, ssc_type,
@@ -196,9 +289,17 @@ public class DistrictVerifyService {
                 economic_weaker_section, is_trainee_dual_mode, verified_date, verified_ip,
                 ssc_eq_marks, tc, caste_certificate, ph_challenge, ex_service,
                 study_certificate, nativity_certificate, uidv, ewsv, age_21, experience, est, sub_caste
-            FROM student_application WHERE regid::character varying = ?
+            FROM student_application WHERE regid::character varying = ? AND year = ? AND phase = ?
+            ON CONFLICT (regid) DO UPDATE SET
+                phase = COALESCE(application.phase, ''::hstore) || EXCLUDED.phase,
+                year = EXCLUDED.year,
+                app_status = EXCLUDED.app_status,
+                user_id = EXCLUDED.user_id,
+                verified_date = EXCLUDED.verified_date,
+                verified_ip = EXCLUDED.verified_ip,
+                reason = EXCLUDED.reason
             """;
-        jdbcTemplate.getJdbcTemplate().update(appInsert, rid);
+        jdbcTemplate.getJdbcTemplate().update(appInsert, rid, cycle.year(), cycle.phase());
 
         // 3. Copy to cand_marks
         jdbcTemplate.getJdbcTemplate().update("DELETE FROM cand_marks WHERE regid::text = ?", rid);
@@ -233,13 +334,30 @@ public class DistrictVerifyService {
         // officer is approving (mirrors DistrictVerifyService.list which scopes by
         // regid+dist_code). Each district approves/rejects independently, so multiple
         // districts per regid must be able to coexist in trade_sel.
-        jdbcTemplate.getJdbcTemplate().update("DELETE FROM trade_sel WHERE regid::text = ? AND dist_code = ?", rid, distCode);
         String tradeInsert = """
             INSERT INTO trade_sel (regid, iti_code, dist_code, temp, freezee, temp_code, trno, phase, year)
             SELECT regid, iti_code, dist_code, temp, freezee, temp_code, trno, phase, year
             FROM student_trade_sel WHERE regid::character varying = ? AND dist_code = ?
+                AND year = ? AND hstore(phase)->? = 'true'
+            ON CONFLICT (regid, dist_code) DO UPDATE SET
+                iti_code = EXCLUDED.iti_code,
+                temp = EXCLUDED.temp,
+                freezee = EXCLUDED.freezee,
+                temp_code = EXCLUDED.temp_code,
+                trno = EXCLUDED.trno,
+                phase = COALESCE(trade_sel.phase, ''::hstore) || EXCLUDED.phase,
+                year = EXCLUDED.year
             """;
-        jdbcTemplate.getJdbcTemplate().update(tradeInsert, rid, distCode);
+        if (itiCode != null) {
+            tradeInsert = tradeInsert.replace(
+                    "AND year = ? AND hstore(phase)->? = 'true'",
+                    "AND year = ? AND hstore(phase)->? = 'true' AND iti_code = ?");
+            jdbcTemplate.getJdbcTemplate().update(
+                    tradeInsert, rid, distCode, cycle.year(), cycle.phase(), itiCode);
+        } else {
+            jdbcTemplate.getJdbcTemplate().update(
+                    tradeInsert, rid, distCode, cycle.year(), cycle.phase());
+        }
 
         // Count rows copied
         int appCount = jdbcTemplate.getJdbcTemplate().queryForObject(
@@ -260,6 +378,22 @@ public class DistrictVerifyService {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> reject(String regid, String distCode, String username, String reason, String ip) {
+        return rejectScoped(regid, distCode, null, username, reason, ip);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> rejectForIti(String regid, String itiCode, String username,
+                                             String reason, String ip) {
+        AdmissionPhaseWindowService.Cycle cycle = requireCurrentCycle();
+        String district = resolveItiDistrict(regid, itiCode, cycle);
+        if (district == null) {
+            return failed("This student has not selected your ITI for the current admission phase.");
+        }
+        return rejectScoped(regid, district, itiCode, username, reason, ip);
+    }
+
+    private Map<String, Object> rejectScoped(String regid, String distCode, String itiCode,
+                                              String username, String reason, String ip) {
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("success", false);
 
@@ -273,6 +407,7 @@ public class DistrictVerifyService {
             return res;
         }
         String dc = distCode.trim();
+        AdmissionPhaseWindowService.Cycle cycle = requireCurrentCycle();
         String rejReason = reason == null ? "" : reason.trim();
 
         // Verify candidate exists
@@ -283,31 +418,74 @@ public class DistrictVerifyService {
         }
 
         // District-scoping: verify this student has ITIs in the approver's district
-        List<String> dists = jdbcTemplate.getJdbcTemplate().queryForList(
-                "SELECT DISTINCT dist_code FROM student_trade_sel WHERE regid::text = ? AND dist_code IS NOT NULL",
-                String.class, rid);
+        String selectionsSql =
+                "SELECT DISTINCT dist_code FROM student_trade_sel WHERE regid::text = ? "
+                        + "AND dist_code IS NOT NULL AND year = ? AND hstore(phase)->? = 'true'";
+        List<Object> selectionArgs = new java.util.ArrayList<>(
+                List.of(rid, cycle.year(), cycle.phase()));
+        if (itiCode != null) {
+            selectionsSql += " AND iti_code = ?";
+            selectionArgs.add(itiCode);
+        }
+        List<String> dists = jdbcTemplate.getJdbcTemplate()
+                .queryForList(selectionsSql, String.class, selectionArgs.toArray());
         if (dists.isEmpty() || !dists.contains(dc)) {
             res.put("message", "This application has no ITI selected in your district (" + dc + ")");
             return res;
         }
 
+        String currentStatus = jdbcTemplate.getJdbcTemplate().queryForObject(
+                "SELECT app_status FROM student_application WHERE regid::text = ? AND year = ? AND phase = ?",
+                String.class, rid, cycle.year(), cycle.phase());
+        Window window = isPreviouslyVerified(currentStatus) ? Window.REVERIFICATION : Window.VERIFICATION;
+        if (!phaseWindows.isOpen(window)) {
+            res.put("code", "DATE_EXPIRED");
+            res.put("message", "Date has Expired");
+            return res;
+        }
+
         // 1. Update student_application
         int upd = jdbcTemplate.getJdbcTemplate().update(
-                "UPDATE student_application SET app_status='R', reason=?, user_id=?, ip=?, verified_date=now(), verified_ip=? WHERE regid::text = ?",
-                rejReason, dc, ip, ip, rid);
+                "UPDATE student_application SET app_status='R', reason=?, user_id=?, ip=?, verified_date=now(), verified_ip=? "
+                        + "WHERE regid::text = ? AND year = ? AND phase = ?",
+                rejReason, dc, ip, ip, rid, cycle.year(), cycle.phase());
         if (upd != 1) {
             throw new IllegalStateException("Failed to update student_application for regid " + rid);
         }
 
         // 2. Remove any promoted copies
-        jdbcTemplate.getJdbcTemplate().update("DELETE FROM application WHERE regid::text = ?", rid);
-        jdbcTemplate.getJdbcTemplate().update("DELETE FROM cand_marks WHERE regid::text = ?", rid);
-        jdbcTemplate.getJdbcTemplate().update("DELETE FROM trade_sel WHERE regid::text = ?", rid);
+        jdbcTemplate.getJdbcTemplate().update(
+                "UPDATE application SET phase = delete(phase, array[?]) "
+                        + "WHERE regid::text = ? AND year = ?", cycle.phase(), rid, cycle.year());
+        jdbcTemplate.getJdbcTemplate().update(
+                "DELETE FROM cand_marks WHERE regid::text = ? AND year = ?", rid, cycle.year());
+        String deleteTradeSql = "UPDATE trade_sel SET phase = delete(phase, array[?]) "
+                + "WHERE regid::text = ? AND dist_code = ? AND year = ? "
+                + "AND hstore(phase)->? = 'true'";
+        if (itiCode != null) {
+            deleteTradeSql += " AND iti_code = ?";
+            jdbcTemplate.getJdbcTemplate().update(
+                    deleteTradeSql, cycle.phase(), rid, dc, cycle.year(), cycle.phase(), itiCode);
+        } else {
+            jdbcTemplate.getJdbcTemplate().update(
+                    deleteTradeSql, cycle.phase(), rid, dc, cycle.year(), cycle.phase());
+        }
 
         res.put("success", true);
         res.put("message", "Application rejected successfully");
         res.put("appStatus", "R");
         return res;
+    }
+
+    private static Map<String, Object> failed(String message) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", false);
+        result.put("message", message);
+        return result;
+    }
+
+    private static boolean isPreviouslyVerified(String appStatus) {
+        return "A".equalsIgnoreCase(str(appStatus)) || "R".equalsIgnoreCase(str(appStatus));
     }
 
     /**
@@ -319,13 +497,26 @@ public class DistrictVerifyService {
         if (distCode == null || distCode.isBlank()) {
             return List.of();
         }
+        AdmissionPhaseWindowService.Cycle cycle = requireCurrentCycle();
         return jdbcTemplate.getJdbcTemplate().queryForList(
                 "SELECT a.regid, a.name, a.fname, a.user_id, a.verified_date, " +
                 "       a.app_status, a.ssc_regno, a.dob " +
                 "FROM student_application a " +
                 "WHERE EXISTS (SELECT 1 FROM student_trade_sel s " +
-                "              WHERE s.regid::text = a.regid::text AND s.dist_code = ?) " +
+                "              WHERE s.regid::text = a.regid::text AND s.dist_code = ? "
+                        + "AND s.year = ? AND hstore(s.phase)->? = 'true') "
+                        + "AND a.year = ? AND a.phase = ? " +
                 "ORDER BY a.regid DESC",
-                distCode.trim());
+                distCode.trim(), cycle.year(), cycle.phase(), cycle.year(), cycle.phase());
+    }
+
+    private AdmissionPhaseWindowService.Cycle requireCurrentCycle() {
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        if (cycle == null || cycle.year() == null || cycle.year().isBlank()
+                || cycle.phase() == null || cycle.phase().isBlank()) {
+            throw new IllegalStateException(
+                    "No current admission year and phase found in admissions.admission_phase.");
+        }
+        return cycle;
     }
 }

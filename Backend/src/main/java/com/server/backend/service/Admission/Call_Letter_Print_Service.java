@@ -11,6 +11,8 @@ public interface Call_Letter_Print_Service {
 
     Call_Letter_Print_DTO getCallLetterPrint(
             String distCode,
+            String itiCode,
+            String roleId,
             String regid,
             String fromRank,
             String toRank,
