@@ -378,6 +378,14 @@
                         </td>
                     `;
                     entriesTableBody.appendChild(row);
+
+                    // Auto-set Strength Vacant to match Strength when Strength changes,
+                    // so the user does not have to set it manually.
+                    const strengthInput = row.querySelector('.strength-input');
+                    const vacantInput = row.querySelector('.strength-vacant-input');
+                    strengthInput.addEventListener('input', function () {
+                        vacantInput.value = this.value;
+                    });
                 });
 
                 // Add event listeners
