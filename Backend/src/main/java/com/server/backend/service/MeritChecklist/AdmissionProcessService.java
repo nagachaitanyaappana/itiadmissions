@@ -938,7 +938,8 @@ public class AdmissionProcessService {
         String regid = text(rankRows.get(0).get("regid"));
         String candidateTable = resolveCandidateTable(year);
         List<Map<String, Object>> candidates = jdbc.queryForList(
-                "SELECT regid, name, fname, caste, gender, dob, phc, exservice, ssc_regno, ssc_year, "
+                "SELECT regid, name, fname, mname, caste, gender, dob, phc, exservice, ssc_regno, "
+                        + "ssc_board, ssc_year, ssc_month, "
                         + "email, economic_weaker_section, ewsv, pwd_category "
                         + "FROM public." + candidateTable + " WHERE regid = CAST(:regid AS integer) LIMIT 1",
                 new MapSqlParameterSource("regid", regid));
@@ -954,6 +955,7 @@ public class AdmissionProcessService {
         student.put("rank", number(rankRows.get(0).get("rank"), 0));
         student.put("name", text(candidate.get("name")));
         student.put("fname", text(candidate.get("fname")));
+        student.put("mname", text(candidate.get("mname")));
         student.put("caste", text(candidate.get("caste")));
         student.put("gender", text(candidate.get("gender")));
         student.put("dob", candidate.get("dob"));
@@ -961,7 +963,10 @@ public class AdmissionProcessService {
         student.put("exservice", isYes(candidate.get("exservice")) ? "Yes" : "No");
         student.put("year_of_admission", year + "-" + academicYearSuffix(year));
         student.put("ssc_regno", text(candidate.get("ssc_regno")));
+        student.put("ssc_board", text(candidate.get("ssc_board")));
         student.put("ssc_year", text(candidate.get("ssc_year")));
+        student.put("ssc_month", text(candidate.get("ssc_month")));
+        student.put("ssc_month_option", normalizeSscMonth(candidate.get("ssc_month")));
         student.put("email_id", text(candidate.get("email")));
         student.put("ews", isYes(candidate.get("economic_weaker_section")) ? "Yes" : "No");
         student.put("pwd_category", isYes(candidate.get("pwd_category")) ? "Yes" : "No");
@@ -1141,8 +1146,10 @@ public class AdmissionProcessService {
 
         Map<String, Object> existing = findAdmission(regid, year, String.valueOf(phase));
         if (existing != null) {
-            return failure("Candidate " + regid + " is already admitted (admission number "
-                    + existing.get("adm_num") + ")");
+            String itiName = existing.get("iti_name") != null ? existing.get("iti_name").toString() : "";
+            String admNum = existing.get("adm_num") != null ? existing.get("adm_num").toString() : "";
+            return failure("Candidate " + regid + " is already admitted at ITI " + itiName
+                    + " (admission number " + admNum + ")");
         }
 
         String candidateRankScope = phase == 1

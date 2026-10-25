@@ -363,6 +363,7 @@ public class AdmissionCounselingController {
             cand.put("rank", data.get("rank"));
             cand.put("name", data.get("name"));
             cand.put("fatherName", data.get("fname"));
+            cand.put("motherName", data.get("mname"));
             cand.put("caste", data.get("caste"));
             cand.put("gender", data.get("gender"));
             cand.put("qual", "");
@@ -376,7 +377,13 @@ public class AdmissionCounselingController {
             cand.put("phc", data.get("phc"));
             cand.put("exservice", data.get("exservice"));
             cand.put("ssc_regno", data.get("ssc_regno"));
+            cand.put("ssc_board", data.get("ssc_board"));
             cand.put("ssc_year", data.get("ssc_year"));
+            cand.put("ssc_month", data.get("ssc_month"));
+            cand.put("ssc_month_option", data.get("ssc_month_option"));
+            cand.put("email", data.get("email_id"));
+            cand.put("ews", data.get("ews"));
+            cand.put("pwd_category", data.get("pwd_category"));
             cand.put("is_admitted", data.get("is_admitted"));
             cand.put("admission_details", data.get("admission_details"));
             cand.put("photo_base64", data.get("photo_base64"));

@@ -127,11 +127,20 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
         }
 
         // admissions.iti_admissions.regid is character varying (unlike student_application).
-        Integer admitted = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM admissions.iti_admissions WHERE regid = ?",
-                Integer.class, String.valueOf(regid));
-        if (admitted != null && admitted > 0) {
+        List<Map<String, Object>> admissionRows = jdbcTemplate.queryForList(
+                "SELECT ia.adm_num, i.iti_name, COALESCE(m.trade_name, m.trade_short) AS trade_name "
+                        + "FROM admissions.iti_admissions ia "
+                        + "LEFT JOIN public.iti i ON i.iti_code = ia.iti_code "
+                        + "LEFT JOIN public.ititrade_master m ON m.trade_code = ia.trade_code "
+                        + "WHERE ia.regid = CAST(? AS varchar) "
+                        + "ORDER BY ia.date_of_admission DESC NULLS LAST LIMIT 1",
+                String.valueOf(regid));
+        if (!admissionRows.isEmpty()) {
+            Map<String, Object> admission = admissionRows.get(0);
             result.put("status", "admitted");
+            result.put("adm_num", admission.get("adm_num"));
+            result.put("iti_name", admission.get("iti_name"));
+            result.put("trade_name", admission.get("trade_name"));
             return result;
         }
 

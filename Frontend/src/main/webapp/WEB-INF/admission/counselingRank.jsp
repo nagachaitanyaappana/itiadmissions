@@ -33,6 +33,8 @@ body{font-family:Verdana,Arial,sans-serif;background:#fff;}
 .matrix-wrap table{min-width:900px;}
 .matrix-wrap th,.matrix-wrap td{text-align:center;font-size:11px;}
 .tfv-f{background:#e8f5a8;font-weight:bold;}
+.vacant-cell{background:#BCE954;font-weight:bold;}
+.student-photo{display:block;width:100px;height:130px;object-fit:cover;margin:0 auto 4px;}
 .memo{border:1px solid #7a7a7a;width:60%;margin:10px auto 50px;font-size:13px;border-collapse:collapse;}
 .memo td{border:1px solid #7a7a7a;padding:6px 8px;}
 .inline-input{padding:3px;font-size:12px;}
@@ -82,9 +84,10 @@ body{font-family:Verdana,Arial,sans-serif;background:#fff;}
 <table id="admForm">
 <tr><td class="cand-head" colspan="4">Admission Details</td></tr>
 <tr><td>Id marks 1: <input type="text" id="idm1" class="inline-input" size="20" /></td><td>Id marks 2: <input type="text" id="idm2" class="inline-input" size="20" /></td></tr>
-<tr><td>SSC Reg No: <input type="text" id="sscReg" class="inline-input" size="14" /></td><td>SSC Year: <input type="text" id="sscYear" class="inline-input" size="8" /></td></tr>
-<tr><td>Type of Admission: <select id="admissionBoard"><option value="">Select Board</option></select></td>
-<td>SSC Month: <select id="sscMonth" class="inline-input"><option value="">Select</option><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></td></tr>
+<tr><tr><td>SSC Reg No: <input type="text" id="sscReg" class="inline-input" size="14" /></td><td>SSC Year: <input type="text" id="sscYear" class="inline-input" size="8" /></td></tr>
+<tr><td>SSC Board: <span id="sscBoardText"></span><input type="hidden" id="sscBoard" /></td>
+<td>Type of Admission: <select id="admissionBoard"><option value="">Select Board</option></select></td></tr>
+<tr><td>SSC Month: <select id="sscMonth" class="inline-input"><option value="">Select</option><option value="03">March</option><option value="04">Supplementary</option></select></td></tr>
 <tr><td colspan="2" class="btn-row"><input type="button" class="submit-btn" id="takeBtn" value="Take Admission" onclick="takeAdmission();" /> <span class="err" id="takeErr"></span></td></tr>
 </table>
 </div>
@@ -133,14 +136,23 @@ function showCand(resp,rank,phase,year){
     return;
   }
   cur=c;
+  sel=null;
   document.getElementById('sscReg').value=c.ssc_regno||'';
   document.getElementById('sscYear').value=c.ssc_year||'';
+  document.getElementById('sscBoard').value=c.ssc_board||'';
+  document.getElementById('sscBoardText').textContent=c.ssc_board||'N/A';
+  document.getElementById('sscMonth').value=c.ssc_month_option||'';
+  document.getElementById('idm1').value='';
+  document.getElementById('idm2').value='';
   document.getElementById('admYear').innerHTML=esc(c.year||year);
+  var photo=c.photo_base64
+    ?'<img class="student-photo" src="data:image/jpeg;base64,'+esc(c.photo_base64)+'" alt="Student photo" />'
+    :'<span>No photo available</span>';
   document.getElementById('candRow').innerHTML=
-    '<td>Name:<b>'+esc(c.name||c.regid)+'</b><br/>Community:<b>'+esc(c.caste||'-')+'</b><br/>Rank:<b>'+esc(c.rank)+'</b><br/>Year:<b>'+esc(c.year||year)+'</b></td>'+
-    '<td>Father Name:<b>'+esc(c.fatherName||'-')+'</b><br/>Reg No:<b>'+esc(c.regid)+'</b><br/>PHC/Ex-Service:<b>'+esc(c.phc||'-')+'/'+esc(c.exservice||'-')+'</b></td>'+
+    '<td>'+photo+'Name:<b>'+esc(c.name||c.regid)+'</b><br/>Father Name:<b>'+esc(c.fatherName||'-')+'</b><br/>Mother Name:<b>'+esc(c.motherName||'-')+'</b><br/>Community:<b>'+esc(c.caste||'-')+'</b></td>'+
+    '<td>Rank:<b>'+esc(c.rank)+'</b><br/>Reg No:<b>'+esc(c.regid)+'</b><br/>PHC/Ex-Service:<b>'+esc(c.phc||'-')+'/'+esc(c.exservice||'-')+'</b><br/>EWS/PWD:<b>'+esc(c.ews||'-')+'/'+esc(c.pwd_category||'-')+'</b></td>'+
     '<td>Dist:<b>'+esc(c.distName||c.dist_code||'-')+'</b><br/>ITI:<b>'+esc(c.iti_code||'-')+'</b><br/>Phase:<b>'+esc(c.phase||phase)+'</b></td>'+
-    '<td>Gender:<b>'+esc(c.gender||'-')+'</b><br/>DOB:<b>'+esc(c.dob||'-')+'</b><br/>Status:<b>'+esc(c.app_status||'-')+'</b></td>';
+    '<td>Gender:<b>'+esc(c.gender||'-')+'</b><br/>DOB:<b>'+esc(c.dob||'-')+'</b><br/>SSC Reg No:<b>'+esc(c.ssc_regno||'-')+'</b><br/>SSC Board/Year/Month:<b>'+esc(c.ssc_board||'-')+'/'+esc(c.ssc_year||'-')+'/'+esc(c.ssc_month||'-')+'</b><br/>Email:<b>'+esc(c.email||'-')+'</b><br/>Status:<b>'+esc(c.app_status||'-')+'</b></td>';
   document.getElementById('candBox').style.display='block';
 
   var admitted=!!c.is_admitted;
@@ -197,11 +209,12 @@ function renderMatrix(){
   if(!seatMatrix.length){b.innerHTML='<tr><td colspan="17">No seats available in the district for this phase.</td></tr>';return;}
   seatMatrix.forEach(function(item,idx){
     var g=cat(item,'General'), im=cat(item,'IM'), ph=cat(item,'PH'), ex=cat(item,'EXS');
-    function three(c){return '<td>'+num(c.T)+'</td><td class="tfv-f">'+num(c.F)+'</td><td>'+num(c.V)+'</td>';}
+    function three(c){var vacant=num(c.V);return '<td>'+num(c.T)+'</td><td class="tfv-f">'+num(c.F)+'</td><td'+(vacant>0?' class="vacant-cell"':'')+'>'+vacant+'</td>';}
+    var hasVacancy=num(g.V)+num(im.V)+num(ph.V)+num(ex.V)>0;
     b.insertAdjacentHTML('beforeend',
       '<tr><td>'+esc(item.iti_name)+'</td><td>'+esc(item.trade_name)+'</td><td>'+txt(item.strength_total)+'</td>'+
       three(g)+three(im)+three(ph)+three(ex)+
-      '<td><input type="radio" name="seat" data-i="'+idx+'" /></td></tr>');
+      '<td><input type="radio" name="seat" data-i="'+idx+'"'+(hasVacancy?'':' disabled="disabled" title="No vacant seats"')+' /></td></tr>');
   });
   var radios=b.querySelectorAll('input[name=seat]');
   radios.forEach(function(r){
@@ -261,6 +274,7 @@ function takeAdmission(){
     idmarks1:document.getElementById('idm1').value,
     idmarks2:document.getElementById('idm2').value,
     ssc_regno:document.getElementById('sscReg').value,
+    ssc_board:document.getElementById('sscBoard').value,
     ssc_year:document.getElementById('sscYear').value,
     ssc_month:document.getElementById('sscMonth').value,
     type_admission:board,
