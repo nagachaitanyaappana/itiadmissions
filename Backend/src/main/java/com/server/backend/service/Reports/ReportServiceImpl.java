@@ -303,23 +303,18 @@ public class ReportServiceImpl implements ReportService {
             """;
         List<Map<String, Object>> catRows = jdbcTemplate.queryForList(seatSql, itiCode, tradeCode, year);
 
-        // Get candidates
-        String candSql = """
-            SELECT DISTINCT ON (a.adm_num)
-                   NULLIF(r.rank,'')::int AS rank,
-                   a.adm_num, a.name, a.fname, a.gender,
-                   TO_CHAR(a.dob, 'DD-MM-YYYY') AS dob, a.caste, a.res_category
-            FROM admissions.iti_admissions a
-            LEFT JOIN ranks r ON a.regid = r.regid
-             WHERE TRIM(a.iti_code::text) = TRIM(?::text)
-               AND TRIM(a.trade_code::text) = TRIM(?::text)
-               AND a.phase = ?
-               AND a.year_of_admission = ?
-               AND (a.mode_adm IS NULL OR UPPER(TRIM(a.mode_adm::text)) = UPPER(TRIM(?::text)))
-             ORDER BY a.adm_num, NULLIF(r.rank,'')::int NULLS LAST
-            """;
-        List<Map<String, Object>> candRows = jdbcTemplate.queryForList(candSql,
+        // Get candidates - try with mode_adm filter first, fall back to without it
+        String admTable = "admissions.iti_admissions" + year;
+        String candSqlWithMode = "SELECT DISTINCT ON (a.adm_num) NULLIF(r.rank,'')::int AS rank, a.adm_num, a.name, a.fname, a.gender, TO_CHAR(a.dob, 'DD-MM-YYYY') AS dob, a.caste, a.res_category FROM " + admTable + " a LEFT JOIN ranks r ON a.regid = r.regid WHERE TRIM(a.iti_code::text) = TRIM(?::text) AND TRIM(a.trade_code::text) = TRIM(?::text) AND a.phase = ? AND a.year_of_admission = ? AND (a.mode_adm IS NULL OR UPPER(TRIM(a.mode_adm::text)) = UPPER(TRIM(?::text))) ORDER BY a.adm_num, NULLIF(r.rank,'')::int NULLS LAST";
+        String candSqlWithoutMode = "SELECT DISTINCT ON (a.adm_num) NULLIF(r.rank,'')::int AS rank, a.adm_num, a.name, a.fname, a.gender, TO_CHAR(a.dob, 'DD-MM-YYYY') AS dob, a.caste, a.res_category FROM " + admTable + " a LEFT JOIN ranks r ON a.regid = r.regid WHERE TRIM(a.iti_code::text) = TRIM(?::text) AND TRIM(a.trade_code::text) = TRIM(?::text) AND a.phase = ? AND a.year_of_admission = ? ORDER BY a.adm_num, NULLIF(r.rank,'')::int NULLS LAST";
+        List<Map<String, Object>> candRows = jdbcTemplate.queryForList(candSqlWithMode,
                 itiCode, tradeCode, Integer.parseInt(phase), year, modeAdm.toUpperCase());
+        if (candRows == null || candRows.isEmpty()) {
+            candRows = jdbcTemplate.queryForList(candSqlWithoutMode,
+                    itiCode, tradeCode, Integer.parseInt(phase), year);
+        } else {
+            // if mode filter gave results but maybe less than expected? keep as is
+        }
 
         // Group candidates by category
         Map<String, List<DscFullReportResponse.CandidateRow>> candidatesByCategory = new LinkedHashMap<>();
@@ -1378,6 +1373,10 @@ public class ReportServiceImpl implements ReportService {
 
         StringBuilder tradeSql = new StringBuilder("SELECT trade_code, trade_name FROM public.ititrade_master WHERE 1=1");
         List<Object> tradeParams = new ArrayList<>();
+        if (itiCode != null && !itiCode.isEmpty()) {
+            tradeSql.append(" AND trade_code IN (SELECT sm.trade_code FROM public.iti_seatmatrix sm WHERE TRIM(sm.iti_code::text) = TRIM(?::text) AND sm.year = (SELECT value FROM public.iti_params WHERE code='7'))");
+            tradeParams.add(itiCode);
+        }
         tradeSql.append(" ORDER BY trade_name");
         jdbcTemplate.query(tradeSql.toString(), (rs, rowNum) -> {
             tradeOptions.add(new DscOptionsResponse.TradeOption(rs.getString("trade_code"), rs.getString("trade_name")));

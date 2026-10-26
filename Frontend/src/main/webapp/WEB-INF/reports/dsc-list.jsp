@@ -44,7 +44,7 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label-official">ITI Name</label>
-                            <select name="iti_code" id="iti_code" class="form-select-official" required>
+                            <select name="iti_code" id="iti_code" class="form-select-official" required onchange="loadTradesForIti(this.value)">
                                 <option value="">Select ITI</option>
                             </select>
                         </div>
@@ -74,7 +74,8 @@
                             <label class="form-label-official">Year</label>
                             <select name="year" id="year" class="form-select-official" required>
                                 <option value="">-select-</option>
-                                <option value="2025" selected>2025</option>
+                                <option value="2026" selected>2026</option>
+                                <option value="2025">2025</option>
                                 <option value="2024">2024</option>
                                 <option value="2023">2023</option>
                                 <option value="2022">2022</option>
@@ -164,6 +165,24 @@
                     }
                 })
                 .catch(err => console.error('Failed to load options:', err));
+        }
+
+        function loadTradesForIti(itiCode) {
+            const tradeSelect = document.getElementById('trade_code');
+            tradeSelect.innerHTML = '<option value="">Select Trade</option>';
+            if (!itiCode) {
+                return;
+            }
+            fetch('${backendApiUrl}/dsc-options?iti_code=' + encodeURIComponent(itiCode), { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.trades && data.trades.length > 0) {
+                        data.trades.forEach(trade => {
+                            tradeSelect.innerHTML += '<option value="' + trade.trade_code + '">' + trade.trade_name + '</option>';
+                        });
+                    }
+                })
+                .catch(err => console.error('Failed to load trades for ITI:', err));
         }
 
         function fetchReport(event) {
