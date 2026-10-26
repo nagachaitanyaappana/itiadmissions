@@ -9,17 +9,30 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-:root{--blue:#0d47a1;--blue2:#1976d2;--accent:#42a5f5;}
+:root{--blue:#0d47a1;--blue2:#1976d2;--accent:#42a5f5;--text-dark:#1a237e;--border-blue:#90caf9;--shadow-blue:rgba(13,71,161,0.15);--rich-blue-bg:#e3f2fd;}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
-body{font-family:'Inter',sans-serif;background:#f5f7fa;color:#1a237e;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
+body{font-family:'Inter',sans-serif;background:url('${pageContext.request.contextPath}/images/ap.png') no-repeat center 260px fixed;background-size:30%;background-color:#f5f7fa;color:#1a237e;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
 .bg-shapes{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
 .bg-shapes span{position:absolute;border-radius:50%;filter:blur(60px);opacity:.35;animation:float 12s ease-in-out infinite;}
 .bg-shapes span:nth-child(1){width:400px;height:400px;background:#fff;top:-100px;left:-100px;}
 .bg-shapes span:nth-child(2){width:500px;height:500px;background:#90caf9;bottom:-150px;right:-150px;animation-delay:3s;}
 .bg-shapes span:nth-child(3){width:300px;height:300px;background:#1976d2;top:40%;left:60%;animation-delay:6s;}
 @keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-40px)}}
-header{position:relative;z-index:1;backdrop-filter:blur(10px);background:rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.2);padding:18px 0;text-align:center;}
+header{position:relative;z-index:1;backdrop-filter:blur(10px);background:linear-gradient(135deg,rgba(13,71,161,.9),rgba(25,118,210,.8));border-bottom:1px solid rgba(255,255,255,.2);padding:12px 0;box-shadow:0 4px 20px rgba(0,0,0,.15);}
+.header-top{display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto;padding:8px 20px;flex-wrap:wrap;gap:12px;}
+.header-left,.header-right{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.header-center{flex:1;text-align:center;min-width:200px;}
+.header-center h1{font-size:22px;font-weight:800;letter-spacing:1.5px;margin:0;}
+.header-center p{font-size:12px;opacity:.9;margin-top:4px;}
+.minister-photos{display:flex;gap:8px;}
+.minister-photo{width:70px;height:70px;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,0.4);box-shadow:0 4px 12px rgba(0,0,0,0.25);}
+.header-top{display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto;padding:16px 20px;flex-wrap:wrap;gap:12px;}
+.header-left{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.header-center{flex:1;text-align:center;min-width:200px;}
+.header-right{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.minister-photos{display:flex;gap:8px;}
+.minister-photo{width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,0.3);box-shadow:0 4px 12px rgba(0,0,0,0.2);background:rgba(255,255,255,0.15);}
 header h1{font-size:24px;font-weight:800;letter-spacing:1.5px;}
 header p{font-size:12px;opacity:.85;margin-top:4px;}
 nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);background:rgba(13,71,161,.75);border-bottom:1px solid rgba(255,255,255,.15);}
@@ -34,11 +47,31 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);background:rgba(
 .nav-links li:hover .dropdown{display:block;}
 .dropdown a{display:block;padding:10px 14px;border-radius:6px;font-size:13px;text-transform:none;}
 .dropdown a:hover{background:rgba(255,255,255,.18);}
-main{position:relative;z-index:1;flex:1;max-width:1200px;margin:0 auto;padding:60px 20px;width:100%;}
+
+/* Login dropdown with form inside */
+.nav-links li.login-menu > .dropdown{min-width:340px;right:0;left:auto;}
+.login-dropdown-form{padding:16px;display:flex;flex-direction:column;gap:12px;}
+.login-row{display:flex;flex-direction:column;gap:6px;}
+.login-row label{font-size:12px;font-weight:700;color:#333;}
+.login-row input{width:100%;padding:10px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;box-sizing:border-box;}
+.login-row input:focus{outline:none;border-color:var(--blue);}
+.login-captcha{display:flex;gap:10px;align-items:center;}
+.login-captcha input{flex:1;padding:10px 12px;}
+.login-captcha img{width:100px;height:34px;border:1px solid #ddd;border-radius:6px;flex-shrink:0;}
+.login-captcha .refresh{cursor:pointer;font-size:11px;color:var(--blue);font-weight:700;white-space:nowrap;}
+.login-btn{width:100%;padding:10px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--accent));color:#fff;font-weight:700;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;}
+.login-btn:hover{opacity:.9;}
+
+main{position:relative;z-index:1;flex:1;max-width:1200px;margin:0 auto;padding:40px 20px;width:100%;}
 .hero{text-align:center;margin-bottom:60px;}
-.hero h2{font-size:44px;font-weight:800;margin-bottom:12px;color:var(--blue);}
-.hero p{font-size:18px;color:#555;max-width:600px;margin:0 auto;}
+.hero h2{font-size:48px;font-weight:900;margin-bottom:12px;color:var(--blue);text-shadow:0 2px 8px rgba(13,71,161,.2);}
+.hero p{font-size:20px;color:#333;max-width:600px;margin:0 auto;font-weight:600;}
 .hero-actions{margin-top:30px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+
+/* Default center image like old home page */
+.home-center-image{text-align:center;margin:40px 0;}
+.home-center-image img{max-width:100%;height:auto;border-radius:12px;border:1px solid var(--border-blue);box-shadow:0 8px 24px var(--shadow-blue);}
+
 .btn{padding:14px 30px;border-radius:50px;font-weight:700;text-decoration:none;display:inline-block;transition:.3s;border:none;cursor:pointer;font-size:14px;}
 .btn-primary{background:#fff;color:var(--blue);box-shadow:0 8px 24px rgba(0,0,0,.2);}
 .btn-primary:hover{transform:translateY(-3px);}
@@ -73,8 +106,19 @@ footer{position:relative;z-index:1;background:rgba(0,0,0,.2);text-align:center;p
 <body>
 <div class="bg-shapes"><span></span><span></span><span></span></div>
 <header>
-  <h1>ITI Admissions Portal</h1>
-  <p>Government of Andhra Pradesh &bull; Developed by NIC</p>
+  <div class="header-top">
+    <div class="header-left">&nbsp;</div>
+    <div class="header-center">
+      <h1>ITI Admissions Portal</h1>
+      <p>Government of Andhra Pradesh &bull; Developed by NIC</p>
+    </div>
+    <div class="header-right">
+      <div class="minister-photos">
+        <img src="${pageContext.request.contextPath}/images/ap_cm.png" alt="CM Nara Chandra Babu Naidu" class="minister-photo" />
+        <img src="${pageContext.request.contextPath}/images/ap_dcm.png" alt="Nara Lokesh" class="minister-photo" />
+      </div>
+    </div>
+  </div>
 </header>
 <nav>
   <div class="nav-inner">
@@ -101,16 +145,13 @@ footer{position:relative;z-index:1;background:rgba(0,0,0,.2);text-align:center;p
   <section class="hero">
     <h2>Welcome to ITI Admissions</h2>
     <p>Your gateway to Industrial Training Institute admissions in Andhra Pradesh</p>
-    <div class="hero-actions">
-      <a href="${pageContext.request.contextPath}/student-registration" class="btn btn-primary">Get Started</a>
-      <a href="${pageContext.request.contextPath}/Course" class="btn btn-secondary">Explore Courses</a>
-    </div>
   </section>
+
   <div class="grid">
-    <div class="card"><i class="fas fa-user-graduate"></i><h3>Student Registration</h3><p>Register your personal details to get a Registration Number</p><a href="${pageContext.request.contextPath}/student-registration">Register Now <i class="fas fa-arrow-right"></i></a></div>
-    <div class="card"><i class="fas fa-file-alt"></i><h3>Apply for ITI</h3><p>Select districts, trades, and units to apply for admission</p><a href="${pageContext.request.contextPath}/student-apply">Apply Now <i class="fas fa-arrow-right"></i></a></div>
-    <div class="card"><i class="fas fa-edit"></i><h3>Edit Details</h3><p>Update your registered information before final submission</p><a href="${pageContext.request.contextPath}/student-edit-details">Edit <i class="fas fa-arrow-right"></i></a></div>
-    <div class="card"><i class="fas fa-key"></i><h3>Forgot Registration ID</h3><p>Retrieve your registration number if you have forgotten it</p><a href="${pageContext.request.contextPath}/forgot-regid">Retrieve <i class="fas fa-arrow-right"></i></a></div>
+    <div class="card"><i class="fas fa-user-graduate"></i><h3>Student Registration</h3><p>Register your personal details to get a Registration Number</p><a href="${pageContext.request.contextPath}/student-registration">Register Now</a></div>
+    <div class="card"><i class="fas fa-file-alt"></i><h3>Apply for ITI</h3><p>Select districts, trades, and units to apply for admission</p><a href="${pageContext.request.contextPath}/student-apply">Apply Now</a></div>
+    <div class="card"><i class="fas fa-edit"></i><h3>Edit Details</h3><p>Update your registered information before final submission</p><a href="${pageContext.request.contextPath}/student-edit-details">Edit</a></div>
+    <div class="card"><i class="fas fa-key"></i><h3>Forgot Registration ID</h3><p>Retrieve your registration number if you have forgotten it</p><a href="${pageContext.request.contextPath}/forgot-regid">Retrieve</a></div>
   </div>
 <% String err = request.getParameter("error"); if (err != null) { %>
 <div class="note" style="border-left-color:#d32f2f;background:rgba(211,47,47,.15);">
@@ -123,27 +164,6 @@ footer{position:relative;z-index:1;background:rgba(0,0,0,.2);text-align:center;p
 <% } %>
   <div class="visitor"><b>No of Visitors:</b> <span id="visitorCount"></span></div>
 </main>
-<div class="modal-overlay" id="loginModal" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="modal">
-    <button class="close" onclick="document.getElementById('loginModal').classList.remove('open')">&times;</button>
-    <div class="modal-header"><h3>Welcome Back</h3><p>Sign in to continue to ITI Admissions</p></div>
-    <div class="modal-body">
-      <div id="loginError" style="display:none;background:rgba(211,47,47,.12);color:#b71c1c;padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:13px;font-weight:600;"></div>
-      <form id="loginForm" action="${pageContext.request.contextPath}/iti/login.do" method="post" onsubmit="return submit1();">
-        <div class="input-group"><i class="fas fa-user"></i><input id="loginUname" name="uname" minlength="2" type="text" autocomplete="off" required autofocus placeholder="Registration No / User Name" /></div>
-        <div class="input-group"><i class="fas fa-lock"></i><input id="loginPwd" name="pwd" minlength="2" type="password" required autocomplete="off" placeholder="Password" /></div>
-        <input type="hidden" name="pwdd" id="loginPwdd" />
-        <div class="input-group" style="display:flex;gap:10px;align-items:center;">
-          <i class="fas fa-shield-alt" style="position:relative;left:0;transform:none;"></i>
-          <input type="text" id="loginCaptcha" name="captcha" maxlength="4" required placeholder="Captcha" style="margin:0;flex:1;padding-left:16px;" onblur="validateFreeSpace(this.value, this, 'Please Enter The Letters Shown In Picture')" />
-          <img src="${pageContext.request.contextPath}/captcha" id="loginCaptchaImage" alt="Captcha" style="height:46px;border-radius:10px;border:1px solid #ddd;" />
-        </div>
-        <span id="loginCaptchaRef" style="cursor:pointer;font-size:12px;color:var(--blue);font-weight:600;display:block;margin-bottom:12px;" onclick="refreshCaptcha()">Refresh Captcha</span>
-        <button type="submit" id="loginMysubmit">Sign In</button>
-      </form>
-    </div>
-  </div>
-</div>
 <footer>&copy; 2026 Government of Andhra Pradesh. All Rights Reserved. Developed by NIC.</footer>
 <script src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
 <script>
@@ -158,9 +178,9 @@ $(document).ready(function(){
              err==='invalid' ? 'Invalid username or password.' :
              err==='inactive' ? 'Your account is inactive. Contact administrator.' :
              err==='session' ? 'Please login to continue.' : 'Login service unavailable, please try again later.';
-    $('#loginError').text(msg).show();
-    $('#loginModal').addClass('open');
+    alert(msg);
   }
+  $("#loginCaptchaRef").click(function(){ refreshCaptcha(); });
   $("#loginCaptcha").keypress(function(ev){ if(ev.keyCode===13) $("#loginMysubmit").click(); });
 });
 </script>
