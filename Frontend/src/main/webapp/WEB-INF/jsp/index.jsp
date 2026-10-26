@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-:root{--blue:#0d47a1;--blue2:#1976d2;--accent:#42a5f5;--text-dark:#1a237e;--border-blue:#90caf9;--shadow-blue:rgba(13,71,161,0.15);--rich-blue-bg:#e3f2fd;}
+:root{--blue:#00897b;--blue2:#004d40;--accent:#26a69a;--text-dark:#1a237e;--border-blue:#80cbc4;--shadow-blue:rgba(0,137,123,0.15);--rich-blue-bg:#e0f2f1;}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
 body{font-family:'Inter',sans-serif;background:url('${pageContext.request.contextPath}/images/ap.png') no-repeat center 260px fixed;background-size:30%;background-color:#f5f7fa;color:#1a237e;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
@@ -19,7 +19,7 @@ body{font-family:'Inter',sans-serif;background:url('${pageContext.request.contex
 .bg-shapes span:nth-child(2){width:500px;height:500px;background:#90caf9;bottom:-150px;right:-150px;animation-delay:3s;}
 .bg-shapes span:nth-child(3){width:300px;height:300px;background:#1976d2;top:40%;left:60%;animation-delay:6s;}
 @keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-40px)}}
-header{position:relative;z-index:1;backdrop-filter:blur(10px);background:linear-gradient(135deg,rgba(13,71,161,.9),rgba(25,118,210,.8));border-bottom:1px solid rgba(255,255,255,.2);padding:12px 0;box-shadow:0 4px 20px rgba(0,0,0,.15);}
+header{position:relative;z-index:1;backdrop-filter:blur(10px);background:linear-gradient(135deg,rgba(0,137,123,.9),rgba(0,77,64,.8));border-bottom:1px solid rgba(255,255,255,.2);padding:12px 0;box-shadow:0 4px 20px rgba(0,0,0,.15);}
 .header-top{display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto;padding:8px 20px;flex-wrap:wrap;gap:12px;}
 .header-left,.header-right{display:flex;align-items:center;gap:12px;flex-shrink:0;}
 .header-center{flex:1;text-align:center;min-width:200px;}
@@ -35,7 +35,7 @@ header{position:relative;z-index:1;backdrop-filter:blur(10px);background:linear-
 .minister-photo{width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,0.3);box-shadow:0 4px 12px rgba(0,0,0,0.2);background:rgba(255,255,255,0.15);}
 header h1{font-size:24px;font-weight:800;letter-spacing:1.5px;}
 header p{font-size:12px;opacity:.85;margin-top:4px;}
-nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);background:rgba(13,71,161,.75);border-bottom:1px solid rgba(255,255,255,.15);}
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);background:rgba(0,137,123,.75);border-bottom:1px solid rgba(255,255,255,.15);}
 .nav-inner{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:64px;}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;color:#fff;text-decoration:none;}
 .brand i{font-size:22px;}
