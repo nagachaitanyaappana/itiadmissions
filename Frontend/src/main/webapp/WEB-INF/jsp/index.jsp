@@ -35,7 +35,7 @@ header{position:relative;z-index:1;backdrop-filter:blur(10px);background:linear-
 .minister-photo{width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,0.3);box-shadow:0 4px 12px rgba(0,0,0,0.2);background:rgba(255,255,255,0.15);}
 header h1{font-size:24px;font-weight:800;letter-spacing:1.5px;}
 header p{font-size:12px;opacity:.85;margin-top:4px;}
-nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);background:rgba(63,81,181,.75);border-bottom:1px solid rgba(255,255,255,.15);}
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);background:linear-gradient(135deg,rgba(63,81,181,.9),rgba(48,63,159,.8));border-bottom:1px solid rgba(255,255,255,.15);}
 .nav-inner{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:64px;}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;color:#fff;text-decoration:none;}
 .brand i{font-size:22px;}
