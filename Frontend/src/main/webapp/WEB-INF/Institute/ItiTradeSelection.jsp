@@ -42,13 +42,14 @@
             margin-bottom: 25px;
             border: 2px solid #000;
         }
-        .selection-area h5 {
+        .selection-area h5.section-header {
             background-color: #4ab131;
             color: #fff;
-            margin: 0 0 15px;
+            margin: 0;
             padding: 10px;
             text-align: center;
             font-weight: bold;
+            font-size: 16px;
         }
         .selection-area .row { padding: 0 20px 18px; }
         .details-area {
@@ -101,15 +102,16 @@
 
         <!-- ITI & Trade Selection -->
         <div class="selection-area">
+            <h5 class="section-header">Select ITI & Select Trade</h5>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label for="itiSelect" class="form-label fw-bold">Select ITI</label>
+                    <label for="itiSelect" class="form-label fw-bold">ITI:</label>
                     <select class="form-select" id="itiSelect">
                         <option value="">-- Select ITI --</option>
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label for="tradeSelect" class="form-label fw-bold">Trades Available</label>
+                    <label for="tradeSelect" class="form-label fw-bold">Trade:</label>
                     <select class="form-select" id="tradeSelect">
                         <option value="">-- Select Trade --</option>
                     </select>

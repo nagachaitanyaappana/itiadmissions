@@ -353,8 +353,7 @@
                     const row = document.createElement("tr");
                     row.innerHTML = `
                         <td>
-                            <input type="number" class="form-control form-control-sm strength-input" data-index="\${index}" value="\${strengthValue}" min="1" style="width: 100px;">
-                        </td>
+                            <select class="form-select form-select-sm strength-input" data-index="${index}" style="width: 100px;"><option value="20" \${entry.strength == 20 ? 'selected' : ''}>20</option><option value="24" \${entry.strength == 24 ? 'selected' : ''}>24</option></select>
                         <td>
                             <select class="form-select form-select-sm shift-select" data-index="\${index}">
                                 <option value="1" \${entry.shiftAllowed === 1 ? 'selected' : ''}>1</option>
@@ -634,3 +633,5 @@ console.log("========================================");
 </body>
 
 </html>
+
+
