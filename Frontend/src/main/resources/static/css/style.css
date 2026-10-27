@@ -65,6 +65,9 @@ body {
     position: relative;
     border-right: 1px solid #ffffff;
 }
+.nav-menu>li:last-child {
+    border-right: none !important;
+}
 
 /* LINKS */
 .nav-menu>li>a,
@@ -809,6 +812,9 @@ body {
 .nav-menu>li {
     position: relative;
     border-right: 1px solid #ffffff;
+}
+.nav-menu>li:last-child {
+    border-right: none !important;
 }
 
 /* LINKS */

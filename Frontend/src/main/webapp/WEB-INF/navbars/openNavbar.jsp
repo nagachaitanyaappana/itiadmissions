@@ -29,6 +29,9 @@
                  <li class="nav-item">
                     <a class="nav-link active" href="${pageContext.request.contextPath}/Login">Login</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="https://itiadmissions.ap.gov.in/placementsfe/">PLACEMENTS / IN-PLANT TRAINING</a>
+                </li>
             </ul>
         </div>
     </div>

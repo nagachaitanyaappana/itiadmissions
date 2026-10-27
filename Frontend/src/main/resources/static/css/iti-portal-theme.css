@@ -82,6 +82,7 @@ body .authenticated-navbar {
 }
 
 body .nav-menu > li { border-right: 1px solid #c8d18a !important; }
+body .nav-menu > li:last-child { border-right: none !important; }
 
 body .nav-menu > li > a,
 body .authenticated-navbar .nav-link {
