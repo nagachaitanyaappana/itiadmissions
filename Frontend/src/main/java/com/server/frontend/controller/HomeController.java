@@ -156,6 +156,16 @@ public class HomeController {
         return "jsp/under_construction";
     }
 
+    @GetMapping("/GovtItiList")
+    public String govtItiList() {
+        return "reports/govt-iti-list";
+    }
+
+    @GetMapping("/PrivateItiList")
+    public String privateItiList() {
+        return "reports/private-iti-list";
+    }
+
     @GetMapping("/")
     public String home() {
         return "jsp/index";
