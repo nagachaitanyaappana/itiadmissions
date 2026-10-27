@@ -344,13 +344,18 @@
                             document.getElementById("regFormDiv").style.display = "none";
                             if (resumed) {
                                 $('#regResult').html(
-                                    '<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:60%;">'
-                                    + '<h3 style="color:#155724;">Already Registered for this SSC Hall Ticket</h3>'
-                                    + '<p style="font-size:18px;color:#155724;">An application already exists for this SSC Hall Ticket Number and the details match. '
-                                    + 'Your existing Registration ID is: <b>' + student.regid + '</b></p>'
-                                    + '<p style="color:#155724;">Your earlier registration details are loaded below. Please verify/complete the personal details and SSC marks, then click <b>APPLY NOW</b> to continue.</p>'
+                                    '<div style="background-color:#fff3cd;border:2px solid #ffeeba;padding:25px;margin:20px auto;width:65%;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">'
+                                    + '<h3 style="color:#856404;margin-top:0;">Already Registered</h3>'
+                                    + '<p style="font-size:16px;color:#856404;">An application already exists for SSC Hall Ticket Number <b>' + (student.sscRegNo || '') + '</b>.</p>'
+                                    + '<p style="font-size:18px;color:#0c5460;background:#d1ecf1;border:1px solid #bee5eb;padding:12px;border-radius:4px;"><b>Your Registration ID is: ' + student.regid + '</b></p>'
+                                    + '<p style="color:#555;line-height:1.6;">You are already registered for this admission session and cannot register again. If you wish to select or update your ITI / Trade choices, please proceed to <b>Trade Selection</b>. If you need to update your personal details, use <b>Edit Details</b>.</p>'
+                                    + '<div style="margin-top:20px;text-align:center;">'
+                                    + '<a href="${pageContext.request.contextPath}/student-apply" style="display:inline-block;padding:10px 22px;background:#0056b3;color:#ffffff;text-decoration:none;font-weight:bold;border-radius:4px;margin-right:12px;">Go to Trade Selection (Apply)</a>'
+                                    + '<a href="${pageContext.request.contextPath}/student-edit-details" style="display:inline-block;padding:10px 22px;background:#6c757d;color:#ffffff;text-decoration:none;font-weight:bold;border-radius:4px;margin-right:12px;">Edit Application Details</a>'
+                                    + '<a href="${pageContext.request.contextPath}/" style="display:inline-block;padding:10px 22px;background:#28a745;color:#ffffff;text-decoration:none;font-weight:bold;border-radius:4px;">Home</a>'
+                                    + '</div>'
                                     + '</div>');
-                                resumeExisting(student.regid);
+                                // Do NOT open Step 2 for already registered students
                             } else {
                                 $('#regResult').html(
                                     '<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:60%;">'

@@ -129,17 +129,30 @@ public class DistrictVerifyService {
             return res;
         }
 
+        String scopeApprovedSql =
+                "SELECT count(*) FROM trade_sel WHERE regid::text = ? AND dist_code = ? "
+                        + "AND year = ? AND hstore(phase)->? = 'true'";
+        List<Object> scopeArgs = new java.util.ArrayList<>(
+                List.of(rid, dc, cycle.year(), cycle.phase()));
+        if (itiCode != null && !itiCode.isBlank()) {
+            scopeApprovedSql += " AND (iti_code = ? OR iti_code IS NULL OR iti_code = '')";
+            scopeArgs.add(itiCode.trim());
+        }
+        int scopeApprovedCount = jdbcTemplate.getJdbcTemplate().queryForObject(
+                scopeApprovedSql, Integer.class, scopeArgs.toArray());
+        boolean isScopeApproved = scopeApprovedCount > 0;
+
+        // Candidate is only already approved if they have been promoted for this scope in the active cycle.
+        // If they were approved in an earlier phase/district, their status for this phase is pending ('P').
+        String effectiveAppStatus = isScopeApproved ? "A" : ("A".equalsIgnoreCase(appStatus) ? "P" : appStatus);
+
         res.put("success", true);
         res.put("student", app);
-        res.put("appStatus", appStatus);
+        res.put("appStatus", effectiveAppStatus);
         res.put("trades", trades);
         res.put("allowed", true);
         res.put("distCode", dc);
-
-        int existsApp = jdbcTemplate.getJdbcTemplate().queryForObject(
-                "SELECT count(*) FROM application WHERE regid::text = ?",
-                Integer.class, rid);
-        res.put("alreadyInApplication", existsApp > 0);
+        res.put("alreadyInApplication", isScopeApproved);
 
         List<Map<String, Object>> marks = jdbcTemplate.getJdbcTemplate().queryForList(
                 "SELECT * FROM student_cand_marks WHERE regid::text = ?", rid);
@@ -233,14 +246,26 @@ public class DistrictVerifyService {
             return res;
         }
 
-        String currentStatus = jdbcTemplate.getJdbcTemplate().queryForObject(
-                "SELECT app_status FROM student_application WHERE regid::text = ? AND year = ? AND phase = ?",
-                String.class, rid, cycle.year(), cycle.phase());
-        Window window = isPreviouslyVerified(currentStatus) ? Window.REVERIFICATION : Window.VERIFICATION;
+        String checkApprovedSql =
+                "SELECT count(*) FROM trade_sel WHERE regid::text = ? AND dist_code = ? "
+                        + "AND year = ? AND hstore(phase)->? = 'true'";
+        List<Object> checkArgs = new java.util.ArrayList<>(
+                List.of(rid, dc, cycle.year(), cycle.phase()));
+        if (itiCode != null && !itiCode.isBlank()) {
+            checkApprovedSql += " AND (iti_code = ? OR iti_code IS NULL OR iti_code = '')";
+            checkArgs.add(itiCode.trim());
+        }
+        boolean isAlreadyApproved = jdbcTemplate.getJdbcTemplate().queryForObject(
+                checkApprovedSql, Integer.class, checkArgs.toArray()) > 0;
+
+        Window window = isAlreadyApproved ? Window.REVERIFICATION : Window.VERIFICATION;
         if (!phaseWindows.isOpen(window)) {
-            res.put("code", "DATE_EXPIRED");
-            res.put("message", "Date has Expired");
-            return res;
+            Window altWindow = window == Window.VERIFICATION ? Window.REVERIFICATION : Window.VERIFICATION;
+            if (!phaseWindows.isOpen(altWindow)) {
+                res.put("code", "DATE_EXPIRED");
+                res.put("message", "Date has Expired");
+                return res;
+            }
         }
 
         // 1. Update student_application: set app_status='A', verified info
@@ -434,14 +459,26 @@ public class DistrictVerifyService {
             return res;
         }
 
-        String currentStatus = jdbcTemplate.getJdbcTemplate().queryForObject(
-                "SELECT app_status FROM student_application WHERE regid::text = ? AND year = ? AND phase = ?",
-                String.class, rid, cycle.year(), cycle.phase());
-        Window window = isPreviouslyVerified(currentStatus) ? Window.REVERIFICATION : Window.VERIFICATION;
+        String checkApprovedSql =
+                "SELECT count(*) FROM trade_sel WHERE regid::text = ? AND dist_code = ? "
+                        + "AND year = ? AND hstore(phase)->? = 'true'";
+        List<Object> checkArgs = new java.util.ArrayList<>(
+                List.of(rid, dc, cycle.year(), cycle.phase()));
+        if (itiCode != null && !itiCode.isBlank()) {
+            checkApprovedSql += " AND (iti_code = ? OR iti_code IS NULL OR iti_code = '')";
+            checkArgs.add(itiCode.trim());
+        }
+        boolean isAlreadyApproved = jdbcTemplate.getJdbcTemplate().queryForObject(
+                checkApprovedSql, Integer.class, checkArgs.toArray()) > 0;
+
+        Window window = isAlreadyApproved ? Window.REVERIFICATION : Window.VERIFICATION;
         if (!phaseWindows.isOpen(window)) {
-            res.put("code", "DATE_EXPIRED");
-            res.put("message", "Date has Expired");
-            return res;
+            Window altWindow = window == Window.VERIFICATION ? Window.REVERIFICATION : Window.VERIFICATION;
+            if (!phaseWindows.isOpen(altWindow)) {
+                res.put("code", "DATE_EXPIRED");
+                res.put("message", "Date has Expired");
+                return res;
+            }
         }
 
         // 1. Update student_application
@@ -500,13 +537,21 @@ public class DistrictVerifyService {
         AdmissionPhaseWindowService.Cycle cycle = requireCurrentCycle();
         return jdbcTemplate.getJdbcTemplate().queryForList(
                 "SELECT a.regid, a.name, a.fname, a.user_id, a.verified_date, " +
-                "       a.app_status, a.ssc_regno, a.dob " +
+                "       CASE WHEN EXISTS (" +
+                "           SELECT 1 FROM trade_sel t " +
+                "           WHERE t.regid::text = a.regid::text AND t.dist_code = ? " +
+                "           AND t.year = ? AND hstore(t.phase)->? = 'true'" +
+                "       ) THEN 'A' " +
+                "       WHEN a.app_status = 'R' THEN 'R' " +
+                "       ELSE 'P' END AS app_status, " +
+                "       a.ssc_regno, a.dob " +
                 "FROM student_application a " +
                 "WHERE EXISTS (SELECT 1 FROM student_trade_sel s " +
                 "              WHERE s.regid::text = a.regid::text AND s.dist_code = ? "
                         + "AND s.year = ? AND hstore(s.phase)->? = 'true') "
                         + "AND a.year = ? AND a.phase = ? " +
                 "ORDER BY a.regid DESC",
+                distCode.trim(), cycle.year(), cycle.phase(),
                 distCode.trim(), cycle.year(), cycle.phase(), cycle.year(), cycle.phase());
     }
 

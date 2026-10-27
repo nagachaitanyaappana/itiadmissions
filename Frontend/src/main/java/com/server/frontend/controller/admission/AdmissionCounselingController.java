@@ -100,6 +100,7 @@ public class AdmissionCounselingController {
                     "Phase 2 and later admissions are processed by the ITI login for that ITI.");
             return "admission/phase2RoleRequired";
         }
+        model.addAttribute("timingOptions", fetchTodayTimings(request));
         return "admission/counselingStart";
     }
 
@@ -164,6 +165,24 @@ public class AdmissionCounselingController {
         } catch (Exception e) {
             // If the check itself cannot run, do not hard-block the page.
             return true;
+        }
+    }
+
+    /** Today's admission timings (cal_time) loaded from admission_timings table for the logged-in ITI. */
+    @SuppressWarnings("unchecked")
+    private List<String> fetchTodayTimings(HttpServletRequest request) {
+        try {
+            ResponseEntity<Map<String, Object>> resp = rest.exchange(
+                    backendBaseUrl + "/api/admission/today-timings",
+                    org.springframework.http.HttpMethod.GET,
+                    new HttpEntity<>(scopeHeaders(request)),
+                    new ParameterizedTypeReference<Map<String, Object>>() {
+                    });
+            Map<String, Object> body = resp.getBody();
+            Object data = body == null ? null : body.get("data");
+            return data == null ? List.of() : (List<String>) data;
+        } catch (Exception e) {
+            return List.of();
         }
     }
 

@@ -47,7 +47,15 @@
       </tr>
       <tr>
         <td class="label">Admission Timings :</td>
-        <td><select name="timing" id="timing"><option value="">-select-</option><option value="09:00-11:00">09:00 - 11:00</option><option value="11:00-13:00">11:00 - 13:00</option><option value="14:00-16:00">14:00 - 16:00</option><option value="16:00-18:00">16:00 - 18:00</option></select><span class="err" id="timingError"></span></td>
+        <td>
+          <select name="timing" id="timing">
+            <option value="">-select-</option>
+            <c:forEach var="t" items="${timingOptions}">
+              <option value="${t}">${t}</option>
+            </c:forEach>
+          </select>
+          <span class="err" id="timingError"></span>
+        </td>
       </tr>
       <tr><td class="label">Phase :</td><td><input type="text" id="phase" value="${currentPhase}" readonly="readonly" /><input type="hidden" name="phase" value="${currentPhase}" /></td></tr>
       <tr><td class="label">Year :</td><td><input type="text" id="year" value="${currentYear}" readonly="readonly" /><input type="hidden" name="year" value="${currentYear}" /></td></tr>

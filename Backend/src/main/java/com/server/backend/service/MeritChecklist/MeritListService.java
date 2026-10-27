@@ -166,21 +166,6 @@ public class MeritListService {
         if ("checklist".equals(status)) {
             dbTablename = "checklist";
             heading = "System Generated CheckList";
-            
-            // Checklist rows are identified by phase only; the active cycle year is still
-            // used for the source applications and the ranks table.
-            String ranksCheckQuery = String.format("SELECT EXISTS(SELECT 1 FROM ranks WHERE phase = :phase AND %s = :targetCode AND year = :year LIMIT 1)", codeColumn);
-            MapSqlParameterSource ranksParams = new MapSqlParameterSource()
-                    .addValue("phase", phase)
-                    .addValue("targetCode", targetCode)
-                    .addValue("year", year);
-            Boolean ranksExist = jdbcTemplate.queryForObject(ranksCheckQuery, ranksParams, Boolean.class);
-            if (ranksExist != null && ranksExist) {
-                throw new IllegalStateException(
-                        "Final merit list already exists for this " +
-                        (useDistCode ? "district" : "ITI") + " and phase " + phase + " year " + year +
-                        "; checklist cannot be regenerated.");
-            }
 
             String deleteQuery = String.format(
                     "DELETE FROM checklist c WHERE c.phase = :phase AND c.%s = :targetCode",
@@ -317,12 +302,23 @@ public class MeritListService {
             dbTablename, codeColumn, yearFilter
         );
 
+        String distCode = user.distCode();
+        if ((distCode == null || distCode.isBlank()) && user.itiCode() != null) {
+            try {
+                distCode = jdbcTemplate.queryForObject(
+                        "SELECT dist_code FROM public.iti WHERE iti_code = :itiCode LIMIT 1",
+                        new MapSqlParameterSource("itiCode", user.itiCode()),
+                        String.class);
+            } catch (Exception ignored) {
+            }
+        }
+
         MapSqlParameterSource queryParams = new MapSqlParameterSource()
                 .addValue("phase", phase)
                 .addValue("qual", qualCode)
                 .addValue("targetCode", targetCode)
                 .addValue("itiCode", user.itiCode())
-                .addValue("distCode", user.distCode())
+                .addValue("distCode", distCode)
                 .addValue("year", year)
                 .addValue("trno", trno);
 
