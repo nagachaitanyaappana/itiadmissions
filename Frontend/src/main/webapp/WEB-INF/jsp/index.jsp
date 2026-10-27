@@ -1,56 +1,89 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-    <!DOCTYPE html>
-    <html>
+<!DOCTYPE html>
+<html lang="en">
 
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-        <title>AP ITI ADMISSIONS - 2026</title>
-    </head>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>AP ITI ADMISSIONS - 2026</title>
+    <style>
+        body.home-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            background-color: #f8fafc;
+        }
 
-    <body>
-        <!-- Global Header Component (Includes banner, navbar, and marquee) -->
-        <header>
-            <%@ include file="header.jsp" %>
-        </header>
+        .home-main {
+            flex: 1 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
 
-        <!-- 5. Main Hero Section (Grid) -->
-        <div class="container-fluid px-5 mt-4">
-            <div class="row align-items-start">
-                <!-- Column 1: Main Carousel & Profiles (div col-md-6) -->
+        .home-page footer {
+            margin-top: auto;
+            width: 100%;
+        }
+
+        .home-page .profile-img {
+            width: 100px !important;
+            height: 100px !important;
+        }
+
+        .home-page .leader-profiles h4 {
+            font-size: 13.5px !important;
+            margin-top: 6px !important;
+        }
+
+        .home-page .leader-profiles p {
+            font-size: 11.5px !important;
+            margin-bottom: 0 !important;
+        }
+    </style>
+</head>
+
+<body class="home-page">
+    <!-- Global Header Component (Includes banner, navbar, and marquee) -->
+    <header>
+        <%@ include file="header.jsp" %>
+    </header>
+
+    <!-- Main Hero Section (Grid) -->
+    <main class="home-main">
+        <div class="container-fluid px-4 px-lg-5 my-3">
+            <div class="row align-items-start g-4">
+                <!-- Column 1: Main Carousel & Profiles (col-md-6) -->
                 <div class="col-md-6">
-                    <%@include file="carousel.jsp" %>
+                    <%@ include file="carousel.jsp" %>
 
-                        <!-- 6. Official Profiles Section -->
-                        <div class="leader-profiles mt-4">
-                            <div class="profile">
-                                <img src="${pageContext.request.contextPath}/images/ap_cm.png" alt="Chief Minister"
-                                    class="profile-img">
-                                <h4><b>Sri Nara<br>Chandrababu Naidu</b></h4>
-                                <p>Hon'ble Chief Minister</p>
-                            </div>
-                            <div class="profile">
-                                <img src="${pageContext.request.contextPath}/images/ap_dcm.png"
-                                    alt="Deputy Chief Minister" class="profile-img">
-                                <h4><b>Sri Konidela<br>Pawan Kalyan</b></h4>
-                                <p>Hon'ble Deputy Chief Minister</p>
-                            </div>
-                            <div class="profile">
-                                <img src="${pageContext.request.contextPath}/images/it_min.png" alt="Minister"
-                                    class="profile-img">
-                                <h4><b>Sri Nara<br>Lokesh</b></h4>
-                                <p>Hon'ble Minister<br>Information,Electronics & Communications</p>
-                            </div>
-
+                    <!-- Official Profiles Section -->
+                    <div class="leader-profiles mt-3">
+                        <div class="profile">
+                            <img src="${pageContext.request.contextPath}/images/ap_cm.png" alt="Chief Minister" class="profile-img">
+                            <h4><b>Sri Nara<br>Chandrababu Naidu</b></h4>
+                            <p>Hon'ble Chief Minister</p>
                         </div>
+                        <div class="profile">
+                            <img src="${pageContext.request.contextPath}/images/ap_dcm.png" alt="Deputy Chief Minister" class="profile-img">
+                            <h4><b>Sri Konidela<br>Pawan Kalyan</b></h4>
+                            <p>Hon'ble Deputy Chief Minister</p>
+                        </div>
+                        <div class="profile">
+                            <img src="${pageContext.request.contextPath}/images/it_min.png" alt="Minister" class="profile-img">
+                            <h4><b>Sri Nara<br>Lokesh</b></h4>
+                            <p>Hon'ble Minister<br>Information, Electronics & Communications</p>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Column 2: News & Updates (4 cols) -->
+                <!-- Column 2: News & Updates (col-md-3) -->
                 <div class="col-md-3">
-                    <div class="modern-card mb-4">
+                    <div class="modern-card mb-3">
                         <div class="modern-news-header">
                             <h5><i class="fas fa-bullhorn me-2"></i>News & Updates</h5>
                         </div>
@@ -76,9 +109,9 @@
                     </div>
                 </div>
 
-                <!-- Column 3: Student Area -->
+                <!-- Column 3: Student Area (col-md-3) -->
                 <div class="col-md-3">
-                    <div class="modern-card mb-4">
+                    <div class="modern-card mb-3">
                         <div class="modern-student-header">
                             <div class="student-header-icon">
                                 <i class="fas fa-graduation-cap"></i>
@@ -134,14 +167,10 @@
                 </div>
             </div>
         </div>
+    </main>
 
+    <!-- Global Footer Component -->
+    <%@ include file="footer.jsp" %>
+</body>
 
-        <!-- 7. Bottom Sections / Analytics (Optional for now) -->
-
-        <!-- Global Footer Component -->
-        <footer>
-            <%@ include file="footer.jsp" %>
-        </footer>
-    </body>
-
-    </html>
+</html>

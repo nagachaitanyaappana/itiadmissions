@@ -1,5 +1,5 @@
-<footer class="mt-auto">
-    <div class="lower-footer text-center mt-3">
+<footer class="mt-auto w-100">
+    <div class="lower-footer text-center">
         <div class="container">
             &copy; 2026 Government of Andhra Pradesh. All Rights Reserved. Developed by NIC.
         </div>

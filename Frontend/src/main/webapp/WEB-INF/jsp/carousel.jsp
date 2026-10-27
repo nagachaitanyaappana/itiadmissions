@@ -7,15 +7,15 @@
   <div class="carousel-inner">
     <div class="carousel-item active">
       <img src="${pageContext.request.contextPath}/images/slide1.webp" class="d-block w-100" alt="Slide 1"
-        style="height: 300px; object-fit: cover;">
+        style="height: 275px; object-fit: cover;">
     </div>
     <div class="carousel-item">
       <img src="${pageContext.request.contextPath}/images/slide2.png" class="d-block w-100" alt="Slide 2"
-        style="height: 300px; object-fit: cover;">
+        style="height: 275px; object-fit: cover;">
     </div>
     <div class="carousel-item">
       <img src="${pageContext.request.contextPath}/images/slide3.webp" class="d-block w-100" alt="Slide 3"
-        style="height: 300px; object-fit: cover;">
+        style="height: 275px; object-fit: cover;">
     </div>
   </div>
   <button class="carousel-control-prev" type="button" data-bs-target="#homeCarousel" data-bs-slide="prev">

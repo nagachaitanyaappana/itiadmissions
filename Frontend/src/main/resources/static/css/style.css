@@ -22,6 +22,18 @@ body {
     background-color: #fff;
     margin: 0;
     padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+footer {
+    margin-top: auto;
+    width: 100%;
 }
 
 /* Header Top Bar (Modern Blue Gradient) */
@@ -341,7 +353,7 @@ button[type="submit"].btn-primary:active {
 }
 
 .lower-footer {
-    background-color: var(--primary-blue);
+    background-color: #2f6fa5 !important;
     color: white;
     padding: 10px 0;
     font-size: 13px;
@@ -791,6 +803,18 @@ body {
     background-color: #fff;
     margin: 0;
     padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+footer {
+    margin-top: auto;
+    width: 100%;
 }
 
 /* Header Top Bar (Dark Teal) */
@@ -991,7 +1015,7 @@ body {
 }
 
 .lower-footer {
-    background-color: var(--primary-blue);
+    background-color: #2f6fa5 !important;
     color: white;
     padding: 10px 0;
     font-size: 13px;
