@@ -1333,16 +1333,4 @@ body {
         transform: translateY(0);
     }
 }
-/* Sticky footer fix */
-html {
-    height: 100%;
-}
-body {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-footer {
-    margin-top: auto;
-    width: 100%;
-}
+

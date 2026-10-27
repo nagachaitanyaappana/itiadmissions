@@ -186,7 +186,7 @@ public class DevPageController {
                 "district-schedule", "shift-unit-report", "admitted-seats-abstract",
                 "all-resource-role", "distwise-admitted-seats-abstract",
                 "trade-dist-wise-admission-report", "tradewise-vacant-position", "about-strive",
-                "disclosure-management", "api-documentation", "trade-display2", "disclaimer"};
+                "disclosure-management", "api-documentation", "disclaimer"};
         for (String v : reportViews) m.put(rep + v, "/reports/" + v);
         return java.util.Collections.unmodifiableMap(m);
     }

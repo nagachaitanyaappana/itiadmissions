@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 @Tag(name = "reports", description = "Reports UI pages and documentation endpoints")
 @Controller
@@ -210,7 +211,7 @@ public class ReportsController {
 
     // ========== ITI PROFILE & TRADE DISPLAY ==========
 
-    @GetMapping("/iti-profile")
+    @RequestMapping(value = "/iti-profile", method = {RequestMethod.GET, RequestMethod.POST})
     public String itiProfile() {
         return "reports/iti-profile";
     }
@@ -218,11 +219,6 @@ public class ReportsController {
     @GetMapping("/trade-display1")
     public String tradeDisplay1() {
         return "redirect:/reports/iti-profile";
-    }
-
-    @RequestMapping(value = {"/trade-display2", "/trade_display2.jsp"})
-    public String tradeDisplay2() {
-        return "reports/trade-display2";
     }
 
     // ========== PUBLIC PAGES ==========
