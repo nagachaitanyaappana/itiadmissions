@@ -1,612 +1,964 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>:: ITI :: Edit Registration</title>
-        
+<html lang="en">
 <head>
-    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-<title>:: ITI  ::</title>
-<link rel="shortcut icon" type="image/ico" href="${pageContext.request.contextPath}/iti.png" />
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/expe1011.css">
-<script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Edit Registration Details | ITI Admission Portal</title>
+    <link rel="shortcut icon" type="image/ico" href="${pageContext.request.contextPath}/images/iti.png" />
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
+    <script type="text/javascript" src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 
-<style>
-    #menu-bar {
-  width: 100%;
-  margin: 0px 0px 0px 0px;
-  padding: 0px 0px 0px 0px;
-  height: 30px;
-  line-height: 100%;
-  border-radius: 0px;
-  -webkit-border-radius: 24px;
-  -moz-border-radius: 24px;
-  box-shadow: 2px 2px 2px #666666;
-  -webkit-box-shadow: 2px 2px 2px #666666;
-  -moz-box-shadow: 2px 2px 2px #666666;
-  background: #e4eeb9;
-  position:relative;
-  z-index:999;
-}
-#menu-bar li {
-  margin: 0px 0px 6px 0px;
-  padding: 0px 6px 0px 6px;
-  float: left;
-  position: relative;
-  list-style: none;
-}
-#menu-bar a {
-  font-weight: bold;
-  font-family: verdana;
-  font-size: 14px;
-  color: #000000;
-    background: #e4eeb9;
-  text-decoration: none;
-  display: block;
-  padding: 6px 20px 6px 20px;
-  margin: 0;
-  margin-bottom: 6px;
-  -webkit-border-radius: 10px;
-  -moz-border-radius: 10px;
-}
-#menu-bar li ul li a {
-  margin: 0;
-}
-#menu-bar .active a, #menu-bar li:hover > a {
-  background:blue;
-  background: lightblue;
- background: -ms-linear-gradient(top,  #EB4954,  #A19197);
-  background: -webkit-gradient(linear, left top, left bottom, from(#EB4954), to(#A19197));
-  background: -moz-linear-gradient(top,  #EB4954,  #A19197);
-  color: white;
-  -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, .2);
-  -moz-box-shadow: 0 1px 1px rgba(0, 0, 0, .2);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, .2);
-}
-#menu-bar ul li:hover a, #menu-bar li:hover li a {
-  background: lightgoldenrodyellow;
-  color: #000000;
-}
-#menu-bar ul a:hover {
-  background: lightblue!important;
-  color: black !important;
-  border-radius: 0;
-  -webkit-border-radius: 0;
-  -moz-border-radius: 0;
-}
-#menu-bar li:hover > ul {
-  display: block;
-}
-#menu-bar ul {
-  background: block;
-  background: linear-gradient(top,  #FFD21C,  #CF7688);
-  background: -ms-linear-gradient(top,  #FFD21C,  #CF7688);
-  background: -webkit-gradient(linear, left top, left bottom, from(#FFD21C), to(#CF7688));
-  background: -moz-linear-gradient(top,  #FFD21C,  #CF7688);
-  display: none;
-  margin: 0;
-  padding: 0;
-  width: 300px;
-  position: absolute;
-  top: 30px;
-  left: 0;
-  border-radius: 0px;
-  -webkit-border-radius: 10px;
-  -moz-border-radius: 10px;
-  -webkit-box-shadow: 2px 2px 3px #222222;
-  -moz-box-shadow: 2px 2px 3px #222222;
-  box-shadow: 2px 2px 3px #222222;
-}
-#menu-bar ul li {
-  float: none;
-  margin: 0;
-  padding: 0;
-}
-#menu-bar ul a {
-  padding:10px 0px 10px 15px;
-   background: gold;
-  color:grey;
-  font-size:13px;
-  font-style:normal;
-  font-family:verdana;
-  font-weight: normal;
-  text-shadow: 2px 2px 3px #FFFFFF;
-}
-#menu-bar ul li:first-child > a {
-  border-top-left-radius: 10px;
-  -webkit-border-top-left-radius: 10px;
-  -moz-border-radius-topleft: 10px;
-  border-top-right-radius: 10px;
-  -webkit-border-top-right-radius: 10px;
-  -moz-border-radius-topright: 10px;
-}
-#menu-bar ul li:last-child > a {
-  border-bottom-left-radius: 10px;
-  -webkit-border-bottom-left-radius: 10px;
-  -moz-border-radius-bottomleft: 10px;
-  border-bottom-right-radius: 10px;
-  -webkit-border-bottom-right-radius: 10px;
-  -moz-border-radius-bottomright: 10px;
-}
-#menu-bar:after {
-  content: ".";
-  display: block;
-  clear: both;
-  visibility: hidden;
-  line-height: 0;
-  height: 0;
-}
-#menu-bar {
-  display: inline-block;
-}
-  html[xmlns] #menu-bar {
-  display: block;
-}
-* html #menu-bar {
-  height: 1%;
-} 
-</style>
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0e7ff 0%, #f1f5f9 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-        <script type="text/javascript">
-            function NumericsOnly(evt)
-            {
-                var charCode = (evt.which) ? evt.which : event.keyCode;
+        main {
+            flex: 1;
+        }
 
-                if ((charCode > 31 && (charCode < 48 || charCode > 57)))
-                {
-                    alert("Enter Numbers");
-                    return false;
-                }
-                return true;
+        /* ===== STEP 1: VERIFICATION CARD ===== */
+        .registration-card {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.1);
+            padding: 35px 32px;
+            margin: 40px auto;
+            max-width: 520px;
+            border-top: 6px solid #2f6fa5;
+        }
+
+        .header-title {
+            font-weight: 800;
+            color: #1e3a8a;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: 1.65rem;
+        }
+
+        .header-subtitle {
+            color: #2f6fa5;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #334155;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+        }
+
+        .form-label span.req {
+            color: #ef4444;
+            margin-left: 2px;
+        }
+
+        .registration-card .form-control {
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            color: #0f172a;
+            background-color: #f8fafc;
+            transition: all 0.2s ease;
+        }
+
+        .registration-card .form-control:focus {
+            background-color: #ffffff;
+            border-color: #2f6fa5;
+            box-shadow: 0 0 0 4px rgba(47, 111, 165, 0.15);
+            outline: none;
+        }
+
+        .captcha-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .captcha-img {
+            height: 44px;
+            width: 135px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            background-color: #ffffff;
+            object-fit: contain;
+            user-select: none;
+        }
+
+        .captcha-refresh {
+            background-color: #e0f2fe;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
+            border-radius: 10px;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .captcha-refresh:hover {
+            background-color: #bae6fd;
+            color: #0c4a6e;
+            transform: rotate(180deg);
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #2f6fa5, #1e4f7a);
+            border: none;
+            border-radius: 10px;
+            padding: 11px 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            color: #ffffff !important;
+            box-shadow: 0 4px 15px rgba(47, 111, 165, 0.3);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(47, 111, 165, 0.4);
+            color: #ffffff !important;
+        }
+
+        .btn-secondary-custom {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 11px 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #475569 !important;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-secondary-custom:hover {
+            background-color: #e2e8f0;
+            color: #0f172a !important;
+        }
+
+        .buttons-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        .buttons-row button,
+        .buttons-row a {
+            flex: 1;
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 0.8rem;
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* ===== STEP 2: STRUCTURED EDIT FORM ===== */
+        .form-table-container {
+            max-width: 1050px;
+            margin: 20px auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 2px solid #000000;
+            overflow: hidden;
+        }
+
+        .form-header-bar {
+            background-color: #2f6fa5;
+            color: #ffffff;
+            padding: 14px 20px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.15rem;
+            border-bottom: 2px solid #000000;
+        }
+
+        .attention-banner {
+            background-color: #eef4fa;
+            padding: 10px 20px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #1e3a8a;
+            border-bottom: 1px solid #000000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .prefill-summary {
+            background-color: #f8fafc;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            border-bottom: 2px solid #000000;
+            color: #334155;
+            text-align: center;
+        }
+
+        .form-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .form-table td,
+        .form-table th {
+            border: 1px solid #000000;
+            padding: 8px 12px;
+            vertical-align: middle;
+        }
+
+        .form-table td.label-cell {
+            background-color: #eef4fa;
+            color: #195695;
+            font-weight: 600;
+            width: 22%;
+            font-size: 0.88rem;
+        }
+
+        .form-table td.label-cell span.req {
+            color: #ef4444;
+            margin-left: 2px;
+        }
+
+        .form-table td.input-cell {
+            width: 28%;
+            background-color: #ffffff;
+        }
+
+        .form-table .form-control,
+        .form-table .form-select {
+            border: 1px solid #a6b8c7;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 0.88rem;
+            width: 100%;
+        }
+
+        .form-table .form-control:read-only {
+            background-color: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+            cursor: not-allowed;
+        }
+
+        .form-table .form-control:focus,
+        .form-table .form-select:focus {
+            border-color: #2f6fa5;
+            box-shadow: 0 0 0 3px rgba(47, 111, 165, 0.15);
+            outline: none;
+        }
+
+        .photo-preview-box {
+            width: 100px;
+            height: 120px;
+            border: 2px dashed #94a3b8;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #f8fafc;
+        }
+
+        .photo-preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .result-card {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.1);
+            padding: 35px 32px;
+            margin: 40px auto;
+            max-width: 600px;
+            border-top: 6px solid #16a34a;
+            text-align: center;
+        }
+    </style>
+
+    <%@ include file="_windowGate.jsp" %>
+</head>
+<body>
+    <header>
+        <%@ include file="../jsp/header.jsp" %>
+    </header>
+
+    <main>
+        <div class="container py-4">
+            <!-- Update Result Alert/Card -->
+            <div id="editResult" style="display:none;"></div>
+
+            <!-- ============ GATE: LOOK UP REGISTRATION ============ -->
+            <div class="registration-card" id="gateDiv">
+                <div class="text-center">
+                    <div class="header-title">
+                        <i class="fas fa-user-edit"></i> ITI Admission Portal
+                    </div>
+                    <div class="header-subtitle">
+                        Student <span style="font-weight: bold; color: #2f6fa5;">Edit Registration</span> Details
+                    </div>
+                </div>
+
+                <div id="gateAlert"></div>
+
+                <form name="EditForm" method="post" action="#" onsubmit="return fetchForEdit()">
+                    <div class="mb-3">
+                        <label class="form-label" for="ssc_regno_gate">
+                            SSC Hall Ticket Number <span class="req">*</span>
+                        </label>
+                        <input type="text" class="form-control" name="ssc_regno" id="ssc_regno_gate"
+                               maxlength="15" placeholder="Enter SSC Hall Ticket Number"
+                               onkeypress="return NumericsOnly(event);" autocomplete="off">
+                        <span id="gateSscError" class="error-msg"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="dob_gate">
+                            Date of Birth <span class="req">*</span>
+                        </label>
+                        <input type="date" class="form-control" name="dob" id="dob_gate">
+                        <span id="gateDobError" class="error-msg"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="regid_gate">
+                            Registration ID <span class="req">*</span>
+                        </label>
+                        <input type="text" class="form-control" name="regid" id="regid_gate"
+                               maxlength="10" placeholder="Enter Registration ID"
+                               onkeypress="return NumericsOnly(event);" autocomplete="off">
+                        <span id="gateRegidError" class="error-msg"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label" for="captcha_gate">
+                            Captcha Verification <span class="req">*</span>
+                        </label>
+                        <div class="captcha-container mb-2">
+                            <div class="captcha-refresh" onclick="refreshCaptcha()" title="Refresh Captcha">
+                                <i class="fas fa-sync-alt"></i>
+                            </div>
+                            <img id="captchaImage" src="${pageContext.request.contextPath}/captcha" class="captcha-img" alt="Captcha" />
+                            <div class="flex-grow-1">
+                                <input type="text" class="form-control" id="captcha_gate" name="captcha"
+                                       placeholder="Enter Captcha" maxlength="6" autocomplete="off">
+                            </div>
+                        </div>
+                        <span id="gateCaptchaError" class="error-msg"></span>
+                    </div>
+
+                    <div class="buttons-row">
+                        <a href="${pageContext.request.contextPath}/" class="btn btn-secondary-custom">
+                            <i class="fas fa-home"></i> Home
+                        </a>
+                        <button type="button" class="btn btn-secondary-custom" onclick="resetGateForm()">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                        <button type="submit" class="btn btn-primary-custom" id="gateSubmitBtn">
+                            <i class="fas fa-arrow-right"></i> Submit
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ============ EDIT FORM (Opens after lookup) ============ -->
+            <div id="editDiv" style="display:none;">
+                <div class="form-table-container">
+                    <div class="form-header-bar">
+                        Edit Registration Form for Admission into the Industrial Training Institute for the session <span class="sessionYearPhase"></span>
+                    </div>
+                    <div class="attention-banner">
+                        <i class="fas fa-exclamation-triangle text-warning fs-5"></i>
+                        <span>Attention: Enter data carefully. If any information is found wrong in Marks/GPA, Caste, etc., the authority has the right to disqualify the candidate.</span>
+                    </div>
+
+                    <div id="prefillInfo" class="prefill-summary"></div>
+
+                    <form name="EditDetailsForm" method="post" action="#" onsubmit="return submitEdit()">
+                        <table class="form-table">
+                            <tr>
+                                <td class="label-cell">Hall Ticket Number<span class="req">*</span></td>
+                                <td class="input-cell"><input type="text" id="sscRegDisp" class="form-control" readonly tabindex="-1"></td>
+                                <td class="label-cell">Board<span class="req">*</span></td>
+                                <td class="input-cell"><input type="text" id="boardDisp" class="form-control" readonly tabindex="-1"></td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">Year of Pass<span class="req">*</span></td>
+                                <td class="input-cell"><input type="text" id="sscYearDisp" class="form-control" readonly tabindex="-1"></td>
+                                <td class="label-cell">Month of Pass<span class="req">*</span></td>
+                                <td class="input-cell">
+                                    <select id="ssc_month" class="form-select">
+                                        <option value="">--Select Month--</option>
+                                        <option value="03">March</option>
+                                        <option value="04">Supplementary</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">Applicant's Name<span class="req">*</span></td>
+                                <td class="input-cell"><input type="text" id="name" class="form-control" maxlength="50" oninput="this.value = this.value.toUpperCase()"></td>
+                                <td class="label-cell">Father's Name<span class="req">*</span></td>
+                                <td class="input-cell"><input type="text" id="fname" class="form-control" maxlength="50" oninput="this.value = this.value.toUpperCase()"></td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">Mother's Name<span class="req">*</span></td>
+                                <td class="input-cell"><input type="text" id="mname" class="form-control" maxlength="50" oninput="this.value = this.value.toUpperCase()"></td>
+                                <td class="label-cell">Gender<span class="req">*</span></td>
+                                <td class="input-cell">
+                                    <div class="d-flex gap-3 align-items-center pt-1">
+                                        <label class="form-check-label"><input type="radio" name="gender" value="male" class="form-check-input me-1"> Male</label>
+                                        <label class="form-check-label"><input type="radio" name="gender" value="female" class="form-check-input me-1"> Female</label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">Date of Birth<span class="req">*</span></td>
+                                <td class="input-cell"><input type="date" id="appdob" class="form-control"></td>
+                                <td class="label-cell">Aadhaar Card Number<span class="req">*</span></td>
+                                <td class="input-cell"><input type="text" id="adarno" class="form-control" maxlength="12" onkeypress="return NumericsOnly(event);"></td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">Mobile Number<span class="req">*</span></td>
+                                <td class="input-cell"><input type="text" id="phno" class="form-control" maxlength="10" onkeypress="return NumericsOnly(event);"></td>
+                                <td class="label-cell">Email</td>
+                                <td class="input-cell"><input type="email" id="email" class="form-control" maxlength="80"></td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">Address<span class="req">*</span></td>
+                                <td class="input-cell"><textarea id="addr" class="form-control" rows="2"></textarea></td>
+                                <td class="label-cell">Pincode<span class="req">*</span></td>
+                                <td class="input-cell"><input type="text" id="pincode" class="form-control" maxlength="6" onkeypress="return NumericsOnly(event);"></td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">Caste Category<span class="req">*</span></td>
+                                <td class="input-cell">
+                                    <select id="casteSelect" class="form-select" onchange="loadSubCastes();">
+                                        <option value="">--Select Caste--</option>
+                                    </select>
+                                </td>
+                                <td class="label-cell">Sub Caste</td>
+                                <td class="input-cell">
+                                    <select id="subCasteSelect" class="form-select">
+                                        <option value="">--Select Sub Category--</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">Local / Non-Local<span class="req">*</span></td>
+                                <td class="input-cell">
+                                    <select id="local" class="form-select">
+                                        <option value="">--Select Local Status--</option>
+                                        <option value="Local">Local</option>
+                                        <option value="NonLocal">Non-Local</option>
+                                    </select>
+                                </td>
+                                <td class="label-cell">Physically Challenged<span class="req">*</span></td>
+                                <td class="input-cell">
+                                    <div class="d-flex gap-3 align-items-center pt-1">
+                                        <label class="form-check-label"><input type="radio" name="phc" value="yes" class="form-check-input me-1"> Yes</label>
+                                        <label class="form-check-label"><input type="radio" name="phc" value="no" class="form-check-input me-1"> No</label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">PWD Category</td>
+                                <td class="input-cell">
+                                    <select id="pwdCategory" class="form-select">
+                                        <option value="">None</option>
+                                        <option value="1">Blind</option>
+                                        <option value="2">Deaf</option>
+                                        <option value="3">Motor Disability</option>
+                                        <option value="4">Mental Disability</option>
+                                    </select>
+                                </td>
+                                <td class="label-cell">Ex-Servicemen<span class="req">*</span></td>
+                                <td class="input-cell">
+                                    <div class="d-flex gap-3 align-items-center pt-1">
+                                        <label class="form-check-label"><input type="radio" name="exs" value="yes" class="form-check-input me-1"> Yes</label>
+                                        <label class="form-check-label"><input type="radio" name="exs" value="no" class="form-check-input me-1"> No</label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">Qualification<span class="req">*</span></td>
+                                <td class="input-cell">
+                                    <select id="ssc" class="form-select">
+                                        <option value="">--Select Qualification--</option>
+                                        <option value="yes">SSC Passed</option>
+                                        <option value="no">8th Passed</option>
+                                    </select>
+                                </td>
+                                <td class="label-cell">Economic Weaker Section<span class="req">*</span></td>
+                                <td class="input-cell">
+                                    <div class="d-flex gap-3 align-items-center pt-1">
+                                        <label class="form-check-label"><input type="radio" name="ews" value="yes" class="form-check-input me-1"> Yes</label>
+                                        <label class="form-check-label"><input type="radio" name="ews" value="no" class="form-check-input me-1"> No</label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label-cell">Photograph</td>
+                                <td class="input-cell" colspan="3">
+                                    <div class="d-flex flex-wrap gap-4 align-items-center">
+                                        <div>
+                                            <div class="small text-muted mb-1 fw-bold">Current Photo:</div>
+                                            <div class="photo-preview-box">
+                                                <img id="existingPhoto" alt="No Photo" style="display:none;">
+                                                <span id="noPhotoText" class="text-muted small">No Photo</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="small text-muted mb-1 fw-bold">New Photo Preview:</div>
+                                            <div class="photo-preview-box" id="photoPrevBox">
+                                                <span class="text-muted small">Select below</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1" style="min-width: 220px;">
+                                            <label class="form-label small">Upload New Photo (Optional):</label>
+                                            <input type="file" id="photo" class="form-control form-control-sm" accept="image/png,image/jpeg" onchange="previewPhoto(this);">
+                                            <div class="form-text text-muted" style="font-size:0.75rem;">Allowed formats: PNG, JPG (Max 200 KB)</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div class="p-3 bg-light text-center border-top">
+                            <div class="d-inline-flex gap-3">
+                                <a href="${pageContext.request.contextPath}/" class="btn btn-secondary-custom">
+                                    <i class="fas fa-home me-1"></i> Back to Home
+                                </a>
+                                <button type="submit" class="btn btn-primary-custom" id="saveEditBtn">
+                                    <i class="fas fa-save me-1"></i> Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="text/javascript">
+        var CURRENT_REGID = null;
+
+        function NumericsOnly(evt) {
+            var charCode = (evt.which) ? evt.which : event.keyCode;
+            if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        }
+
+        function refreshCaptcha() {
+            var timestamp = (new Date()).getTime();
+            $("#captchaImage").attr("src", "${pageContext.request.contextPath}/captcha?ts=" + timestamp);
+            $("#captcha_gate").val("");
+            $("#gateCaptchaError").text("");
+        }
+
+        function resetGateForm() {
+            document.getElementById("ssc_regno_gate").value = "";
+            document.getElementById("dob_gate").value = "";
+            document.getElementById("regid_gate").value = "";
+            document.getElementById("captcha_gate").value = "";
+            $(".error-msg").text("");
+            $("#gateAlert").empty();
+            refreshCaptcha();
+        }
+
+        function validateGate() {
+            var valid = true;
+            $(".error-msg").text("");
+            $("#gateAlert").empty();
+
+            var ssc_regno = $("#ssc_regno_gate").val().trim();
+            if (!ssc_regno) {
+                $("#gateSscError").text("SSC Hall Ticket Number is required.");
+                $("#ssc_regno_gate").focus();
+                valid = false;
             }
 
-            function validate() {
-
-                //captcha
-                var captcha = document.getElementById("captcha").value;
-                if (captcha === "" || captcha === null) {
-                    document.getElementById("captcha").focus();
-                    alert("Captcha is required");
-                    return false;
-                }
-                //regid
-                var regid = document.getElementById("regid").value;
-                if (regid === "" || regid === null) {
-                    document.getElementById("regid").focus();
-                    alert("Registration Id is required");
-                    return false;
-                }
-                //ssc_regno
-                var ssc_regno = document.getElementById("ssc_regno").value;
-                if (ssc_regno === "" || ssc_regno === null) {
-                    document.getElementById("ssc_regno").focus();
-                    alert("SSC HallTicket Number is required");
-                    return false;
-                }
-                //dob
-                var dob = document.getElementById("dob").value;
-                if (dob === "" || dob === null) {
-                    document.getElementById("dob").focus();
-                    alert("Date of Birth is required");
-                    return false;
-                }
-                return true;
+            var dob = $("#dob_gate").val();
+            if (!dob) {
+                $("#gateDobError").text("Date of Birth is required.");
+                if (valid) $("#dob_gate").focus();
+                valid = false;
             }
-        </script>
 
-        <script type="text/javascript">
-            $(document).ready(function () {
-                $.ajaxSetup({
-                    cache: false
-                });
-                $("#captchaRef").click(function () {
-                    var timestamp = (new Date()).getTime();
-                    var newSrc = $("#captchaImage").attr("src").split("?");
-                    newSrc = newSrc[0] + "?" + timestamp;
-                    $("#captchaImage").attr("src", newSrc);
-                    $("#captchaImage").slideDown("fast");
+            var regid = $("#regid_gate").val().trim();
+            if (!regid) {
+                $("#gateRegidError").text("Registration ID is required.");
+                if (valid) $("#regid_gate").focus();
+                valid = false;
+            }
 
-                });
-                $('#captcha').keypress(function (ev) {
-                    if (ev.keyCode === 13)
-                        $('#mysubmit').click();
-                });
-            });
-        </script>
-            <script type="text/javascript">
-                var CURRENT_REGID = null;
+            var captcha = $("#captcha_gate").val().trim();
+            if (!captcha) {
+                $("#gateCaptchaError").text("Captcha is required.");
+                if (valid) $("#captcha_gate").focus();
+                valid = false;
+            }
 
-                // Gate submit: captcha check -> fetch record -> open edit form
-                function fetchForEdit() {
-                    if (!validate()) return false;
-                    var entered = document.getElementById("captcha").value.trim().toUpperCase();
-                    $.get('${pageContext.request.contextPath}/captcha/text', function (serverCaptcha) {
-                        if (entered !== String(serverCaptcha).trim().toUpperCase()) {
-                            alert("Captcha does not match. Please try again.");
-                            $("#captchaRef").click();
-                            document.getElementById("captcha").value = "";
-                            document.getElementById("captcha").focus();
-                            return;
-                        }
-                        var regid = document.getElementById("regid").value.trim();
-                        var hallticket = document.getElementById("ssc_regno").value.trim().toUpperCase();
-                        var dob = document.getElementById("dob").value;
-                        $.get('${backendBaseUrl}/api/student/' + regid, function (s) {
-                            if (String(s.sscRegNo || '').toUpperCase() !== hallticket) {
-                                alert("Hall Ticket Number does not match this Registration Id.");
-                                return;
-                            }
-                            if (s.dob && String(s.dob).substring(0, 10) !== dob) {
-                                alert("Date of Birth does not match this Registration Id.");
-                                return;
-                            }
-                            CURRENT_REGID = s.regid;
-                            prefill(s);
-                            document.getElementById("gateDiv").style.display = "none";
-                            document.getElementById("editDiv").style.display = "";
-                            window.scrollTo(0, 0);
-                        }).fail(function () {
-                            alert("No registration found for Registration Id " + regid + ".");
-                        });
-                    });
-                    return false;
+            return valid;
+        }
+
+        function fetchForEdit() {
+            if (!validateGate()) return false;
+
+            var entered = document.getElementById("captcha_gate").value.trim().toUpperCase();
+            var submitBtn = $("#gateSubmitBtn");
+            submitBtn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin"></i> Checking...');
+
+            $.get('${pageContext.request.contextPath}/captcha/text', function (serverCaptcha) {
+                if (entered !== String(serverCaptcha).trim().toUpperCase()) {
+                    submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
+                    $("#gateCaptchaError").text("Captcha does not match. Please try again.");
+                    refreshCaptcha();
+                    document.getElementById("captcha_gate").focus();
+                    return;
                 }
 
-                function prefill(s) {
-                    var boardMap = { '28': 'Andhra Pradesh State Board (SSC)', '51': 'CBSE', '52': 'ICSE', '36': 'Telangana' };
-                    var board = boardMap[String(s.sscBoard)] || (s.sscBoard || '');
-                    document.getElementById("prefillInfo").innerHTML =
-                        '<b>Registration Id:</b> ' + s.regid + ' &nbsp;|&nbsp; <b>Hall Ticket:</b> ' + s.sscRegNo
-                        + ' &nbsp;|&nbsp; <b>Board:</b> ' + board + ' &nbsp;|&nbsp; <b>Year:</b> ' + s.sscYear
-                        + ' &nbsp;|&nbsp; <b>Result Type:</b> ' + (s.sscType === 'sscm' ? 'Marks' : 'GPA');
-                    document.getElementById("sscRegDisp").value = s.sscRegNo || '';
-                    document.getElementById("boardDisp").value = board;
-                    document.getElementById("sscYearDisp").value = s.sscYear || '';
-                    document.getElementById("ssc_month").value = s.sscMonth || '';
-                    document.getElementById("name").value = s.name || '';
-                    document.getElementById("fname").value = s.fname || '';
-                    document.getElementById("mname").value = s.mname || '';
-                    setRadio("gender", s.gender || '');
-                    document.getElementById("appdob").value = s.dob ? String(s.dob).substring(0, 10) : '';
-                    document.getElementById("adarno").value = s.adarno || '';
-                    document.getElementById("phno").value = s.phno || '';
-                    document.getElementById("email").value = s.email || '';
-                    document.getElementById("addr").value = s.addr || '';
-                    document.getElementById("pincode").value = s.pincode || '';
-                    document.getElementById("local").value = s.local || '';
-                    document.getElementById("pwdCategory").value = (s.pwdCategory && s.pwdCategory !== 'N') ? s.pwdCategory : '';
-                    document.getElementById("ssc").value = s.sscPassed === true ? 'yes' : (s.sscPassed === false ? 'no' : '');
-                    if (s.caste) $('#casteSelect').append('<option value="' + s.caste + '" selected>' + s.caste + '</option>');
-                    if (s.subCaste) $('#subCasteSelect').append('<option value="' + s.subCaste + '" selected>' + s.subCaste + '</option>');
-                    setRadio("phc", s.phc === true ? 'yes' : (s.phc === false ? 'no' : ''));
-                    setRadio("exs", s.exservice === true ? 'yes' : (s.exservice === false ? 'no' : ''));
-                    setRadio("ews", s.economicWeakerSection === true ? 'yes' : (s.economicWeakerSection === false ? 'no' : ''));
-                    // Show any previously uploaded photograph (mirrors Editviewpage.jsp).
-                    $.get('${backendBaseUrl}/api/student/photo/' + s.regid, function (r) {
-                        var img = document.getElementById("existingPhoto");
-                        if (r && r.photo) {
-                            img.src = 'data:image/jpeg;base64,' + r.photo;
-                            img.style.display = '';
-                        } else {
-                            img.style.display = 'none';
-                        }
-                    });
-                }
+                var regid = document.getElementById("regid_gate").value.trim();
+                var hallticket = document.getElementById("ssc_regno_gate").value.trim().toUpperCase();
+                var dob = document.getElementById("dob_gate").value;
 
-                function radioVal(name) {
-                    var els = document.getElementsByName(name);
-                    for (var i = 0; i < els.length; i++) { if (els[i].checked) { return els[i].value; } }
-                    return "";
-                }
+                $.get('${backendBaseUrl}/api/student/' + encodeURIComponent(regid), function (s) {
+                    submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
 
-                function setRadio(name, value) {
-                    var els = document.getElementsByName(name);
-                    for (var i = 0; i < els.length; i++) { els[i].checked = (els[i].value === value); }
-                }
-
-                function val(id) { var v = document.getElementById(id).value.trim(); return v === "" ? null : v; }
-
-                // Local preview of a newly selected photograph; uploading happens on Save.
-                function previewPhoto(input) {
-                    var box = document.getElementById("photoPrev");
-                    box.innerHTML = "";
-                    if (!input || !input.files || input.files.length === 0) { return; }
-                    var file = input.files[0];
-                    if (file.type !== "image/png" && file.type !== "image/jpeg") {
-                        input.value = "";
-                        alert("Please select a PNG or JPEG image.");
+                    if (String(s.sscRegNo || '').toUpperCase() !== hallticket) {
+                        $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-triangle me-2"></i>Hall Ticket Number does not match this Registration ID.</div>');
+                        refreshCaptcha();
                         return;
                     }
-                    var img = document.createElement("img");
-                    img.src = URL.createObjectURL(file);
-                    img.style.width = "90px";
-                    img.style.height = "110px";
-                    img.style.border = "1px solid #666";
-                    box.appendChild(img);
-                }
-            </script>
-            <script type="text/javascript">
-                function loadCastes() {
-                    // Master list comes from public.caste_master (caste_code / caste_name).
-                    // The codes (BC-A, SC-I, ...) are exactly what student_application.caste stores.
-                    $.get('${backendBaseUrl}/api/student/castes', function (list) {
-                        $.each(list, function (i, c) {
-                            $('#casteSelect').append('<option value="' + c.casteCode + '">' + c.casteName + '</option>');
-                        });
-                    });
-                }
-
-                function loadSubCastes() {
-                    var code = document.getElementById("casteSelect").value;
-                    var sel = document.getElementById("subCasteSelect");
-                    sel.innerHTML = '<option value="">--Select Sub Caste--</option>';
-                    if (!code) { return; }
-                    // Sub-caste master is the local reference (ids preserved from real
-                    // applications; names land as the true master becomes available)
-                    $.get('${backendBaseUrl}/api/student/subcastes/' + encodeURIComponent(code))
-                        .done(function (list) {
-                            (list || []).forEach(function (r) {
-                                var label = (r.subCasteName && r.subCasteName !== '') ? r.subCasteName : ('Sub-caste ' + r.subCasteId);
-                                var opt = document.createElement('option');
-                                opt.value = r.subCasteId; opt.textContent = label + ' (' + r.subCasteId + ')';
-                                sel.appendChild(opt);
-                            });
-                        });
-                }
-
-                $(document).on('change', '#casteSelect', loadSubCastes);
-
-                function validateEdit() {
-                    var req = [["name","Name"],["fname","Father's Name"],["appdob","Date of Birth"],["phno","Mobile Number"],["addr","Address"],["local","Local/Non-Local"],["casteSelect","Caste"]];
-                    for (var i = 0; i < req.length; i++) {
-                        var el = document.getElementById(req[i][0]);
-                        if (!el.value || !el.value.trim()) { alert("Please enter " + req[i][1] + "."); el.focus(); return false; }
+                    if (s.dob && String(s.dob).substring(0, 10) !== dob) {
+                        $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-triangle me-2"></i>Date of Birth does not match this Registration ID.</div>');
+                        refreshCaptcha();
+                        return;
                     }
-                    if (!radioVal("gender")) { alert("Please select Gender."); return false; }
-                    if (!/^\d{10}$/.test(document.getElementById("phno").value.trim())) { alert("Mobile Number must be 10 digits."); return false; }
-                    var ad = document.getElementById("adarno").value.trim();
-                    if (ad !== "" && !/^\d{12}$/.test(ad)) { alert("Aadhaar must be 12 digits."); return false; }
-                    var pin = document.getElementById("pincode").value.trim();
-                    if (pin !== "" && !/^\d{6}$/.test(pin)) { alert("Pincode must be 6 digits."); return false; }
-                    return true;
-                }
 
-                // Submit: optionally replace the photograph, then PUT /api/student/update/{regid}.
-                // Mirrors Editviewpage.jsp, which posts the photo in the same multipart form.
-                function submitEdit() {
-                    if (!validateEdit()) return false;
-                    var fileInput = document.getElementById("photo");
-                    var hasPhoto = fileInput && fileInput.files && fileInput.files.length > 0;
-                    if (hasPhoto) {
-                        var fd = new FormData();
-                        fd.append("photo", fileInput.files[0]);
-                        $.ajax({
-                            url: '${backendBaseUrl}/api/student/photo/' + CURRENT_REGID,
-                            type: 'POST', data: fd, processData: false, contentType: false,
-                            success: function () { updateDetails(); },
-                            error: function (xhr) {
-                                var msg = "Failed to upload the photograph.";
-                                if (xhr.responseJSON && xhr.responseJSON.error) { msg = xhr.responseJSON.error; }
-                                alert(msg);
-                            }
-                        });
-                    } else {
-                        updateDetails();
-                    }
-                    return false;
-                }
+                    CURRENT_REGID = s.regid;
+                    prefill(s);
+                    document.getElementById("gateDiv").style.display = "none";
+                    document.getElementById("editDiv").style.display = "";
+                    window.scrollTo(0, 0);
 
-                function updateDetails() {
-                    var payload = {
-                        name: document.getElementById("name").value.trim(),
-                        fname: document.getElementById("fname").value.trim(),
-                        mname: document.getElementById("mname").value.trim(),
-                        gender: radioVal("gender"),
-                        dob: document.getElementById("appdob").value,
-                        adarno: document.getElementById("adarno").value.trim(),
-                        phno: document.getElementById("phno").value.trim(),
-                        email: document.getElementById("email").value.trim(),
-                        addr: document.getElementById("addr").value.trim(),
-                        pincode: document.getElementById("pincode").value.trim(),
-                        caste: document.getElementById("casteSelect").value,
-                        subCaste: document.getElementById("subCasteSelect").value,
-                        local: document.getElementById("local").value,
-                        sscMonth: document.getElementById("ssc_month").value,
-                        pwdCategory: document.getElementById("pwdCategory").value,
-                        sscPassed: document.getElementById("ssc").value === "" ? null : document.getElementById("ssc").value === 'yes',
-                        economicWeakerSection: radioVal("ews") === "yes",
-                        phc: radioVal("phc") === "yes",
-                        exservice: radioVal("exs") === "yes"
-                    };
-                    $.ajax({
-                        url: '${backendBaseUrl}/api/student/update/' + CURRENT_REGID,
-                        type: 'PUT', contentType: 'application/json',
-                        data: JSON.stringify(payload),
-                        success: function () {
-                            $('#editResult').html('<div style="background-color:#d4edda;border:2px solid #28a745;padding:20px;margin:10px auto;width:70%;">'
-                                + '<h3 style="color:#155724;">Registration Details Updated Successfully!</h3>'
-                                + '<p style="color:#155724;">Your details have been saved for Registration Id <b>' + CURRENT_REGID + '</b>.</p>'
-                                + '<p><a href="${pageContext.request.contextPath}/">Back to Home</a></p></div>');
-                            document.getElementById("editDiv").style.display = "none";
-                            window.scrollTo(0, 0);
-                        },
-                        error: function (xhr) {
-                            var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message
-                                : "Failed to update details. Please check the values and try again.";
-                            alert(msg);
+                }).fail(function () {
+                    submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
+                    $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-circle me-2"></i>No registration found for Registration ID <b>' + regid + '</b>.</div>');
+                    refreshCaptcha();
+                });
+
+            }).fail(function () {
+                submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
+                $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;">Verification service temporarily unavailable. Please retry.</div>');
+            });
+
+            return false;
+        }
+
+        function prefill(s) {
+            var boardMap = { '28': 'Andhra Pradesh State Board (SSC)', '51': 'CBSE', '52': 'ICSE', '36': 'Telangana' };
+            var board = boardMap[String(s.sscBoard)] || (s.sscBoard || '-');
+
+            document.getElementById("prefillInfo").innerHTML =
+                '<strong>Registration ID:</strong> <span class="badge bg-primary fs-6 me-2">' + s.regid + '</span> '
+                + '<strong>Hall Ticket:</strong> ' + (s.sscRegNo || '-') + ' &nbsp;|&nbsp; '
+                + '<strong>Board:</strong> ' + board + ' &nbsp;|&nbsp; '
+                + '<strong>Year:</strong> ' + (s.sscYear || '-') + ' &nbsp;|&nbsp; '
+                + '<strong>Result Type:</strong> ' + (s.sscType === 'sscm' ? 'Marks' : 'GPA');
+
+            document.getElementById("sscRegDisp").value = s.sscRegNo || '';
+            document.getElementById("boardDisp").value = board;
+            document.getElementById("sscYearDisp").value = s.sscYear || '';
+            document.getElementById("ssc_month").value = s.sscMonth || '';
+            document.getElementById("name").value = s.name || '';
+            document.getElementById("fname").value = s.fname || '';
+            document.getElementById("mname").value = s.mname || '';
+            setRadio("gender", s.gender || '');
+            document.getElementById("appdob").value = s.dob ? String(s.dob).substring(0, 10) : '';
+            document.getElementById("adarno").value = s.adarno || '';
+            document.getElementById("phno").value = s.phno || '';
+            document.getElementById("email").value = s.email || '';
+            document.getElementById("addr").value = s.addr || '';
+            document.getElementById("pincode").value = s.pincode || '';
+            document.getElementById("local").value = s.local || '';
+            document.getElementById("pwdCategory").value = (s.pwdCategory && s.pwdCategory !== 'N') ? s.pwdCategory : '';
+            document.getElementById("ssc").value = s.sscPassed === true ? 'yes' : (s.sscPassed === false ? 'no' : '');
+
+            if (s.caste) {
+                $('#casteSelect').val(s.caste);
+                loadSubCastes(s.subCaste);
+            }
+
+            setRadio("phc", s.phc === true ? 'yes' : (s.phc === false ? 'no' : ''));
+            setRadio("exs", s.exservice === true ? 'yes' : (s.exservice === false ? 'no' : ''));
+            setRadio("ews", s.economicWeakerSection === true ? 'yes' : (s.economicWeakerSection === false ? 'no' : ''));
+
+            // Load existing photo
+            $.get('${backendBaseUrl}/api/student/photo/' + s.regid, function (r) {
+                var img = document.getElementById("existingPhoto");
+                var noPhotoText = document.getElementById("noPhotoText");
+                if (r && r.photo) {
+                    img.src = 'data:image/jpeg;base64,' + r.photo;
+                    img.style.display = 'block';
+                    noPhotoText.style.display = 'none';
+                } else {
+                    img.style.display = 'none';
+                    noPhotoText.style.display = 'inline';
+                }
+            });
+        }
+
+        function radioVal(name) {
+            var els = document.getElementsByName(name);
+            for (var i = 0; i < els.length; i++) {
+                if (els[i].checked) { return els[i].value; }
+            }
+            return "";
+        }
+
+        function setRadio(name, value) {
+            var els = document.getElementsByName(name);
+            for (var i = 0; i < els.length; i++) {
+                els[i].checked = (els[i].value === value);
+            }
+        }
+
+        function previewPhoto(input) {
+            var box = document.getElementById("photoPrevBox");
+            box.innerHTML = "";
+            if (!input || !input.files || input.files.length === 0) {
+                box.innerHTML = '<span class="text-muted small">Select below</span>';
+                return;
+            }
+            var file = input.files[0];
+            if (file.type !== "image/png" && file.type !== "image/jpeg") {
+                input.value = "";
+                alert("Please select a PNG or JPEG image.");
+                box.innerHTML = '<span class="text-muted small">Select below</span>';
+                return;
+            }
+            var img = document.createElement("img");
+            img.src = URL.createObjectURL(file);
+            img.style.width = "100%";
+            img.style.height = "100%";
+            img.style.objectFit = "cover";
+            box.appendChild(img);
+        }
+
+        function loadCastes() {
+            $.get('${backendBaseUrl}/api/student/castes', function (list) {
+                $.each(list, function (i, c) {
+                    $('#casteSelect').append('<option value="' + c.casteCode + '">' + c.casteName + '</option>');
+                });
+            });
+        }
+
+        function loadSubCastes(preselect) {
+            var code = document.getElementById("casteSelect").value;
+            var sel = document.getElementById("subCasteSelect");
+            sel.innerHTML = '<option value="">--Select Sub Category--</option>';
+            if (!code) { return; }
+            $.get('${backendBaseUrl}/api/student/subcastes/' + encodeURIComponent(code))
+                .done(function (list) {
+                    (list || []).forEach(function (r) {
+                        var label = (r.subCasteName && r.subCasteName !== '') ? r.subCasteName : ('Sub-caste ' + r.subCasteId);
+                        var opt = document.createElement('option');
+                        opt.value = r.subCasteId;
+                        opt.textContent = label + ' (' + r.subCasteId + ')';
+                        if (preselect && String(preselect) === String(r.subCasteId)) {
+                            opt.selected = true;
                         }
-                    });
-                    return false;
-                }
-
-                $(document).ready(function () {
-                    loadCastes();
-                    // Current session year/phase come from admissions.admission_phase (current = true).
-                    $.get('${backendBaseUrl}/api/reports/current-admission-phase', function (data) {
-                        if (data && data.year) {
-                            $('.sessionYearPhase').text(String(data.year) + '(Phase-' + data.phase + ')');
-                        }
+                        sel.appendChild(opt);
                     });
                 });
-            </script>
+        }
 
-        <style>
-            #mysubmit,#submit{
-                color: white;
-                font-weight: bolder;
-                border: none;
-                width: 30%;
-                border-radius: 4px;
+        function validateEdit() {
+            var req = [
+                ["name", "Applicant's Name"],
+                ["fname", "Father's Name"],
+                ["mname", "Mother's Name"],
+                ["appdob", "Date of Birth"],
+                ["phno", "Mobile Number"],
+                ["addr", "Address"],
+                ["pincode", "Pincode"],
+                ["local", "Local/Non-Local"],
+                ["casteSelect", "Caste"]
+            ];
+            for (var i = 0; i < req.length; i++) {
+                var el = document.getElementById(req[i][0]);
+                if (!el.value || !el.value.trim()) {
+                    alert("Please enter " + req[i][1] + ".");
+                    el.focus();
+                    return false;
+                }
             }
-            #mysubmit{ background-color: seagreen; color: white; }
-            #submit{ background-color: lightsalmon; color: white; }
-            #captchaRef{
-                background-color: #00c6fb; 
-                size: auto;
-                border-radius: 4px;
-                border: none; 
-                font-weight: bolder;
+            if (!radioVal("gender")) {
+                alert("Please select Gender.");
+                return false;
             }
-            #heading{
-                color: black;
-                font-weight: bold; 
+            if (!/^\d{10}$/.test(document.getElementById("phno").value.trim())) {
+                alert("Mobile Number must be 10 digits.");
+                document.getElementById("phno").focus();
+                return false;
             }
-            td{ padding-bottom: 10px; padding-left: 10px; }
-            table{
-                border: 2px solid black;
-                width: 60%;
-                height: 30%;
+            var ad = document.getElementById("adarno").value.trim();
+            if (ad !== "" && !/^\d{12}$/.test(ad)) {
+                alert("Aadhaar Card Number must be 12 digits.");
+                document.getElementById("adarno").focus();
+                return false;
             }
+            var pin = document.getElementById("pincode").value.trim();
+            if (pin !== "" && !/^\d{6}$/.test(pin)) {
+                alert("Pincode must be 6 digits.");
+                document.getElementById("pincode").focus();
+                return false;
+            }
+            return true;
+        }
 
-        </style>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
-    <%@ include file="_windowGate.jsp" %>
-    </head>
-    <body>
-        
-<center>
-    <img src="${pageContext.request.contextPath}/images/gen.jpg" id="banner-id" width="100%">
-</center>
+        function submitEdit() {
+            if (!validateEdit()) return false;
 
-<div id="editResult"></div>
+            var saveBtn = $("#saveEditBtn");
+            saveBtn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin me-1"></i> Saving Changes...');
 
-<!-- ============ GATE: LOOK UP THE REGISTRATION ============ -->
-<div id="gateDiv">
-        <form name="EditForm" method="post" action="#" onsubmit="return fetchForEdit()">
-            <h2 style="background-color: lightgreen" align="center">Edit Registration Form for Admission into the Industrial Training Institute for the session <span class="sessionYearPhase"></span> </h2>
-            <table width="50%"  align="center" bgcolor="#cbd6b2">
-                <tr id="heading">
-                    <td></td>
-                    <td><u>Student Edit Form</u></td>
-                </tr>
-                <tr>
-                    <td><b>SSC HallTicket Number<font color="red">*</font></b></td>
-                    <td colspan="2"><input type="text" name="ssc_regno" value="" onkeypress="return NumericsOnly(event);" id="ssc_regno" maxlength="15"></td>
-                </tr> 
-                <tr>
-                    <td><b>Date of Birth<font color="red">*</font></b></td>
-                    <td colspan="2"> <input type="date" name="dob" value="" id="dob"> </td>      
-                </tr>
-                <tr>
-                    <td><b>Registration Id<font color="red">*</font></b></td>
-                    <td colspan="2"><input type="text" name="regid" maxlength="10" value="" onkeypress="return NumericsOnly(event);" id="regid"></td>
-                </tr> 
-                <tr>
-                    <td><b>Captcha<font color="red">*</font></b></td>
-                    <td colspan="2"><input type="text" autocomplete="off" id="captcha"  name="captcha"   tabindex="3" maxlength="4" />
-                    </td>
-                </tr>
-                <tr>
-                    <td></td>
-                    <td><button type="button" id='captchaRef' style="padding:5px 10px;cursor:pointer;">&#8635; New Captcha</button> 
-                        <img src="${pageContext.request.contextPath}/captcha" id='captchaImage'  border="0" width="135px" height="30px"></td>
+            var fileInput = document.getElementById("photo");
+            var hasPhoto = fileInput && fileInput.files && fileInput.files.length > 0;
+            if (hasPhoto) {
+                var fd = new FormData();
+                fd.append("photo", fileInput.files[0]);
+                $.ajax({
+                    url: '${backendBaseUrl}/api/student/photo/' + CURRENT_REGID,
+                    type: 'POST',
+                    data: fd,
+                    processData: false,
+                    contentType: false,
+                    success: function () {
+                        updateDetails();
+                    },
+                    error: function (xhr) {
+                        saveBtn.prop("disabled", false).html('<i class="fas fa-save me-1"></i> Save Changes');
+                        var msg = "Failed to upload the photograph.";
+                        if (xhr.responseJSON && xhr.responseJSON.error) { msg = xhr.responseJSON.error; }
+                        alert(msg);
+                    }
+                });
+            } else {
+                updateDetails();
+            }
+            return false;
+        }
 
-                </tr> 
-                <tr>
-                    <td align="right"><a href="${pageContext.request.contextPath}/"><input type="button"  value="Home" id="submit"/></a></td>
-                    <td> <input type="submit" value="Submit" id="mysubmit"/> </td>
-                </tr> 
-            </table>
-        </form>
-</div>
-<!-- ============ EDIT FORM (opens after lookup) ============ -->
-<div id="editDiv" style="display:none;">
-        <form name="EditDetailsForm" method="post" action="#" onsubmit="return submitEdit()">
-            <h2 style="background-color: lightgreen" align="center" class="style4">
-                Edit Registration Form for Admission into the Industrial Training Institute for the session <span class="sessionYearPhase"></span></h2>
+        function updateDetails() {
+            var saveBtn = $("#saveEditBtn");
+            var payload = {
+                name: document.getElementById("name").value.trim(),
+                fname: document.getElementById("fname").value.trim(),
+                mname: document.getElementById("mname").value.trim(),
+                gender: radioVal("gender"),
+                dob: document.getElementById("appdob").value,
+                adarno: document.getElementById("adarno").value.trim(),
+                phno: document.getElementById("phno").value.trim(),
+                email: document.getElementById("email").value.trim(),
+                addr: document.getElementById("addr").value.trim(),
+                pincode: document.getElementById("pincode").value.trim(),
+                caste: document.getElementById("casteSelect").value,
+                subCaste: document.getElementById("subCasteSelect").value,
+                local: document.getElementById("local").value,
+                sscMonth: document.getElementById("ssc_month").value,
+                pwdCategory: document.getElementById("pwdCategory").value,
+                sscPassed: document.getElementById("ssc").value === "" ? null : document.getElementById("ssc").value === 'yes',
+                economicWeakerSection: radioVal("ews") === "yes",
+                phc: radioVal("phc") === "yes",
+                exservice: radioVal("exs") === "yes"
+            };
 
-            <p id="prefillInfo" style="text-align:center;background-color:#e4eeb9;padding:8px;border:1px solid #999;"></p>
+            $.ajax({
+                url: '${backendBaseUrl}/api/student/update/' + CURRENT_REGID,
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                success: function () {
+                    saveBtn.prop("disabled", false).html('<i class="fas fa-save me-1"></i> Save Changes');
 
-            <table width="70%" align="center" bgcolor="#b7e2f3" border="1">
-                <tr bgcolor="#1e43cc"><td colspan="2" style="color:#fff;text-align:center;font-size:larger;"><u>Student Edit Form</u></td></tr>
-                <tr><td><font color="#d42424"><b>Hall Ticket Number*</b></font></td><td><input type="text" id="sscRegDisp" readonly="readonly"></td></tr>
-                <tr><td><font color="#d42424"><b>Board</b></font></td><td><input type="text" id="boardDisp" readonly="readonly"></td></tr>
-                <tr><td><font color="#d42424"><b>Year of Pass*</b></font></td><td><input type="text" id="sscYearDisp" readonly="readonly"></td></tr>
-                <tr><td><font color="#d42424"><b>Month of Pass*</b></font></td><td><select id="ssc_month"><option value="">---Select --</option><option value="03">March</option><option value="04">Supplymentary</option></select></td></tr>
-                <tr><td><font color="#d42424"><b>Applicants Name*</b></font></td><td><input type="text" id="name" maxlength="50"></td></tr>
-                <tr><td><font color="#d42424"><b>Father Name*</b></font></td><td><input type="text" id="fname" maxlength="50"></td></tr>
-                <tr><td><font color="#d42424"><b>mothers Name*</b></font></td><td><input type="text" id="mname" maxlength="50"></td></tr>
-                <tr><td><font color="#d42424"><b>Gender*</b></font></td><td>Male <input type="radio" name="gender" value="male"> Female <input type="radio" name="gender" value="female"></td></tr>
-                <tr><td><font color="#d42424"><b>Date of Birth(dd-mm-yyyy):*</b></font></td><td><input type="date" id="appdob"></td></tr>
-                <tr><td><font color="#d42424"><b>Aadhar Card Number*</b></font></td><td><input type="text" id="adarno" maxlength="12" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr><td><font color="#d42424"><b>Mobile Number*</b></font></td><td><input type="text" id="phno" maxlength="10" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr><td><font color="#d42424"><b>Email</b></font></td><td><input type="text" id="email" maxlength="80"></td></tr>
-                <tr><td><font color="#d42424"><b>Address*</b></font></td><td><textarea id="addr" rows="3" cols="40"></textarea></td></tr>
-                <tr><td><font color="#d42424"><b>Pincode</b></font></td><td><input type="text" id="pincode" maxlength="6" onkeypress="return NumericsOnly(event);"></td></tr>
-                <tr><td><font color="#d42424"><b>Caste*</b></font></td><td><select id="casteSelect" onchange="loadSubCastes();"><option value="">--Select Caste--</option></select></td></tr>
-                <tr><td><font color="#d42424"><b>Sub Caste</b></font></td><td><select id="subCasteSelect"><option value="">-- Select Sub Category --</option></select></td></tr>
-                <tr><td><font color="#d42424"><b>Local/Non Local*</b></font></td><td><select id="local"><option value="">---Select --</option><option value="Local">Local</option><option value="NonLocal">Non Local</option></select></td></tr>
-                <tr><td><font color="#d42424"><b>Physically Challenged*</b></font></td><td>Yes <input type="radio" name="phc" value="yes"> No <input type="radio" name="phc" value="no"></td></tr>
-                <tr><td><font color="#d42424"><b>PWD Category</b></font></td><td><select id="pwdCategory"><option value="">---Select --</option><option value="1">Blind</option><option value="2">Deaf</option><option value="3">Motor Disability</option><option value="4">Mental Disability</option></select></td></tr>
-                <tr><td><font color="#d42424"><b>Ex-Servicemen*</b></font></td><td>Yes <input type="radio" name="exs" value="yes"> No <input type="radio" name="exs" value="no"></td></tr>
-                <tr><td><font color="#d42424"><b> Qualification:*</b></font></td><td><select id="ssc"><option value="">---Select --</option><option value="yes">SSC Passed</option><option value="no">8th Passed</option></select></td></tr>
-                <tr><td><font color="#d42424"><b>Economic Weaker Section*</b></font></td><td>Yes <input type="radio" name="ews" value="yes"> No <input type="radio" name="ews" value="no"></td></tr>
-                <tr><td colspan="2"><b>Number of Languages*</b>&nbsp;&nbsp;<input type="radio" name="subjects" value="sub1"> two&nbsp;&nbsp;<input type="radio" name="subjects" value="sub2" checked="checked"> three</td></tr>
-                <tr><td><font color="#d42424"><b>Photograph</b></font></td><td>
-                        <div>Current photo: <img id="existingPhoto" alt="No photo uploaded yet"
-                            style="width:90px;height:110px;border:1px solid #666;display:none;"></div>
-                        <input type="file" id="photo" accept="image/png,image/jpeg" onchange="previewPhoto(this);">
-                        <div id="photoPrev"></div>
-                    </td></tr>
-                <tr>
-                    <td style="text-align: center;" colspan="2"> 
-                        <a href="${pageContext.request.contextPath}/"> <input type="button" name="back" id="submit" Style="width:100px;" value="Back to Home"/></a>
-                        <input type="submit" value="Save Changes" id="mysubmit"/>
-                    </td>
-                </tr>
-            </table>
-        </form>
-</div>
-<style>
-    #footer{
-        position:fixed;
-        bottom:0px;
-        width:100%;
-        height:25px;
-        padding-top: 8px;
-        text-align: center;
-        background-color: #0E4878;
-        border-top: 1px #000000 solid;
-        font-size: 12px;
-        font-family: arial, verdana;
-        color: #ffffff;
-    }
-</style>
+                    var resultHtml = '<div class="result-card">'
+                        + '<i class="fas fa-check-circle" style="font-size: 3.5rem; color: #16a34a;"></i>'
+                        + '<h3 class="mt-3 fw-bold" style="color: #14532d;">Registration Details Updated!</h3>'
+                        + '<p class="text-muted">Your registration details have been updated successfully for Registration ID <b>' + CURRENT_REGID + '</b>.</p>'
+                        + '<div class="d-flex flex-wrap gap-2 justify-content-center mt-4">'
+                        + '  <a href="${pageContext.request.contextPath}/student-apply" class="btn btn-primary-custom">'
+                        + '    <i class="fas fa-paper-plane me-1"></i> Apply for ITI'
+                        + '  </a>'
+                        + '  <a href="${pageContext.request.contextPath}/" class="btn btn-secondary-custom">'
+                        + '    <i class="fas fa-home me-1"></i> Back to Home'
+                        + '  </a>'
+                        + '</div>'
+                        + '</div>';
 
-<br><br>
-<br><br>
+                    $("#editDiv").hide();
+                    $("#editResult").html(resultHtml).slideDown('fast');
+                    window.scrollTo(0, 0);
+                },
+                error: function (xhr) {
+                    saveBtn.prop("disabled", false).html('<i class="fas fa-save me-1"></i> Save Changes');
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message
+                        : "Failed to update details. Please check the values and try again.";
+                    alert(msg);
+                }
+            });
+        }
 
-<div id="footer">
-    2013 @ All Rights Reserved &nbsp;&nbsp; Designed by &nbsp; National Informatics Center
-    <font color="white"><a href="http://www.ap.nic.in" title="">National Informatics Center </a></font>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <font color="white"><a href="${pageContext.request.contextPath}/">Disclaimer</a></font>
+        $(document).ready(function () {
+            loadCastes();
+            $.get('${backendBaseUrl}/api/reports/current-admission-phase', function (data) {
+                if (data && data.year) {
+                    $('.sessionYearPhase').text(String(data.year) + ' (Phase-' + data.phase + ')');
+                }
+            });
 
-</div>
+            $('#captcha_gate').keypress(function (ev) {
+                if (ev.keyCode === 13) {
+                    $('#gateSubmitBtn').click();
+                }
+            });
+        });
+    </script>
 
-
-<%@ include file="../footer.jsp" %>
+    <%@ include file="../jsp/footer.jsp" %>
 </body>
 </html>

@@ -84,7 +84,17 @@
         .captcha-container {
             display: flex;
             gap: 10px;
-            align-items: stretch;
+            align-items: center;
+        }
+
+        .captcha-img {
+            height: 44px;
+            width: 140px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            background-color: #ffffff;
+            object-fit: contain;
+            user-select: none;
         }
 
         .captcha-refresh {
@@ -92,35 +102,20 @@
             color: #0284c7;
             border: 1px solid #bae6fd;
             border-radius: 10px;
-            width: 50px;
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s;
+            flex-shrink: 0;
         }
 
         .captcha-refresh:hover {
             background-color: #bae6fd;
             color: #0c4a6e;
-        }
-
-        .captcha-box {
-            color: #0f172a;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 1.6rem;
-            font-weight: 800;
-            letter-spacing: 8px;
-            border-radius: 10px;
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
-            background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-            padding: 0 10px;
-            border: 1px solid #a5b4fc;
-            text-align: center;
+            transform: rotate(180deg);
         }
 
         .btn-primary-custom {
@@ -496,10 +491,10 @@
                         <div class="mb-3">
                             <label class="form-label" for="captchaInput">Captcha<span class="req">*</span></label>
                             <div class="captcha-container">
-                                <button type="button" class="captcha-refresh" onclick="loadCaptcha();" title="Refresh Captcha">
+                                <img id="captchaImage" src="${pageContext.request.contextPath}/captcha" alt="Captcha" class="captcha-img" />
+                                <button type="button" class="captcha-refresh" onclick="refreshCaptcha();" title="Refresh Captcha">
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
-                                <input type="text" id="mainCaptcha" readonly="readonly" class="form-control captcha-box" />
                                 <input type="text" id="captchaInput" class="form-control" maxlength="4"
                                     autocomplete="off" onchange="clearError('captchaErr')"
                                     placeholder="Enter Captcha" style="flex-grow: 1;" />
@@ -1069,9 +1064,6 @@
 
         // Initialize Page
         $(document).ready(function () {
-            // Load Captcha
-            loadCaptcha();
-
             // Load Admission Phase info
             $.get(BACKEND_URL + '/api/reports/current-admission-phase', function (data) {
                 if (data && data.year) {
@@ -1113,20 +1105,9 @@
         }
 
         // ================= CAPTCHA =================
-        function loadCaptcha() {
-            $.get('${pageContext.request.contextPath}/captcha/text?_=' + new Date().getTime(), function (text) {
-                if (text && text.trim().length > 0) {
-                    $('#mainCaptcha').val(text.trim());
-                }
-            }).fail(function () {
-                // Fallback local random generation
-                var chars = '0123456789';
-                var code = '';
-                for (var i = 0; i < 4; i++) {
-                    code += chars.charAt(Math.floor(Math.random() * chars.length));
-                }
-                $('#mainCaptcha').val(code);
-            });
+        function refreshCaptcha() {
+            var ts = new Date().getTime();
+            $('#captchaImage').attr('src', '${pageContext.request.contextPath}/captcha?ts=' + ts);
         }
 
         // ================= VERHOEFF AADHAAR CHECK =================
@@ -1178,7 +1159,7 @@
         // ================= RESET STEP 1 =================
         function resetStep1() {
             $('.error-msg').text('');
-            loadCaptcha();
+            refreshCaptcha();
         }
 
         // ================= STEP 1 SUBMISSION =================
@@ -1218,14 +1199,8 @@
             }
 
             var enteredCaptcha = $('#captchaInput').val().trim();
-            var expectedCaptcha = $('#mainCaptcha').val().trim();
             if (!enteredCaptcha) {
                 $('#captchaErr').text("Please enter Captcha.");
-                isValid = false;
-            } else if (enteredCaptcha.toUpperCase() !== expectedCaptcha.toUpperCase()) {
-                $('#captchaErr').text("Captcha does not match. Please try again.");
-                loadCaptcha();
-                $('#captchaInput').val('').focus();
                 isValid = false;
             }
 
@@ -1234,44 +1209,59 @@
             var btn = $('#step1SubmitBtn');
             btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Checking...');
 
-            var payload = {
-                sscBoard: board,
-                sscRegNo: regno,
-                sscYear: year,
-                sscType: sscType,
-                year: SESSION_YEAR
-            };
-
-            $.ajax({
-                url: BACKEND_URL + '/api/student/save',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(payload),
-                success: function (student) {
+            // Verify entered captcha against session captcha
+            $.get('${pageContext.request.contextPath}/captcha/text?ts=' + new Date().getTime(), function (serverCaptcha) {
+                if (enteredCaptcha.toUpperCase() !== String(serverCaptcha).trim().toUpperCase()) {
                     btn.prop('disabled', false).html('Proceed <i class="fas fa-arrow-right"></i>');
-                    if (student && student.resumed === true) {
-                        // Already registered student
-                        $('#step1Div').hide();
-                        $('#existHallTicket').text(student.sscRegNo || regno);
-                        $('#existRegId').text(student.regid);
-                        $('#alreadyRegisteredDiv').slideDown('fast');
-                        window.scrollTo(0, 0);
-                    } else {
-                        // New student -> Proceed to Step 2
-                        initStep2(student, regno, board, year, sscType);
-                    }
-                },
-                error: function (xhr) {
-                    btn.prop('disabled', false).html('Proceed <i class="fas fa-arrow-right"></i>');
-                    var msg = "Verification failed. Please try again.";
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        msg = xhr.responseJSON.message;
-                    }
-                    $('#globalAlert').html('<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
-                        '<strong>Error:</strong> ' + msg +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
-                    loadCaptcha();
+                    $('#captchaErr').text("Captcha does not match. Please try again.");
+                    refreshCaptcha();
+                    $('#captchaInput').val('').focus();
+                    return;
                 }
+
+                var payload = {
+                    sscBoard: board,
+                    sscRegNo: regno,
+                    sscYear: year,
+                    sscType: sscType,
+                    year: SESSION_YEAR
+                };
+
+                $.ajax({
+                    url: BACKEND_URL + '/api/student/save',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: function (student) {
+                        btn.prop('disabled', false).html('Proceed <i class="fas fa-arrow-right"></i>');
+                        if (student && student.resumed === true) {
+                            // Already registered student
+                            $('#step1Div').hide();
+                            $('#existHallTicket').text(student.sscRegNo || regno);
+                            $('#existRegId').text(student.regid);
+                            $('#alreadyRegisteredDiv').slideDown('fast');
+                            window.scrollTo(0, 0);
+                        } else {
+                            // New student -> Proceed to Step 2
+                            initStep2(student, regno, board, year, sscType);
+                        }
+                    },
+                    error: function (xhr) {
+                        btn.prop('disabled', false).html('Proceed <i class="fas fa-arrow-right"></i>');
+                        var msg = "Verification failed. Please try again.";
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            msg = xhr.responseJSON.message;
+                        }
+                        $('#globalAlert').html('<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                            '<strong>Error:</strong> ' + msg +
+                            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
+                        refreshCaptcha();
+                    }
+                });
+            }).fail(function () {
+                btn.prop('disabled', false).html('Proceed <i class="fas fa-arrow-right"></i>');
+                $('#captchaErr').text("Unable to verify captcha. Please refresh and try again.");
+                refreshCaptcha();
             });
         }
 
