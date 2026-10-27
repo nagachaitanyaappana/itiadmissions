@@ -368,7 +368,7 @@
                         </td>
                         <td>
                             <input type="number" class="form-control form-control-sm strength-vacant-input" 
-                                   data-index="\${index}" value="\${entry.strengthVacant != null ? entry.strengthVacant : ''}" min="0" style="width: 100px;" placeholder="= strength">
+                                   data-index="\${index}" value="\${entry.strengthVacant != null ? entry.strengthVacant : ''}" min="0" style="width: 100px;" readonly placeholder="Auto (not editable)">
                         </td>
                         <td>
                             <button class="btn btn-danger btn-sm remove-entry-btn" data-index="\${index}">
@@ -378,13 +378,16 @@
                     `;
                     entriesTableBody.appendChild(row);
 
-                    // Auto-set Strength Vacant to match Strength when Strength changes,
-                    // so the user does not have to set it manually.
+                    // Strength Vacant auto-updates to match Strength when the user
+                    // selects a strength from the dropdown. The field is read-only
+                    // so it cannot be typed into directly.
                     const strengthInput = row.querySelector('.strength-input');
                     const vacantInput = row.querySelector('.strength-vacant-input');
                     strengthInput.addEventListener('input', function () {
                         vacantInput.value = this.value;
                     });
+                    // Initialize vacant to match the currently-selected strength
+                    vacantInput.value = strengthInput.value;
                 });
 
                 // Add event listeners

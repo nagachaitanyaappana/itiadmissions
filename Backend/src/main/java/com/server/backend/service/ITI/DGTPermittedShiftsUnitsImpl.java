@@ -37,7 +37,10 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
         // 2. Snapshot the existing availability flag per shift/unit. In the legacy
         //    application available_year is toggled only on the Edit Trade screen
         //    (Master.Trade.EditTrade_InterfaceAction); this screen must not touch it,
-        //    so carry the existing value over instead of writing the request.
+        //    so carry the existing value over instead of writing the request. Strength
+        //    vacant is not editable here: it is always set equal to strength (all
+        //    seats vacant) when this configuration is saved, so there is no need to
+        //    preserve the previous DB value.
         Map<String, Boolean> existingAvailability = new HashMap<>();
         for (ShiftUnitPermitted existing
                 : repository.findByItiCodeAndTradeCode(dto.getItiCode(), dto.getTradeCode())) {
@@ -192,12 +195,11 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
         entity.setShiftAllowed(String.valueOf(entryDto.getShiftAllowed()));
         entity.setUnitAllowed(String.valueOf(entryDto.getUnitAllowed()));
-        // Strength is entered directly on this screen (the permitted capacity for the shift/unit).
-        // A caller may send strength_vacant to preserve an already-consumed count; otherwise it
-        // defaults to the full strength.
         entity.setStrength(entryDto.getStrength());
-        Integer vacant = entryDto.getStrengthVacant();
-        entity.setStrengthVacant(vacant != null ? vacant : entryDto.getStrength());
+        // Strength is entered directly on this screen (the permitted capacity for the shift/unit).
+        // Strength vacant is not editable here: it always equals strength (all seats vacant).
+        // Any client-sent strength_vacant value is ignored.
+        entity.setStrengthVacant(entryDto.getStrength());
 
         return entity;
     }
