@@ -353,7 +353,11 @@
                     const row = document.createElement("tr");
                     row.innerHTML = `
                         <td>
-                            <select class="form-select form-select-sm strength-input" data-index="${index}" style="width: 100px;"><option value="20" \${entry.strength == 20 ? 'selected' : ''}>20</option><option value="24" \${entry.strength == 24 ? 'selected' : ''}>24</option></select>
+                            <select class="form-select form-select-sm strength-input" data-index="\${index}" style="width: 100px;">
+                                <option value="20" \${entry.strength == 20 ? 'selected' : ''}>20</option>
+                                <option value="24" \${entry.strength == 24 ? 'selected' : ''}>24</option>
+                            </select>
+                        </td>
                         <td>
                             <select class="form-select form-select-sm shift-select" data-index="\${index}">
                                 <option value="1" \${entry.shiftAllowed === 1 ? 'selected' : ''}>1</option>
@@ -368,7 +372,11 @@
                         </td>
                         <td>
                             <input type="number" class="form-control form-control-sm strength-vacant-input" 
+<<<<<<< HEAD
                                    data-index="\${index}" value="\${entry.strengthVacant != null ? entry.strengthVacant : ''}" min="0" style="width: 100px;" readonly placeholder="Auto (not editable)">
+=======
+                                   data-index="\${index}" value="\${entry.strengthVacant != null ? entry.strengthVacant : (entry.strength != null ? entry.strength : 20)}" min="0" style="width: 100px; background-color: #e9ecef; cursor: not-allowed;" placeholder="= strength" readonly tabindex="-1">
+>>>>>>> 2ecc864400373754f3cb8b416f2914bd4fb5c425
                         </td>
                         <td>
                             <button class="btn btn-danger btn-sm remove-entry-btn" data-index="\${index}">
@@ -383,11 +391,17 @@
                     // so it cannot be typed into directly.
                     const strengthInput = row.querySelector('.strength-input');
                     const vacantInput = row.querySelector('.strength-vacant-input');
-                    strengthInput.addEventListener('input', function () {
+                    const syncVacant = function () {
                         vacantInput.value = this.value;
+<<<<<<< HEAD
                     });
                     // Initialize vacant to match the currently-selected strength
                     vacantInput.value = strengthInput.value;
+=======
+                    };
+                    strengthInput.addEventListener('change', syncVacant);
+                    strengthInput.addEventListener('input', syncVacant);
+>>>>>>> 2ecc864400373754f3cb8b416f2914bd4fb5c425
                 });
 
                 // Add event listeners
@@ -409,10 +423,10 @@
 
             function addEntry() {
                 entries.push({
-                    strength: '',
+                    strength: 20,
                     shiftAllowed: 1,
                     unitAllowed: 1,
-                    strengthVacant: ''
+                    strengthVacant: 20
                 });
                 renderEntries();
                 hideMessages();

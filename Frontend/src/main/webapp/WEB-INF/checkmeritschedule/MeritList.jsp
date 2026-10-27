@@ -262,12 +262,23 @@
             document.getElementById('statusSelect').value = 'checklist';
         }
 
+        let isSubmittingMerit = false;
         async function submitMeritList() {
+            if (isSubmittingMerit) return;
+            const submitBtn = document.querySelector('.btn-submit-custom');
+            const originalText = submitBtn ? submitBtn.innerText : 'SUBMIT';
+
             const payload = {
                 category: document.getElementById('categorySelect').value,
                 qual: document.getElementById('qualificationSelect').value,
                 status: document.getElementById('statusSelect').value
             };
+
+            isSubmittingMerit = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'PROCESSING...';
+            }
 
             console.log("Submitting Merit List Request:", payload);
             
@@ -288,10 +299,20 @@
                     console.error("Merit Generation Failed:", result);
                     const message = result.error || result.message || "Unknown error";
                     alert(message.toLowerCase().includes("date") ? "Date has Expired" : "Failed: " + message);
+                    isSubmittingMerit = false;
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = originalText;
+                    }
                 }
             } catch (err) {
                 console.error("Submission error:", err);
                 alert("An error occurred during submission.");
+                isSubmittingMerit = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
             }
         }
     </script>

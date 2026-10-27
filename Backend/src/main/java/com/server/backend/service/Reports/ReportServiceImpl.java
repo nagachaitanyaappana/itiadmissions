@@ -94,13 +94,13 @@ public class ReportServiceImpl implements ReportService {
                     COUNT(DISTINCT CASE WHEN phone_cnt > 1 AND a.phno IS NOT NULL THEN a.phno END) AS phone_duplicate_records,
                     COUNT(DISTINCT CASE WHEN aadhar_cnt > 1 AND a.adarno IS NOT NULL AND a.adarno != '' THEN a.adarno END) AS aadhar_duplicate_records,
                     COUNT(DISTINCT CASE WHEN email_cnt > 1 AND a.email_id IS NOT NULL AND a.email_id != '' THEN a.email_id END) AS email_duplicate_records
-                FROM (
+                    FROM (
                     SELECT a.*,
                         COUNT(*) OVER (PARTITION BY a.iti_code, a.phno) AS phone_cnt,
                         COUNT(*) OVER (PARTITION BY a.iti_code, a.adarno) AS aadhar_cnt,
                         COUNT(*) OVER (PARTITION BY a.iti_code, a.email_id) AS email_cnt
                     FROM admissions.iti_admissions a
-                    WHERE a.year_of_admission = ?
+                    WHERE a.year_of_admission = ? OR '2026' = ?
                 ) a
                 GROUP BY a.iti_code
             )
@@ -120,6 +120,7 @@ public class ReportServiceImpl implements ReportService {
             WHERE 1=1
             """);
         List<Object> params = new ArrayList<>();
+        params.add(effectiveYear);
         params.add(effectiveYear);
 
         if (distCode != null && !"All".equalsIgnoreCase(distCode)) {
@@ -251,82 +252,155 @@ public class ReportServiceImpl implements ReportService {
     }
 
     // 4. DSC Full Report
+    // 4. DSC Full Report (ported from itiap_new DscList_Report.jsp)
     @Override
     public DscFullReportResponse getDscFullReport(String distCode, String itiCode, String tradeCode,
             String phase, String year, String modeAdm) {
         DscFullReportResponse response = new DscFullReportResponse();
 
-        String itiName = itiCode;
+        boolean isAllPhase = (phase == null || "All".equalsIgnoreCase(phase.trim()) || "0".equals(phase.trim()) || "".equals(phase.trim()));
+        int phaseNumber = 0;
         try {
-            String itiSql = "SELECT iti_name FROM public.iti WHERE iti_code = ?";
-            itiName = jdbcTemplate.queryForObject(itiSql, String.class, itiCode);
+            if (!isAllPhase) {
+                phaseNumber = Integer.parseInt(phase.trim());
+            }
         } catch (Exception e) {
-            System.err.println("[ReportServiceImpl] Unexpected error: " + e.getMessage());
+            isAllPhase = true;
         }
 
+        String effectiveYear = (year != null && !year.isBlank()) ? year.trim() : "2026";
+        String effectiveDistCode = distCode;
+        if ((effectiveDistCode == null || effectiveDistCode.isBlank() || "ALL".equalsIgnoreCase(effectiveDistCode))
+                && itiCode != null && itiCode.length() >= 2) {
+            effectiveDistCode = itiCode.substring(0, 2);
+        }
+
+        // 1. District Name
+        String distName = effectiveDistCode;
+        try {
+            String distSql = "SELECT dist_name FROM public.dist_mst WHERE TRIM(dist_code::text) = TRIM(?::text)";
+            distName = jdbcTemplate.queryForObject(distSql, String.class, effectiveDistCode);
+        } catch (Exception e) {
+            System.err.println("[ReportServiceImpl] dist_name query error: " + e.getMessage());
+        }
+
+        // 2. ITI Name
+        String itiName = itiCode;
+        try {
+            String itiSql = "SELECT iti_name FROM public.iti WHERE TRIM(iti_code::text) = TRIM(?::text)";
+            itiName = jdbcTemplate.queryForObject(itiSql, String.class, itiCode);
+        } catch (Exception e) {
+            System.err.println("[ReportServiceImpl] iti_name query error: " + e.getMessage());
+        }
+
+        // 3. Trade Name & Trade Strength (from ititrade)
         String tradeName = tradeCode;
+        try {
+            String tradeSql = "SELECT trade_name FROM public.ititrade_master WHERE trade_code::text = TRIM(?::text)";
+            tradeName = jdbcTemplate.queryForObject(tradeSql, String.class, tradeCode.trim());
+        } catch (Exception e) {
+            System.err.println("[ReportServiceImpl] trade_name query error: " + e.getMessage());
+        }
+
         int totalStrength = 0;
         try {
-            String tradeSql = "SELECT trade_name FROM public.ititrade_master WHERE TRIM(trade_code::text) = TRIM(?::text)";
-            tradeName = jdbcTemplate.queryForObject(tradeSql, String.class, tradeCode);
+            String strengthSql = "SELECT strength FROM public.ititrade WHERE TRIM(iti_code::text) = TRIM(?::text) AND trade_code = ?";
+            Integer strVal = jdbcTemplate.queryForObject(strengthSql, Integer.class, itiCode.trim(), Integer.parseInt(tradeCode.trim()));
+            if (strVal != null) {
+                totalStrength = strVal;
+            }
         } catch (Exception e) {
-            System.err.println("[ReportServiceImpl] Unexpected error: " + e.getMessage());
+            System.err.println("[ReportServiceImpl] ititrade strength query error: " + e.getMessage());
         }
 
         response.setMeta(new DscFullReportResponse.Meta(
-            "DSC Report",
-            "AUGUST-" + year,
+            (distName != null && !distName.isBlank()) ? distName : effectiveDistCode,
+            "AUGUST - " + effectiveYear,
             phase,
-            distCode
+            effectiveDistCode
         ));
         response.setIti(new DscFullReportResponse.ItiInfo(itiCode, itiName));
         response.setTrade(new DscFullReportResponse.TradeInfo(tradeCode, tradeName, totalStrength));
 
-        // Get seat matrix categories
-        String seatSql = """
-            SELECT DISTINCT ON (a.category_code)
-                   a.category_code,
-                   a.strength::int,
-                   a.strength_fill::int,
-                   a.strength_vacant::int,
-                   b.category_order
-            FROM (
-                SELECT skeys(strength) AS category_code,
-                       svals(strength) AS strength,
-                       svals(strength_fill) AS strength_fill,
-                       svals(strength_vacant) AS strength_vacant
-                FROM public.iti_seatmatrix
-                WHERE iti_code = ? AND trade_code::text = ? AND year = ?
-            ) a
-            LEFT JOIN public.category_mast b ON a.category_code = b.category_code
-            ORDER BY a.category_code
-            """;
-        List<Map<String, Object>> catRows = jdbcTemplate.queryForList(seatSql, itiCode, tradeCode, year);
+        // 4. Resolve admissions table for the year
+        String admTable = "admissions.iti_admissions";
+        if (!"2026".equals(effectiveYear)) {
+            try {
+                Integer cnt = jdbcTemplate.queryForObject(
+                    "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'admissions' AND table_name = ?",
+                    Integer.class, "iti_admissions" + effectiveYear
+                );
+                if (cnt != null && cnt > 0) {
+                    admTable = "admissions.iti_admissions" + effectiveYear;
+                } else {
+                    Integer cnt2 = jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'admissions' AND table_name = ?",
+                        Integer.class, "iti_admissions_" + effectiveYear
+                    );
+                    if (cnt2 != null && cnt2 > 0) {
+                        admTable = "admissions.iti_admissions_" + effectiveYear;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
 
-        // Get candidates
-        String candSql = """
-            SELECT DISTINCT ON (a.adm_num)
-                   NULLIF(r.rank,'')::int AS rank,
-                   a.adm_num, a.name, a.fname, a.gender,
-                   TO_CHAR(a.dob, 'DD-MM-YYYY') AS dob, a.caste, a.res_category
-            FROM admissions.iti_admissions a
-            LEFT JOIN ranks r ON a.regid = r.regid
-             WHERE TRIM(a.iti_code::text) = TRIM(?::text)
-               AND TRIM(a.trade_code::text) = TRIM(?::text)
-               AND a.phase = ?
-               AND a.year_of_admission = ?
-               AND (a.mode_adm IS NULL OR UPPER(TRIM(a.mode_adm::text)) = UPPER(TRIM(?::text)))
-             ORDER BY a.adm_num, NULLIF(r.rank,'')::int NULLS LAST
-            """;
-        List<Map<String, Object>> candRows = jdbcTemplate.queryForList(candSql,
-                itiCode, tradeCode, Integer.parseInt(phase), year, modeAdm.toUpperCase());
+        // 5. Query seatmatrix categories matching itiap_new DscList_Report.jsp
+        String seatSql = "SELECT a.category_code, "
+                + "a.strength::integer AS strength, "
+                + "COALESCE(NULLIF(a.strength_fill, ''), '0')::integer AS strength_fill, "
+                + "COALESCE(NULLIF(a.strength_vacant, ''), '0')::integer AS strength_vacant, "
+                + "MIN(b.category_order) AS category_order "
+                + "FROM ( "
+                + "  SELECT iti_code, trade_code, "
+                + "         skeys(strength) AS category_code, "
+                + "         svals(strength) AS strength, "
+                + "         svals(strength_fill) AS strength_fill, "
+                + "         svals(strength_vacant) AS strength_vacant "
+                + "  FROM public.iti_seatmatrix "
+                + "  WHERE TRIM(iti_code::text) = TRIM(?::text) "
+                + "    AND TRIM(trade_code::text) = TRIM(?::text) "
+                + "    AND year::text = ?::text "
+                + ") a "
+                + "INNER JOIN public.category_mast b "
+                + "   ON a.category_code = b.category_code "
+                + "  AND COALESCE(NULLIF(a.strength, ''), '0')::integer <> 0 "
+                + "GROUP BY a.category_code, a.strength, a.strength_fill, a.strength_vacant "
+                + "ORDER BY category_order";
 
-        // Group candidates by category
+        List<Map<String, Object>> catRows = jdbcTemplate.queryForList(
+                seatSql, itiCode.trim(), tradeCode.trim(), effectiveYear);
+
+        // 6. Candidate Query (ported from itiap_new DscList_Report.jsp)
+        String candidateSql = "SELECT r.rank, "
+                + "a.adm_num, a.name, a.fname, a.gender, "
+                + "TO_CHAR(a.dob, 'DD-MM-YYYY') AS dob, a.caste, a.phase, a.res_category "
+                + "FROM " + admTable + " a "
+                + "LEFT JOIN public.ranks r "
+                + "  ON TRIM(a.regid::text) = TRIM(r.regid::text) "
+                + " AND (r.phase::text = ? OR ? = 'All') "
+                + "WHERE TRIM(a.iti_code::text) = TRIM(?::text) "
+                + "  AND TRIM(a.trade_code::text) = TRIM(?::text) "
+                + "  AND (a.phase = ? OR ? = -1) "
+                + "  AND a.year_of_admission = ? "
+                + "ORDER BY NULLIF(r.rank, '')::integer NULLS LAST, a.adm_num";
+
+        List<Map<String, Object>> candRows = jdbcTemplate.queryForList(
+                candidateSql,
+                isAllPhase ? "All" : String.valueOf(phaseNumber),
+                isAllPhase ? "All" : String.valueOf(phaseNumber),
+                itiCode.trim(),
+                tradeCode.trim(),
+                isAllPhase ? -1 : phaseNumber,
+                isAllPhase ? -1 : phaseNumber,
+                effectiveYear
+        );
+
+        // Group candidates by res_category (exact match or trimmed)
         Map<String, List<DscFullReportResponse.CandidateRow>> candidatesByCategory = new LinkedHashMap<>();
         int slNo = 1;
         for (Map<String, Object> cand : candRows) {
-            String category = normalizeCategory(str(cand.get("res_category")));
-            candidatesByCategory.computeIfAbsent(category, k -> new ArrayList<>())
+            String cat = str(cand.get("res_category")).trim();
+            candidatesByCategory.computeIfAbsent(cat, k -> new ArrayList<>())
                 .add(new DscFullReportResponse.CandidateRow(
                         slNo++,
                         str(cand.get("rank")),
@@ -339,34 +413,41 @@ public class ReportServiceImpl implements ReportService {
                 ));
         }
 
-        // Build category groups
+        // 7. Build category groups matching itiap_new
         List<DscFullReportResponse.CategoryGroup> categories = new ArrayList<>();
+        int calculatedTotalStrength = 0;
+
         if (!catRows.isEmpty()) {
             for (Map<String, Object> cat : catRows) {
-                String catCode = str(cat.get("category_code"));
+                String catCode = str(cat.get("category_code")).trim();
                 int strength = ((Number) cat.get("strength")).intValue();
-                int filled = ((Number) cat.get("strength_fill")).intValue();
-                totalStrength += strength;
-                String normCat = normalizeCategory(catCode);
-                List<DscFullReportResponse.CandidateRow> candList = candidatesByCategory.getOrDefault(normCat, new ArrayList<>());
-                int vacant = Math.max(0, strength - candList.size());
+                int filledFromMatrix = ((Number) cat.get("strength_fill")).intValue();
+                int vacantFromMatrix = ((Number) cat.get("strength_vacant")).intValue();
+                calculatedTotalStrength += strength;
 
+                List<DscFullReportResponse.CandidateRow> candList = candidatesByCategory.getOrDefault(catCode, new ArrayList<>());
+                int actualFilled = candList.size();
+                int vacant = (vacantFromMatrix > 0) ? vacantFromMatrix : Math.max(0, strength - actualFilled);
+
+                List<DscFullReportResponse.CandidateRow> rowsForCategory = new ArrayList<>(candList);
                 for (int i = 0; i < vacant; i++) {
-                    candList.add(new DscFullReportResponse.CandidateRow(
-                            candList.size() + 1, null, "VACANT", "VACANT", "", "", "", ""));
+                    rowsForCategory.add(new DscFullReportResponse.CandidateRow(
+                            0, null, "VACANT", "VACANT", "", "", "", ""));
                 }
 
-                categories.add(new DscFullReportResponse.CategoryGroup(catCode, strength, filled, vacant, candList));
+                categories.add(new DscFullReportResponse.CategoryGroup(catCode, strength, actualFilled, vacant, rowsForCategory));
             }
         } else if (!candidatesByCategory.isEmpty()) {
             for (Map.Entry<String, List<DscFullReportResponse.CandidateRow>> entry : candidatesByCategory.entrySet()) {
                 List<DscFullReportResponse.CandidateRow> candList = entry.getValue();
                 categories.add(new DscFullReportResponse.CategoryGroup(entry.getKey(), candList.size(), candList.size(), 0, candList));
-                totalStrength += candList.size();
+                calculatedTotalStrength += candList.size();
             }
         }
 
-        response.getTrade().setTotalStrength(totalStrength);
+        if (totalStrength <= 0) {
+            response.getTrade().setTotalStrength(calculatedTotalStrength);
+        }
         response.setCategories(categories);
         return response;
     }
@@ -1376,9 +1457,13 @@ public class ReportServiceImpl implements ReportService {
             return null;
         }, itiParams.toArray());
 
-        StringBuilder tradeSql = new StringBuilder("SELECT trade_code, trade_name FROM public.ititrade_master WHERE 1=1");
+        StringBuilder tradeSql = new StringBuilder("SELECT DISTINCT b.trade_code, b.trade_name FROM public.ititrade_master b ");
         List<Object> tradeParams = new ArrayList<>();
-        tradeSql.append(" ORDER BY trade_name");
+        if (itiCode != null && !itiCode.isEmpty()) {
+            tradeSql.append("INNER JOIN public.ititrade a ON a.trade_code = b.trade_code WHERE TRIM(a.iti_code::text) = TRIM(?::text) ");
+            tradeParams.add(itiCode);
+        }
+        tradeSql.append("ORDER BY b.trade_name");
         jdbcTemplate.query(tradeSql.toString(), (rs, rowNum) -> {
             tradeOptions.add(new DscOptionsResponse.TradeOption(rs.getString("trade_code"), rs.getString("trade_name")));
             return null;

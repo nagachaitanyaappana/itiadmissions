@@ -196,6 +196,12 @@ public class AdmissionProcessController {
         } catch (IllegalArgumentException | IllegalStateException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("success", false, "error", ex.getMessage()));
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("success", false, "error", "Admission already processed for this candidate or duplicate record."));
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("success", false, "error", ex.getMessage() != null ? ex.getMessage() : "Error processing admission request."));
         }
     }
 

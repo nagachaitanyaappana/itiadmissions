@@ -256,7 +256,9 @@ function openMemo(){
   window.open(CTX+'/admissions/print-admission-slip?admissionNumber='+encodeURIComponent(lastAdmNum),'_blank');
 }
 
+var isTakingAdmission = false;
 function takeAdmission(){
+  if (isTakingAdmission) return;
   var err=document.getElementById('takeErr');
   err.innerHTML='';
   if(!cur){err.innerHTML='Look up a rank first.';return;}
@@ -265,6 +267,7 @@ function takeAdmission(){
   if(!board){err.innerHTML='Please select Type of Admission (Board).';return;}
   var su=document.querySelector('input[name=shiftUnit]:checked');
   if(shiftUnitOptions.length>0&&!su){err.innerHTML='Please select a Shift and Unit option.';return;}
+  isTakingAdmission = true;
   var btn=document.getElementById('takeBtn');
   btn.disabled=true;btn.value='Admitting...';
   var payload={
@@ -303,7 +306,11 @@ function takeAdmission(){
     }
   })
   .catch(function(){err.innerHTML='Server error during admission.';})
-  .finally(function(){btn.disabled=false;btn.value='Take Admission';});
+  .finally(function(){
+    isTakingAdmission = false;
+    btn.disabled = false;
+    btn.value = 'Take Admission';
+  });
 }
 
 (function(){if(document.getElementById('rank').value)lookupRank();})();
