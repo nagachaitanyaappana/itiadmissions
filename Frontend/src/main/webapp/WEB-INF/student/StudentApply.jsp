@@ -233,7 +233,17 @@
                             return;
                         }
                         if (status === 'admitted') {
-                            gateError('Already Admitted');
+                            var msg = 'Already Admitted';
+                            if (res.iti_name) {
+                                msg += ' at ITI: ' + res.iti_name;
+                            }
+                            if (res.adm_num) {
+                                msg += ' (Admission Number: ' + res.adm_num + ')';
+                            }
+                            if (res.trade_name) {
+                                msg += ' - Trade: ' + res.trade_name;
+                            }
+                            gateError(msg);
                             return;
                         }
                         if (status === 'norecords' || !res.record) {

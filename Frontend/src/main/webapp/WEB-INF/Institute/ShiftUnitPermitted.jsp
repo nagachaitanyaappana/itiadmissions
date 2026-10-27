@@ -353,7 +353,10 @@
                     const row = document.createElement("tr");
                     row.innerHTML = `
                         <td>
-                            <input type="number" class="form-control form-control-sm strength-input" data-index="\${index}" value="\${strengthValue}" min="1" style="width: 100px;">
+                            <select class="form-select form-select-sm strength-input" data-index="\${index}" style="width: 100px;">
+                                <option value="20" \${entry.strength == 20 ? 'selected' : ''}>20</option>
+                                <option value="24" \${entry.strength == 24 ? 'selected' : ''}>24</option>
+                            </select>
                         </td>
                         <td>
                             <select class="form-select form-select-sm shift-select" data-index="\${index}">
@@ -369,7 +372,7 @@
                         </td>
                         <td>
                             <input type="number" class="form-control form-control-sm strength-vacant-input" 
-                                   data-index="\${index}" value="\${entry.strengthVacant != null ? entry.strengthVacant : ''}" min="0" style="width: 100px;" placeholder="= strength">
+                                   data-index="\${index}" value="\${entry.strengthVacant != null ? entry.strengthVacant : (entry.strength != null ? entry.strength : 20)}" min="0" style="width: 100px; background-color: #e9ecef; cursor: not-allowed;" placeholder="= strength" readonly tabindex="-1">
                         </td>
                         <td>
                             <button class="btn btn-danger btn-sm remove-entry-btn" data-index="\${index}">
@@ -378,6 +381,16 @@
                         </td>
                     `;
                     entriesTableBody.appendChild(row);
+
+                    // Auto-set Strength Vacant to match Strength when Strength changes,
+                    // so the user does not have to set it manually.
+                    const strengthInput = row.querySelector('.strength-input');
+                    const vacantInput = row.querySelector('.strength-vacant-input');
+                    const syncVacant = function () {
+                        vacantInput.value = this.value;
+                    };
+                    strengthInput.addEventListener('change', syncVacant);
+                    strengthInput.addEventListener('input', syncVacant);
                 });
 
                 // Add event listeners
@@ -399,10 +412,10 @@
 
             function addEntry() {
                 entries.push({
-                    strength: '',
+                    strength: 20,
                     shiftAllowed: 1,
                     unitAllowed: 1,
-                    strengthVacant: ''
+                    strengthVacant: 20
                 });
                 renderEntries();
                 hideMessages();
@@ -626,3 +639,5 @@ console.log("========================================");
 </body>
 
 </html>
+
+

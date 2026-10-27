@@ -1,4 +1,4 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+﻿<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <!DOCTYPE html>
 <html>
 
@@ -42,13 +42,14 @@
             margin-bottom: 25px;
             border: 2px solid #000;
         }
-        .selection-area h5 {
+        .selection-area h5.section-header {
             background-color: #4ab131;
             color: #fff;
-            margin: 0 0 15px;
+            margin: 0;
             padding: 10px;
             text-align: center;
             font-weight: bold;
+            font-size: 16px;
         }
         .selection-area .row { padding: 0 20px 18px; }
         .details-area {
@@ -99,14 +100,20 @@
             <div class="breadcrumb-text">Home / ITI Trade Selection</div>
         </div>
 
-        <!-- ITI Selection Area -->
+        <!-- ITI & Trade Selection -->
         <div class="selection-area">
-            <h5 class="mb-3" style="color: #444;">Select ITI</h5>
+            <h5 class="section-header">Select ITI & Select Trade</h5>
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="itiSelect" class="form-label fw-bold">ITI:</label>
                     <select class="form-select" id="itiSelect">
                         <option value="">-- Select ITI --</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="tradeSelect" class="form-label fw-bold">Trade:</label>
+                    <select class="form-select" id="tradeSelect">
+                        <option value="">-- Select Trade --</option>
                     </select>
                 </div>
             </div>
@@ -123,31 +130,16 @@
             </div>
         </div>
 
-        <!-- Trades Table Area -->
+        <!-- Trade Selection Dropdown -->
         <div id="tradesArea" style="display: none;">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="m-0" style="color: #444;">Trades Available in This ITI</h4>
                 <div class="text-muted" id="tradeCount">Showing 0 entries</div>
             </div>
-
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped">
-                    <thead>
-                        <tr>
-                            <th class="radio-cell">Select</th>
-                            <th>Trade Code</th>
-                            <th>Trade</th>
-                            <th>Strength</th>
-                            <th>Duration (Months)</th>
-                            <th>Available</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tradeTableBody">
-                        <tr>
-                            <td colspan="6" class="text-center">Please select an ITI to load trades.</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="mb-3">
+                <select class="form-select" id="tradeSelect">
+                    <option value="">-- Select Trade --</option>
+                </select>
             </div>
         </div>
 
@@ -183,6 +175,7 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const itiSelect = document.getElementById("itiSelect");
+            const tradeSelect = document.getElementById("tradeSelect");
             const itiDetails = document.getElementById("itiDetails");
             const selectedItiCode = document.getElementById("selectedItiCode");
             const selectedItiName = document.getElementById("selectedItiName");
@@ -292,53 +285,23 @@
             }
 
             function renderTrades(trades) {
-                tradeTableBody.innerHTML = "";
-
-                if (trades.length === 0) {
-                    emptyMessage.style.display = "block";
-                    tradesArea.style.display = "none";
-                    continueBtn.disabled = true;
-                    selectedTrade = null;
-                    tradeCount.textContent = "Showing 0 entries";
-                    return;
-                }
-
-                emptyMessage.style.display = "none";
-                tradesArea.style.display = "block";
-
+                tradeSelect.innerHTML = '<option value="">-- Select Trade --</option>';
                 trades.forEach((trade, index) => {
-                    const tr = document.createElement("tr");
-
-                    const isAvailable = !(trade.tradeFreeze === 1 || trade.tradeFreeze === "1");
-
-                   tr.innerHTML = `
-    <td class="radio-cell">
-        <input type="radio" name="tradeRadio" value="\${index}" class="trade-radio">
-    </td>
-    <td>\${escapeHtml(trade.tradeCode ?? '')}</td>
-    <td><strong>\${escapeHtml(trade.tradeName || trade.tradeShort || '')}</strong></td>
-    <td>\${escapeHtml(trade.strength != null ? String(trade.strength) : (trade.unitStrength != null ? String(trade.unitStrength) : '-'))}</td>
-    <td>\${escapeHtml(trade.durationYrs != null ? String(trade.durationYrs) : '-')}</td>
-    <td>\${isAvailable
-        ? '<span class="text-success fw-bold">Yes</span>'
-        : '<span class="text-danger">No</span>'}</td>
-`;
-
-tradeTableBody.appendChild(tr);
+                    var opt = document.createElement('option');
+                    opt.value = index;
+                    opt.textContent = trade.tradeName || trade.tradeShort || '';
+                    tradeSelect.appendChild(opt);
                 });
-
-                // \${...} escaped so JSP EL leaves the literal for the browser.
-                tradeCount.textContent = `Showing \${trades.length} entries`;
-
-                // Add event listeners to radio buttons
-                const radioButtons = document.querySelectorAll('.trade-radio');
-                radioButtons.forEach(radio => {
-                    radio.addEventListener('change', handleTradeSelection);
+                tradeSelect.addEventListener('change', function() {
+                    handleTradeSelection();
                 });
+                if (trades.length > 0) {
+                    tradeCount.textContent = 'Showing ' + trades.length + ' entries';
+                }
             }
 
-            function handleTradeSelection(event) {
-                const selectedIndex = parseInt(event.target.value);
+            function handleTradeSelection() {
+                const selectedIndex = parseInt(tradeSelect.value);
                 selectedTrade = currentTrades[selectedIndex];
                 continueBtn.disabled = false;
             }
@@ -389,7 +352,7 @@ window.location.href = url;
             function resetTradeSection() {
                 currentTrades = [];
                 selectedTrade = null;
-                tradeTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Please select an ITI to load trades.</td></tr>';
+                tradeSelect.innerHTML = '<option value="">-- Select Trade --</option>';
                 tradesArea.style.display = "none";
                 itiDetails.style.display = "none";
                 continueBtn.disabled = true;
@@ -401,7 +364,7 @@ window.location.href = url;
                 div.textContent = text;
                 return div.innerHTML;
             }
-        });
+        })();
     </script>
 </body>
 

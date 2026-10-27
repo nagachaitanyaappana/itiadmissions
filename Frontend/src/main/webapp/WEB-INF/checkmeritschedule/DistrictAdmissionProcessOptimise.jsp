@@ -39,13 +39,25 @@
                 });
             }
 
+            var isSubmitting = false;
             // Mirrors legacy validateRadioSelection(): a shift/unit row must be chosen.
             function validateRadioSelection() {
+                if (isSubmitting) {
+                    return false;
+                }
                 var selected = document.querySelector('input[name="selectedRadio"]:checked');
                 if (!selected) {
                     alert("Please select at least one Shift Unit Option.");
                     return false;
                 }
+                isSubmitting = true;
+                setTimeout(function () {
+                    var btn = document.querySelector('input[type="submit"]');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.value = "Processing...";
+                    }
+                }, 10);
                 return true;
             }
         </script>

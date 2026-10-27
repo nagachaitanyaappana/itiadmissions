@@ -21,12 +21,12 @@
                 <li><a href="${pageContext.request.contextPath}/reports/api-dashboard-district">API Dashboard (District)</a></li>
                 <li><a href="${pageContext.request.contextPath}/reports/caste-wise-admissions-abstract">Caste Wise Admissions Abstract</a></li>
                 <li><a href="${pageContext.request.contextPath}/reports/verification-report">Verification Report</a></li>
-                <li><a href="${pageContext.request.contextPath}/reports/dsc-list">DSC List</a></li>
             </ul>
         </li>
         <li><a href="#">Admissions</a>
             <ul>
                 <li><a href="${pageContext.request.contextPath}/AdmissionPhase">ADMISSIONS PHASE 1</a></li>
+                <li><a href="${pageContext.request.contextPath}/reports/dsc-list">DSC List</a></li>
                 <li><a href="${pageContext.request.contextPath}/SeatMatrix">seatmatrix</a></li>
                 <li><a href="${pageContext.request.contextPath}/CallLetterView">Call Letter</a></li>
                 <li><a href="${pageContext.request.contextPath}/iti-trade-selection">DGT Permitted Shifts Units</a></li>

@@ -57,13 +57,29 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
 
         // Step 1 is validation-only, matching open_Application_Step1Action: the application row is
         // NOT created here. If the hall ticket already has an application and the entered
-        // board/year/type match, the existing regid is returned so the page resumes it; if they
-        // do not match the duplicate is blocked. A new hall ticket simply returns the entered
-        // step-1 values with a null regid so the final submit (register) can insert the row.
+        // board/year/type match, the existing regid is returned with resumed=true so the page
+        // can show the existing Registration ID and block proceeding to Step 2.
         String sscRegNo = dto.getSscRegNo() == null ? null : dto.getSscRegNo().trim();
         if (sscRegNo != null && !sscRegNo.isEmpty()) {
+            // 1. Check if candidate is already admitted in current year or previous two years
+            Map<String, Object> admitted = findAdmissionRecord(sscRegNo, null, null);
+            if (admitted != null) {
+                String admNum = str(admitted.get("adm_num"));
+                String itiName = str(admitted.get("iti_name"));
+                String tradeName = str(admitted.get("trade_name"));
+                String admYear = str(admitted.get("year_of_admission"));
+                throw new IllegalArgumentException(
+                        "Candidate with SSC Hall Ticket Number " + sscRegNo + " is already admitted at ITI: "
+                                + (itiName != null ? itiName : "-")
+                                + " (Admission Number: " + (admNum != null ? admNum : "-")
+                                + ", Year: " + (admYear != null ? admYear : "-")
+                                + ", Trade: " + (tradeName != null ? tradeName : "-")
+                                + "). Registration is not allowed.");
+            }
+
+            // 2. Check if candidate is already registered in current year's student_application table
             List<Map<String, Object>> existing = jdbcTemplate.queryForList(
-                    "SELECT regid, ssc_board, ssc_year, ssc_type FROM student_application "
+                    "SELECT regid, ssc_board, ssc_year, ssc_type, adarno FROM student_application "
                             + "WHERE upper(trim(ssc_regno)) = upper(?)",
                     sscRegNo);
             if (!existing.isEmpty()) {
@@ -75,9 +91,27 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
                     throw new IllegalArgumentException(
                             "Details do not match the existing application for this SSC Registration Number.");
                 }
+
+                // Also check if this existing student was admitted by regid or adarno
+                Object existingRegid = row.get("regid");
+                String ridStr = existingRegid != null ? existingRegid.toString() : null;
+                String adarnoStr = str(row.get("adarno"));
+                Map<String, Object> regAdmitted = findAdmissionRecord(null, ridStr, adarnoStr);
+                if (regAdmitted != null) {
+                    String admNum = str(regAdmitted.get("adm_num"));
+                    String itiName = str(regAdmitted.get("iti_name"));
+                    String tradeName = str(regAdmitted.get("trade_name"));
+                    String admYear = str(regAdmitted.get("year_of_admission"));
+                    throw new IllegalArgumentException(
+                            "Candidate is already admitted at ITI: " + (itiName != null ? itiName : "-")
+                                    + " (Admission Number: " + (admNum != null ? admNum : "-")
+                                    + ", Year: " + (admYear != null ? admYear : "-")
+                                    + ", Trade: " + (tradeName != null ? tradeName : "-")
+                                    + "). Registration is not allowed.");
+                }
+
                 StudentApplicationDto resumed = new StudentApplicationDto();
-                Object regidValue = row.get("regid");
-                resumed.setRegid(regidValue instanceof Number n ? n.intValue() : null);
+                resumed.setRegid(existingRegid instanceof Number n ? n.intValue() : null);
                 resumed.setSscRegNo(sscRegNo);
                 resumed.setResumed(true);
                 return resumed;
@@ -91,6 +125,68 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
         pending.setSscType(dto.getSscType());
         pending.setResumed(false);
         return pending;
+    }
+
+    /**
+     * Checks whether a candidate is already admitted in the current year's {@code admissions.iti_admissions}
+     * or the previous two years' partitioned admission tables (e.g. {@code admissions.iti_admissions2025},
+     * {@code admissions.iti_admissions2024}). Matches by {@code ssc_regno}, {@code regid}, or {@code adarno}.
+     */
+    private Map<String, Object> findAdmissionRecord(String sscRegNo, String regid, String adarno) {
+        AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
+        int curYear = 2026;
+        if (cycle != null && cycle.year() != null && !cycle.year().isBlank()) {
+            try {
+                curYear = Integer.parseInt(cycle.year().trim());
+            } catch (NumberFormatException ignored) {}
+        }
+
+        List<String> tables = List.of(
+                "admissions.iti_admissions",
+                "admissions.iti_admissions" + (curYear - 1),
+                "admissions.iti_admissions" + (curYear - 2)
+        );
+
+        for (String table : tables) {
+            String bareName = table.replace("admissions.", "");
+            Integer tableExists = jdbcTemplate.queryForObject(
+                    "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'admissions' AND table_name = ?",
+                    Integer.class, bareName);
+            if (tableExists == null || tableExists == 0) {
+                continue;
+            }
+
+            StringBuilder sql = new StringBuilder(
+                    "SELECT ia.adm_num, ia.year_of_admission, COALESCE(i.iti_name, ia.iti_code, '-') AS iti_name, " +
+                    "COALESCE(m.trade_name, m.trade_short, ia.trade_code::text, '-') AS trade_name " +
+                    "FROM " + table + " ia " +
+                    "LEFT JOIN public.iti i ON i.iti_code = ia.iti_code " +
+                    "LEFT JOIN public.ititrade_master m ON m.trade_code = ia.trade_code " +
+                    "WHERE (1=0");
+            List<Object> args = new ArrayList<>();
+
+            if (sscRegNo != null && !sscRegNo.isBlank()) {
+                sql.append(" OR upper(trim(ia.ssc_regno)) = upper(?)");
+                args.add(sscRegNo.trim());
+            }
+            if (regid != null && !regid.isBlank()) {
+                sql.append(" OR ia.regid::text = ?");
+                args.add(regid.trim());
+            }
+            if (adarno != null && !adarno.isBlank()) {
+                sql.append(" OR upper(trim(ia.adarno)) = upper(?)");
+                args.add(adarno.trim());
+            }
+            sql.append(") ORDER BY ia.date_of_admission DESC NULLS LAST LIMIT 1");
+
+            if (!args.isEmpty()) {
+                List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql.toString(), args.toArray());
+                if (!rows.isEmpty()) {
+                    return rows.get(0);
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -126,12 +222,13 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
             return result;
         }
 
-        // admissions.iti_admissions.regid is character varying (unlike student_application).
-        Integer admitted = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM admissions.iti_admissions WHERE regid = ?",
-                Integer.class, String.valueOf(regid));
-        if (admitted != null && admitted > 0) {
+        Map<String, Object> admission = findAdmissionRecord(sscRegNo, String.valueOf(regid), null);
+        if (admission != null) {
             result.put("status", "admitted");
+            result.put("adm_num", admission.get("adm_num"));
+            result.put("iti_name", admission.get("iti_name"));
+            result.put("trade_name", admission.get("trade_name"));
+            result.put("year", admission.get("year_of_admission"));
             return result;
         }
 
@@ -214,6 +311,34 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
                 "Given Email is already available for another candidate.");
         assertUnique("adarno", filterBad(dto.getAdarno()), dto.getRegid(),
                 "Given Aadhaar Number is already available for another candidate.");
+
+        // Guard against already admitted students attempting to register or update
+        Map<String, Object> admitted = findAdmissionRecord(dto.getSscRegNo(),
+                dto.getRegid() != null ? String.valueOf(dto.getRegid()) : null,
+                dto.getAdarno());
+        if (admitted != null) {
+            String admNum = str(admitted.get("adm_num"));
+            String itiName = str(admitted.get("iti_name"));
+            String tradeName = str(admitted.get("trade_name"));
+            String admYear = str(admitted.get("year_of_admission"));
+            throw new IllegalArgumentException(
+                    "Candidate is already admitted at ITI: " + (itiName != null ? itiName : "-")
+                            + " (Admission Number: " + (admNum != null ? admNum : "-")
+                            + ", Year: " + (admYear != null ? admYear : "-")
+                            + ", Trade: " + (tradeName != null ? tradeName : "-")
+                            + "). Registration is not allowed.");
+        }
+
+        // A new registration must not reuse an already registered SSC hall ticket
+        if (!isUpdate && dto.getSscRegNo() != null && !dto.getSscRegNo().isBlank()) {
+            Integer existingCount = jdbcTemplate.queryForObject(
+                    "SELECT count(*) FROM student_application WHERE upper(trim(ssc_regno)) = upper(?)",
+                    Integer.class, dto.getSscRegNo().trim());
+            if (existingCount != null && existingCount > 0) {
+                throw new IllegalArgumentException(
+                        "An application already exists for this SSC Registration Number. You cannot register again.");
+            }
+        }
 
         // trno audit row (legacy generic.logTrace -> public.logtr); returns the trace number.
         Integer trno = jdbcTemplate.queryForObject(

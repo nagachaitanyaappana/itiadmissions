@@ -1,4 +1,4 @@
-﻿<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isELIgnored="true" %>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isELIgnored="true" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -409,7 +409,9 @@
         }
 
         // Save Timings (Step 2)
+        let isSavingTimings = false;
         async function saveTimings() {
+            if (isSavingTimings) return;
             const feedback = document.getElementById('feedbackArea');
             feedback.innerText = "";
             feedback.className = "mt-3 fw-bold";
@@ -443,6 +445,12 @@
                 return;
             }
 
+            const saveBtn = document.querySelector('.btn-success-custom');
+            isSavingTimings = true;
+            if (saveBtn) {
+                saveBtn.disabled = true;
+            }
+
             try {
                 const response = await fetch(API_BASE + '/timings', {
                     credentials: 'include',
@@ -461,6 +469,11 @@
                 }
             } catch (err) {
                 setFeedback("Submission error occurred.", "text-danger");
+            } finally {
+                isSavingTimings = false;
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                }
             }
         }
 
