@@ -33,7 +33,6 @@
                 <li><a href="${pageContext.request.contextPath}/reports/duration-wise-trade-seats-abstract">Duration Wise Trade Seats Abstract</a></li>
                 <li><a href="${pageContext.request.contextPath}/reports/govt-or-pvt-dist-wise-seats-abstract">Govt or Pvt Dist Wise Seats Abstract</a></li>
                 <li><a href="${pageContext.request.contextPath}/reports/verification-report">Verification Report</a></li>
-                <li><a href="${pageContext.request.contextPath}/reports/dsc-list">DSC List</a></li>
                 <li><a href="${pageContext.request.contextPath}/reports/caste-wise-admissions-abstract">Caste Wise Admissions Abstract</a></li>
                 <li><a href="${pageContext.request.contextPath}/reports/district-schedule">District Schedule</a></li>
                 <li><a href="${pageContext.request.contextPath}/reports/shift-unit-report">Shift Unit Report</a></li>
@@ -47,7 +46,7 @@
         <li><a href="#">Admissions</a>
             <ul>
                 <li><a href="${pageContext.request.contextPath}/admissions/search">Search</a></li>
-                <li><a href="${pageContext.request.contextPath}/admissions/dsc-list">DSC List</a></li>
+                <li><a href="${pageContext.request.contextPath}/reports/dsc-list">DSC List</a></li>
                 <li><a href="${pageContext.request.contextPath}/admissions/discharge-admission">DISCHARGE ADMISSION</a></li>
                 <li><a href="${pageContext.request.contextPath}/admissions/status-master">Freeze / UnFreeze</a></li>
             </ul>
