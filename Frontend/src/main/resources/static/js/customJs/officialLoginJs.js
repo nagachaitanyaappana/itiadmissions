@@ -24,23 +24,13 @@ let captchaToken = null;
  */
 function refreshCaptcha() {
     $.ajax({
-        type: 'POST',
-        url: './generateCaptcha',
+        type: 'GET',
+        url: './captcha/text',
         success: function(resp) {
-            if (resp.status === "SUCCESS") {
-                captchaToken = resp.captchaToken;
-                $("#captchaDisplay").val(resp.captcha);
-            }
+            $("#captchaDisplay").val(resp);
         },
         error: function() {
-            console.error("Failed to generate captcha from server. Falling back to local generation.");
-            // Local captcha fallback
-            var chars = new Array('1','2','3','4','5','6','7','8','9','0');
-            var code = '';
-            for (var i = 0; i < 4; i++) {
-                code += chars[Math.floor(Math.random() * chars.length)];
-            }
-            $("#captchaDisplay").val(code);
+            console.error("Failed to generate captcha from server.");
         }
     });
 }
@@ -62,45 +52,12 @@ function handleLogin() {
     // Clear previous errors
     $("#errorMsg").hide().text("");
 
-    $.ajax({
-        type: 'POST',
-        url: './officialLogin',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            username: username,
-            password: password,
-            captcha: captcha,
-            captchaToken: captchaToken
-        }),
-        success: function(resp) {
-            if (resp.status === "SUCCESS") {
-                // Success feedback
-                $("#loginBtn").prop("disabled", true).text("Logging in...");
-                
-                // Redirect based on role or to a default dashboard
-                setTimeout(function() {
-                    // Save for authHome dashboard display
-                    localStorage.setItem('userRole', resp.user.roleid);
-                    localStorage.setItem('username', resp.user.username);
-                    localStorage.setItem('insCode', resp.user.ins_code);
-                    localStorage.setItem('displayName', resp.user.displayName || resp.user.username);
-                    localStorage.setItem('loginTime', new Date().toLocaleString());
-
-                    window.location.href = "./authHome"; 
-                }, 500);
-            } else {
-                showError(resp.message || "Login failed. Please try again.");
-                refreshCaptcha();
-                $("#captcha").val("");
-            }
-        },
-        error: function(xhr) {
-            const resp = xhr.responseJSON;
-            showError(resp && resp.message ? resp.message : "Invalid credentials or login failed.");
-            refreshCaptcha(); // Refresh captcha on failure
-            $("#captcha").val(""); // Clear captcha field
-        }
-    });
+    const form = $("<form>", { method: "POST", action: "./iti/login.do" });
+    form.append($("<input>", { type: "hidden", name: "uname", value: username }));
+    form.append($("<input>", { type: "hidden", name: "password", value: password }));
+    form.append($("<input>", { type: "hidden", name: "captcha", value: captcha }));
+    $("body").append(form);
+    form.submit();
 }
 
 /**

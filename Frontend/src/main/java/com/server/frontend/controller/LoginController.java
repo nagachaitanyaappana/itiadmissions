@@ -25,6 +25,11 @@ public class LoginController {
     @Value("${backend.api.base-url}/api/auth/login")
     private String AUTH_URL;
 
+    @GetMapping("/Login")
+    public String loginPage() {
+        return "jsp/Login";
+    }
+
     @PostMapping("/iti/login.do")
     public String login(@RequestParam("uname") String uname,
                         @RequestParam("pwd") String pwd,

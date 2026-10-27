@@ -4,7 +4,7 @@
         <%@ include file="bannernew.jsp" %>
     </header>
     <c:if test="${empty hideNavbar or not hideNavbar}">
-    <%@ include file="openNavbar.jsp" %>
+    <%@ include file="../navbars/openNavbar.jsp" %>
         <div class="news-marquee">
             <div class="marquee-content">
                 <img src="${pageContext.request.contextPath}/images/new.gif" alt="new" style="height: 20px;">
