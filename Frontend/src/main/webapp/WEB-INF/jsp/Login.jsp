@@ -210,8 +210,8 @@
                 <div class="mb-3">
                     <label for="captcha" class="form-label">Enter Captcha</label>
                     <div class="captcha-container">
-                        <input type="text" id="captchaDisplay" class="form-control" readonly>
-                        <button class="btn-refresh" onclick="refreshCaptcha()" title="Refresh Captcha">
+                        <img id="captchaDisplay" src="${pageContext.request.contextPath}/captcha" alt="captcha" style="height:40px;">
+                        <button type="button" class="btn-refresh" onclick="refreshCaptcha()" title="Refresh Captcha">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>

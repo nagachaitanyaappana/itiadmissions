@@ -23,16 +23,7 @@ let captchaToken = null;
  * Fetches a new captcha from the Spring Boot backend (same-origin)
  */
 function refreshCaptcha() {
-    $.ajax({
-        type: 'GET',
-        url: './captcha/text',
-        success: function(resp) {
-            $("#captchaDisplay").val(resp);
-        },
-        error: function() {
-            console.error("Failed to generate captcha from server.");
-        }
-    });
+    $("#captchaDisplay").attr("src", "./captcha?ts=" + new Date().getTime());
 }
 
 /**
@@ -54,7 +45,7 @@ function handleLogin() {
 
     const form = $("<form>", { method: "POST", action: "./iti/login.do" });
     form.append($("<input>", { type: "hidden", name: "uname", value: username }));
-    form.append($("<input>", { type: "hidden", name: "password", value: password }));
+    form.append($("<input>", { type: "hidden", name: "pwd", value: password }));
     form.append($("<input>", { type: "hidden", name: "captcha", value: captcha }));
     $("body").append(form);
     form.submit();
