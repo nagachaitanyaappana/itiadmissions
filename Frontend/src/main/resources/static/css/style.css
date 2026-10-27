@@ -127,6 +127,25 @@ body {
     border-top: 2px solid #ffffff !important;
 }
 
+/* PRIMARY / SUBMIT BUTTONS (Matches Navbar Blue #2f6fa5) */
+.btn-primary,
+button[type="submit"].btn-primary {
+    background-color: #2f6fa5 !important;
+    border-color: #2f6fa5 !important;
+    color: #ffffff !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+button[type="submit"].btn-primary:hover,
+button[type="submit"].btn-primary:focus,
+button[type="submit"].btn-primary:active {
+    background-color: #1e4f7a !important;
+    border-color: #1e4f7a !important;
+    color: #ffffff !important;
+}
+
 /* Mobile Navbar Toggler */
 .custom-navbar .navbar-toggler {
     background-color: white !important;

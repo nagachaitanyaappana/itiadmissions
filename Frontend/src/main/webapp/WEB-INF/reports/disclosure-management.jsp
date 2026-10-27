@@ -11,19 +11,24 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
     <style>
-        .form-select,.form-control{border-color:#007bff !important}
-        .form-select:focus,.form-control:focus{border-color:#007bff !important;box-shadow:0 0 0 0.2rem rgba(0,123,255,.25)}
-        .table-blue{background:#fff}
-        .table-blue th{background:#007bff;color:#fff}
-        .table-blue td,.table-blue th{border-color:#007bff}
-        /* Make all borders blue */
-        .card{border-color:#007bff !important}
-        .table{border-color:#007bff !important}
-        .table-bordered{border-color:#007bff !important}
-        .table-bordered td,.table-bordered th{border-color:#007bff !important}
-        .btn{border-color:#007bff !important}
-        .btn-primary{border-color:#007bff !important}
-        .btn-success{border-color:#007bff !important}
+        .table-blue { background: #fff; }
+        .table-blue th {
+            background-color: #2f6fa5 !important;
+            color: #ffffff !important;
+            border-color: #000000 !important;
+            vertical-align: middle;
+            font-weight: 600;
+        }
+        .table-blue td, .table-blue th { border-color: #000000 !important; }
+        .table-bordered {
+            border: 1px solid #000000 !important;
+            border-color: #000000 !important;
+        }
+        .table-bordered th,
+        .table-bordered td,
+        .table-bordered > :not(caption) > * > * {
+            border-color: #000000 !important;
+        }
         /* STRIVE content text */
         .text1{font-size:20px;padding-left:65px;}
         .text1 p:before{content:'\25BA ';}
@@ -40,16 +45,11 @@
     </header>
 
     <div class="container my-4">
-        <h4 class="text-primary text-center mb-4">Disclosure Management</h4>
-
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <!-- Middle table: Disclosures Management (always visible) -->
-                <h5 class="card-title text-center fw-bold text-primary">Disclosures Management</h5>
-                <div class="table-responsive">
+        <!-- Middle table: Disclosures Management (always visible) -->
+        <div class="table-responsive">
                     <table class="table table-bordered table-striped align-middle disclosure-table" style="min-width:650px;">
                         <thead class="table-blue">
-                            <tr style="background:#0057AF;color:white">
+                            <tr>
                                 <th class="text-center">SNO</th>
                                 <th class="text-center">Disclosures Management</th>
                                 <th class="text-center"></th>
@@ -124,7 +124,7 @@
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped align-middle disclosure-table" style="min-width:650px;">
                             <thead class="table-blue">
-                                <tr style="background:#0057AF;color:white">
+                                <tr>
                                     <th class="text-center">SNO</th>
                                     <th class="text-center">ITI MIS CODE</th>
                                     <th class="text-center">Name of the ITI</th>
@@ -151,8 +151,6 @@
                         </table>
                     </div>
                 </div>
-            </div>
-        </div>
     </div>
 
     <script>

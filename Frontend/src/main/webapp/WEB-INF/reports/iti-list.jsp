@@ -11,19 +11,36 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
     <style>
-        .form-select,.form-control{border-color:#007bff !important}
-        .form-select:focus,.form-control:focus{border-color:#007bff !important;box-shadow:0 0 0 0.2rem rgba(0,123,255,.25)}
-        .table-blue{background:#fff}
-        .table-blue th{background:#007bff;color:#fff}
-        .table-blue td,.table-blue th{border-color:#007bff}
-        /* Make all borders blue */
-        .card{border-color:#007bff !important}
-        .table{border-color:#007bff !important}
-        .table-bordered{border-color:#007bff !important}
-        .table-bordered td,.table-bordered th{border-color:#007bff !important}
-        .btn{border-color:#007bff !important}
-        .btn-primary{border-color:#007bff !important}
-        .btn-success{border-color:#007bff !important}
+        .table-blue { background: #fff; }
+        .table-blue th {
+            background-color: #2f6fa5 !important;
+            color: #ffffff !important;
+            border-color: #000000 !important;
+            vertical-align: middle;
+            font-weight: 600;
+        }
+        .table-blue td, .table-blue th { border-color: #000000 !important; }
+        .table-bordered {
+            border: 1px solid #000000 !important;
+            border-color: #000000 !important;
+        }
+        .table-bordered th,
+        .table-bordered td,
+        .table-bordered > :not(caption) > * > * {
+            border-color: #000000 !important;
+        }
+        .btn-primary {
+            background-color: #2f6fa5 !important;
+            border-color: #2f6fa5 !important;
+            color: #ffffff !important;
+        }
+        .btn-primary:hover,
+        .btn-primary:focus,
+        .btn-primary:active {
+            background-color: #1e4f7a !important;
+            border-color: #1e4f7a !important;
+            color: #ffffff !important;
+        }
     </style>
     <script type="text/javascript" src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>

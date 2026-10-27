@@ -11,16 +11,24 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
     <script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
     <style>
-        .table-blue{background:#fff}
-        .table-blue th{background:#007bff;color:#fff}
-        .table-blue td,.table-blue th{border-color:#007bff}
-        .card{border-color:#007bff !important}
-        .table{border-color:#007bff !important}
-        .table-bordered{border-color:#007bff !important}
-        .table-bordered td,.table-bordered th{border-color:#007bff !important}
-        .btn{border-color:#007bff !important}
-        .btn-primary{border-color:#007bff !important}
-        .btn-success{border-color:#007bff !important}
+        .table-blue { background: #fff; }
+        .table-blue th {
+            background-color: #2f6fa5 !important;
+            color: #ffffff !important;
+            border-color: #000000 !important;
+            vertical-align: middle;
+            font-weight: 600;
+        }
+        .table-blue td, .table-blue th { border-color: #000000 !important; }
+        .table-bordered {
+            border: 1px solid #000000 !important;
+            border-color: #000000 !important;
+        }
+        .table-bordered th,
+        .table-bordered td,
+        .table-bordered > :not(caption) > * > * {
+            border-color: #000000 !important;
+        }
     </style>
     <script type="text/javascript" src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>
