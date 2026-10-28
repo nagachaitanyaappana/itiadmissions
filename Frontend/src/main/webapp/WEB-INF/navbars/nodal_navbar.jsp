@@ -10,7 +10,7 @@
         <ul>
             <li><a href="${pageContext.request.contextPath}/services/password-change">Change Particular User Password</a></li>
             <li><a href="${pageContext.request.contextPath}/services/registration">Add ITI Master</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Trade Deletion</a></li>
+            <li><a href="#">Trade Deletion</a></li>
         </ul>
     </li>
 
@@ -34,7 +34,7 @@
         <ul>
             <li><a href="${pageContext.request.contextPath}/jsp/permitted_shift_unit_nodal_report.jsp">DGT Permitted Shifts Units Report</a></li>
             <li><a href="${pageContext.request.contextPath}/admissions/reprint-verified-application">Reprint Verified Application</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Update DGT Permitted Shifts Units</a></li>
+            <li><a href="#">Update DGT Permitted Shifts Units</a></li>
             <li><a href="${pageContext.request.contextPath}/reports/verification-report">Verification Report - Dist wise</a></li>
             <li><a href="${pageContext.request.contextPath}/admissions/application-reprint">Application Reprint</a></li>
             <li><a href="${pageContext.request.contextPath}/DeleteScheduleEntry">Delete Admission Timings</a></li>
@@ -43,9 +43,9 @@
 
     <li><a href="#">Placements</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Placements Schedlewise Data</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Placement Year Wise Count Report</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Placement State Report</a></li>
+            <li><a href="#">Placements Schedlewise Data</a></li>
+            <li><a href="#">Placement Year Wise Count Report</a></li>
+            <li><a href="#">Placement State Report</a></li>
         </ul>
     </li>
 

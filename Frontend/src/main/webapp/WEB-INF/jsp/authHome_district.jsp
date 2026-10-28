@@ -1,47 +1,322 @@
-<%@ page contentType="text/html;charset=UTF-8" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>:: ITI - District Dashboard ::</title>
-    <script src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>:: ITI - District Convener Dashboard ::</title>
     <link rel="shortcut icon" type="image/ico" href="${pageContext.request.contextPath}/images/iti.png" />
-    <link rel="shortcut icon" type="image/ico" href="${pageContext.request.contextPath}/images/iti.png" />
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/bootstrap.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal-theme.css">
     <style>
-        body { margin: 0; font-family: Verdana, Arial, sans-serif; background: #fff; }
-        #footer {
-            position: fixed;
-            bottom: 0px;
-            width: 100%;
-            height: 25px;
-            padding-top: 8px;
-            text-align: center;
-            background-color: #0E4878;
-            border-top: 1px #000000 solid;
-            font-size: 12px;
-            font-family: arial, verdana;
+        html, body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #f4f7fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-dashboard-content {
+            flex: 1 0 auto;
+        }
+        .dashboard-hero {
+            background: linear-gradient(135deg, #195695 0%, #2f6fa5 100%);
+            color: #ffffff;
+            border-radius: 10px;
+            padding: 24px 28px;
+            box-shadow: 0 4px 14px rgba(25, 86, 149, 0.15);
+            margin-bottom: 24px;
+        }
+        .dashboard-hero h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .dashboard-hero p {
+            margin-bottom: 0;
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+        .meta-pill {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-right: 8px;
+            margin-top: 10px;
+            color: #fff;
+        }
+        .card-custom {
+            border: 1px solid #dbe2ea;
+            border-radius: 10px;
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        .card-custom .card-header-custom {
+            background-color: #2f6fa5;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 1.05rem;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .card-custom .card-body {
+            padding: 20px;
+        }
+        .info-table th {
+            width: 38%;
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 10px 14px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .info-table td {
+            color: #1e293b;
+            font-size: 0.95rem;
+            padding: 10px 14px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .quick-tile {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #fbfcfe;
+            text-decoration: none;
+            color: #1e293b;
+            transition: all 0.2s ease;
+            margin-bottom: 12px;
+        }
+        .quick-tile:hover {
+            background: #f0f6fc;
+            border-color: #2f6fa5;
+            color: #195695;
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(47, 111, 165, 0.15);
+        }
+        .quick-tile-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: #e6f0f9;
+            color: #2f6fa5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-right: 14px;
+            flex-shrink: 0;
+        }
+        .quick-tile:hover .quick-tile-icon {
+            background: #2f6fa5;
             color: #ffffff;
         }
-        #footer a { color: white; }
-        .login-info { text-align: center; padding: 40px 10px 60px; }
+        .history-table th {
+            background-color: #2f6fa5 !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            padding: 10px 12px;
+            border: 1px solid #195695;
+        }
+        .history-table td {
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .history-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
     </style>
-    <style>
-        body { margin:0; font-family:Verdana, Arial, sans-serif; background:#fff; }
-        #footer { position:fixed; bottom:0; width:100%; padding:8px; text-align:center; background:#0E4878; font-size:12px; color:#fff; }
-        #footer a { color:#fff; }
-        .login-info { text-align:center; padding:40px 10px 60px; }
-    </style>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
 </head>
 <body>
-    <center><img src="${pageContext.request.contextPath}/images/gen.jpg" width="100%" alt="Banner" /></center>
+
+    <!-- Header Banner -->
+    <center>
+        <img src="${pageContext.request.contextPath}/images/gen.jpg" width="100%" alt="ITI Portal Banner" />
+    </center>
+
+    <!-- District Navbar -->
     <%@ include file="../navbars/district_navbar.jsp" %>
-    <div class="login-info">
-        <p><font color="#400040" size="4"><strong>You login in to our application ${loginCount} times</strong></font></p>
-        <c:forEach var="dt" items="${lastLogins}" varStatus="st">
-            <font color="#660000">${st.count}</font> <font color="#CC0000">Login Date:</font> <font color="#330000">${dt}</font><br>
-        </c:forEach>
+
+    <div class="main-dashboard-content">
+        <div class="container py-4">
+
+            <!-- Hero Welcome Card -->
+            <div class="dashboard-hero">
+                <div class="d-flex flex-wrap justify-content-between align-items-center">
+                    <div>
+                        <h2><i class="fas fa-map-marked-alt me-2"></i> District Convener Dashboard</h2>
+                        <p>Department of Technical Education & Training, Government of Andhra Pradesh</p>
+                        <div class="d-flex flex-wrap">
+                            <span class="meta-pill"><i class="fas fa-user-shield me-2"></i> Role: District Convener (Role 3)</span>
+                            <span class="meta-pill"><i class="fas fa-id-badge me-2"></i> User: ${sessionScope.username}</span>
+                            <c:if test="${not empty sessionScope.distName}">
+                                <span class="meta-pill"><i class="fas fa-city me-2"></i> District: ${sessionScope.distName}</span>
+                            </c:if>
+                            <span class="meta-pill"><i class="fas fa-sign-in-alt me-2"></i> Total Logins: ${sessionScope.loginCount != null ? sessionScope.loginCount : 1}</span>
+                        </div>
+                    </div>
+                    <div class="text-end mt-3 mt-md-0">
+                        <span class="badge bg-light text-dark px-3 py-2 fs-6 shadow-sm">
+                            <i class="fas fa-circle text-success me-1"></i> Active Session
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Left Column: Session Profile & Quick Actions -->
+                <div class="col-lg-5 mb-4">
+                    <!-- Session Card -->
+                    <div class="card-custom">
+                        <div class="card-header-custom">
+                            <span><i class="fas fa-id-card me-2"></i> District Profile</span>
+                            <span class="badge bg-light text-primary">District Level</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table info-table mb-0">
+                                <tbody>
+                                    <tr>
+                                        <th>Convener / Officer</th>
+                                        <td><strong>${sessionScope.fullName != null && !empty sessionScope.fullName ? sessionScope.fullName : sessionScope.username}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <th>District Code / ID</th>
+                                        <td><code>${sessionScope.username}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Jurisdiction</th>
+                                        <td><strong>${sessionScope.distName != null ? sessionScope.distName : 'District Officer'}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Administrative Role</th>
+                                        <td>District Admission Convener</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Total Logins</th>
+                                        <td><span class="badge bg-primary fs-7">${sessionScope.loginCount} Sessions</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Quick Action Shortcuts -->
+                    <div class="card-custom">
+                        <div class="card-header-custom">
+                            <span><i class="fas fa-bolt me-2"></i> Quick Admission Actions</span>
+                        </div>
+                        <div class="card-body">
+                            <a href="${pageContext.request.contextPath}/VerifyApplication" class="quick-tile">
+                                <div class="quick-tile-icon"><i class="fas fa-user-check"></i></div>
+                                <div>
+                                    <div class="fw-bold">Verification for Online Applications</div>
+                                    <small class="text-muted">Verify student applications & certificate uploads</small>
+                                </div>
+                            </a>
+                            <a href="${pageContext.request.contextPath}/AdmissionPhase" class="quick-tile">
+                                <div class="quick-tile-icon"><i class="fas fa-door-open"></i></div>
+                                <div>
+                                    <div class="fw-bold">Admissions Phase 1</div>
+                                    <small class="text-muted">Process and confirm Phase 1 admissions</small>
+                                </div>
+                            </a>
+                            <a href="${pageContext.request.contextPath}/MeritList" class="quick-tile">
+                                <div class="quick-tile-icon"><i class="fas fa-list-ol"></i></div>
+                                <div>
+                                    <div class="fw-bold">Generate Merit List</div>
+                                    <small class="text-muted">Generate GPA & rank-based district merit lists</small>
+                                </div>
+                            </a>
+                            <a href="${pageContext.request.contextPath}/ScheduleEntry" class="quick-tile">
+                                <div class="quick-tile-icon"><i class="fas fa-calendar-check"></i></div>
+                                <div>
+                                    <div class="fw-bold">Schedule Entry</div>
+                                    <small class="text-muted">Set counseling venue and date-time schedules</small>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Recent Login History -->
+                <div class="col-lg-7 mb-4">
+                    <div class="card-custom">
+                        <div class="card-header-custom">
+                            <span><i class="fas fa-history me-2"></i> Recent Login History</span>
+                            <span class="badge bg-light text-primary">Last 5 Sessions</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3" style="font-size: 0.92rem;">
+                                You have logged into the AP ITI Admission Portal a total of 
+                                <strong class="text-primary">${sessionScope.loginCount != null ? sessionScope.loginCount : 1} times</strong>.
+                                Below is the audit trail of your most recent sessions:
+                            </p>
+                            <div class="table-responsive">
+                                <table class="table history-table table-bordered mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 12%; text-align: center;">S.No</th>
+                                            <th><i class="far fa-clock me-1"></i> Login Date &amp; Time</th>
+                                            <th style="width: 25%; text-align: center;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <c:choose>
+                                            <c:when test="${not empty sessionScope.lastLogins}">
+                                                <c:forEach var="dt" items="${sessionScope.lastLogins}" varStatus="st">
+                                                    <tr>
+                                                        <td class="text-center fw-bold text-secondary">${st.count}</td>
+                                                        <td>
+                                                            <i class="far fa-calendar-check text-primary me-2"></i>
+                                                            <span class="fw-semibold">${dt}</span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="badge bg-success px-2 py-1">
+                                                                <i class="fas fa-check-circle me-1"></i> Success
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <tr>
+                                                    <td colspan="3" class="text-center py-4 text-muted">
+                                                        <i class="fas fa-info-circle me-1"></i> No prior login records recorded.
+                                                    </td>
+                                                </tr>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </div>
-    <div id="footer">2013 @ All Rights Reserved - <a href="http://www.ap.nic.in">National Informatics Center</a></div>
+
+    <!-- Unified Global Footer -->
+    <%@ include file="footer.jsp" %>
+
 </body>
 </html>

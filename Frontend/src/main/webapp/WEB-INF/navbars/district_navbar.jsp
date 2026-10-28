@@ -40,44 +40,44 @@
 
     <li><a href="#">Exams and Sem</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Exam Apply</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">DOWNLOAD EXAM MASTER DATA</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Semester Hallticket Download</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">HT Download Nonsem</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">HT Approval/Nominal Rolls</a></li>
+            <li><a href="#">Exam Apply</a></li>
+            <li><a href="#">DOWNLOAD EXAM MASTER DATA</a></li>
+            <li><a href="#">Semester Hallticket Download</a></li>
+            <li><a href="#">HT Download Nonsem</a></li>
+            <li><a href="#">HT Approval/Nominal Rolls</a></li>
         </ul>
     </li>
 
     <li><a href="#">HRMS</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Employee ID Edit</a></li>
+            <li><a href="#">Employee ID Edit</a></li>
         </ul>
     </li>
 
     <li><a href="#">Placements</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Placement Schedule Entry</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Placement Dist Report</a></li>
+            <li><a href="#">Placement Schedule Entry</a></li>
+            <li><a href="#">Placement Dist Report</a></li>
         </ul>
     </li>
 
     <li><a href="#">Achievements</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">ITI WISE REPORT</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">ACHIEVEMENT ENTRY</a></li>
+            <li><a href="#">ITI WISE REPORT</a></li>
+            <li><a href="#">ACHIEVEMENT ENTRY</a></li>
         </ul>
     </li>
 
     <li><a href="#">Abstracts</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Caste wise year wise abstract</a></li>
+            <li><a href="#">Caste wise year wise abstract</a></li>
         </ul>
     </li>
 
     <li><a href="#">SCVT Exams</a>
         <ul>
             <li><a href="${pageContext.request.contextPath}/scvt/exam-verification">SCVT Exam Verification</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">SCVT MARKS ENTRY</a></li>
+            <li><a href="#">SCVT MARKS ENTRY</a></li>
             <li><a href="${pageContext.request.contextPath}/scvt/certificate">SCVT Certificate</a></li>
         </ul>
     </li>

@@ -32,48 +32,48 @@
 
     <li><a href="#">Exams and Sem</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Semester Hallticket Download</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">HT Download Nonsem</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Exam Apply</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">HT Approval/Nominal Rolls</a></li>
+            <li><a href="#">Semester Hallticket Download</a></li>
+            <li><a href="#">HT Download Nonsem</a></li>
+            <li><a href="#">Exam Apply</a></li>
+            <li><a href="#">HT Approval/Nominal Rolls</a></li>
         </ul>
     </li>
 
     <li><a href="#">HRMS</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Employee ID Edit</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Faculty details</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Employees Report</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Employee Profile Entry</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Faculty Report</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Hrms Instructions</a></li>
+            <li><a href="#">Employee ID Edit</a></li>
+            <li><a href="#">Faculty details</a></li>
+            <li><a href="#">Employees Report</a></li>
+            <li><a href="#">Employee Profile Entry</a></li>
+            <li><a href="#">Faculty Report</a></li>
+            <li><a href="#">Hrms Instructions</a></li>
         </ul>
     </li>
 
     <li><a href="#">Placements</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Placement Entry</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Placement ITI Report</a></li>
+            <li><a href="#">Placement Entry</a></li>
+            <li><a href="#">Placement ITI Report</a></li>
         </ul>
     </li>
 
     <li><a href="#">Achievements</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">ITI WISE REPORT</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">ACHIEVEMENT ENTRY</a></li>
+            <li><a href="#">ITI WISE REPORT</a></li>
+            <li><a href="#">ACHIEVEMENT ENTRY</a></li>
         </ul>
     </li>
 
     <li><a href="#">Abstracts</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Caste wise year wise abstract</a></li>
+            <li><a href="#">Caste wise year wise abstract</a></li>
         </ul>
     </li>
 
     <li><a href="#">SCVT Exams</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">SCVT Exam Application Details Entry</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">SCVT HallTicket Download</a></li>
+            <li><a href="#">SCVT Exam Application Details Entry</a></li>
+            <li><a href="#">SCVT HallTicket Download</a></li>
         </ul>
     </li>
 

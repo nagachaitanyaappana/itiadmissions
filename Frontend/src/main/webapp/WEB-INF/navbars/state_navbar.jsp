@@ -8,15 +8,15 @@
 
     <li><a href="#">Administration</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Upload News And Updates</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Scroll Update</a></li>
+            <li><a href="#">Upload News And Updates</a></li>
+            <li><a href="#">Scroll Update</a></li>
             <li><a href="${pageContext.request.contextPath}/reports/shift-unit-report">Shift Unit Report</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Trade Name Change</a></li>
+            <li><a href="#">Trade Name Change</a></li>
             <li><a href="${pageContext.request.contextPath}/reports/district-schedule">District Schedule</a></li>
             <li><a href="${pageContext.request.contextPath}/services/dget-iti-code">DGET ITI CODE</a></li>
             <li><a href="${pageContext.request.contextPath}/services/password-change">Change Particular User Password</a></li>
             <li><a href="${pageContext.request.contextPath}/services/register-new-user">NEW USER CREATION</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Login History</a></li>
+            <li><a href="#">Login History</a></li>
             <li><a href="${pageContext.request.contextPath}/services/registration">Add ITI Master</a></li>
         </ul>
     </li>
@@ -52,57 +52,57 @@
 
     <li><a href="#">Exams and Sem</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Question Paper Indent</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">SCVT Semwise Certificate</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Candidate Details</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Result Process</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Dist Wise Sem Results</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">ExamCentre Allocation</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">ExamCentre Entry</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Admission Data</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Total Marks Process Semwise/Htno</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Marks Entry</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">HT Approval/Nominal Rolls</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Delete Admission Non Sem</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Centerwise QIndent</a></li>
+            <li><a href="#">Question Paper Indent</a></li>
+            <li><a href="#">SCVT Semwise Certificate</a></li>
+            <li><a href="#">Candidate Details</a></li>
+            <li><a href="#">Result Process</a></li>
+            <li><a href="#">Dist Wise Sem Results</a></li>
+            <li><a href="#">ExamCentre Allocation</a></li>
+            <li><a href="#">ExamCentre Entry</a></li>
+            <li><a href="#">Admission Data</a></li>
+            <li><a href="#">Total Marks Process Semwise/Htno</a></li>
+            <li><a href="#">Marks Entry</a></li>
+            <li><a href="#">HT Approval/Nominal Rolls</a></li>
+            <li><a href="#">Delete Admission Non Sem</a></li>
+            <li><a href="#">Centerwise QIndent</a></li>
         </ul>
     </li>
 
     <li><a href="#">HRMS</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Faculty Report</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Hrms Instructions</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Employee ID Edit</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Employees Report</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Faculty details</a></li>
+            <li><a href="#">Faculty Report</a></li>
+            <li><a href="#">Hrms Instructions</a></li>
+            <li><a href="#">Employee ID Edit</a></li>
+            <li><a href="#">Employees Report</a></li>
+            <li><a href="#">Faculty details</a></li>
         </ul>
     </li>
 
     <li><a href="#">Placements</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Placement State Report</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Placement Year Wise Count Report</a></li>
+            <li><a href="#">Placement State Report</a></li>
+            <li><a href="#">Placement Year Wise Count Report</a></li>
         </ul>
     </li>
 
     <li><a href="#">Achievements</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">ITI WISE REPORT</a></li>
+            <li><a href="#">ITI WISE REPORT</a></li>
         </ul>
     </li>
 
     <li><a href="#">Abstracts</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Caste wise year wise abstract</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Generate New Abstract Query</a></li>
+            <li><a href="#">Caste wise year wise abstract</a></li>
+            <li><a href="#">Generate New Abstract Query</a></li>
         </ul>
     </li>
 
     <li><a href="#">SCVT Exams</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/under-construction">Sem Certificate Printing</a></li>
+            <li><a href="#">Sem Certificate Printing</a></li>
             <li><a href="${pageContext.request.contextPath}/scvt/exam-initialization">SCVT Exam Initialization</a></li>
-            <li><a href="${pageContext.request.contextPath}/under-construction">SCVT Result Processing</a></li>
+            <li><a href="#">SCVT Result Processing</a></li>
             <li><a href="${pageContext.request.contextPath}/scvt/certificate">SCVT Certificate</a></li>
         </ul>
     </li>
