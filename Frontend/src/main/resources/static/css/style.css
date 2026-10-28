@@ -659,8 +659,15 @@ body {
 
 /* Print Optimizations */
 @media print {
-    .no-print {
+    .no-print,
+    #menu-bar,
+    #menu-bar *,
+    .navbar,
+    nav,
+    header {
         display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
     }
 
     .nodal-body {

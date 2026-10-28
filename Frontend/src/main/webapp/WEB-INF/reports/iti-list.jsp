@@ -114,11 +114,7 @@
     <strong>List of Government and Private ITIs</strong>
 </h2>
 
-<div style="width:90%; margin:auto; text-align:right; margin-bottom:10px;">
-    <input type="button" value="Download Excel" onclick="exportToExcel();">
-</div>
-
-<table width="50%" align="center" bgcolor="#cbd6b2" cellpadding="8" cellspacing="0">
+<table width="55%" align="center" bgcolor="#cbd6b2" cellpadding="8" cellspacing="0">
     <tr bgcolor="#4ab131">
         <td colspan="3" align="center" style="color:white;font-weight:bold;">
             ITI List
@@ -126,11 +122,11 @@
     </tr>
 
 <tr>
-    <td align="right" width="35%">
+    <td align="right" width="30%">
         <b>Select ITI Type :</b>
     </td>
 
-    <td align="left" width="35%">
+    <td align="left" width="30%">
         <select id="govtType" style="width:180px;" onchange="loadItiList()">
             <option value="">-- Select --</option>
               <option value="A" selected>
@@ -145,8 +141,9 @@
         </select>
     </td>
 
-    <td align="left" width="30%">
+    <td align="left" width="40%" style="white-space: nowrap;">
         <input type="button" value="Proceed" onclick="loadItiList()">
+        <input type="button" value="Download Excel" onclick="exportToExcel();" style="margin-left: 6px;">
     </td>
 </tr>
 

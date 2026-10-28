@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -71,8 +72,15 @@ public class ReportsController {
     }
 
     @GetMapping("/dsc-list")
-    public String dscListSecondphase(HttpServletRequest request) {
+    public String dscListSecondphase(HttpServletRequest request, Model model) {
         if (!hasRole(request, "4", "3", "10", "2")) return "redirect:/?error=session";
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            model.addAttribute("roleId", session.getAttribute("roleId"));
+            model.addAttribute("insCode", session.getAttribute("insCode"));
+            model.addAttribute("itiName", session.getAttribute("itiName"));
+            model.addAttribute("distName", session.getAttribute("distName"));
+        }
         return "reports/dsc-list";
     }
 

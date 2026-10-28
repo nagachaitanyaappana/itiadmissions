@@ -403,7 +403,7 @@
                     });
                 }
 
-                function addSelectRow(distCode, itiCode) {
+                function addSelectRow(distCode, itiCode, itiType) {
                     var phaseOne = isPhaseOne();
                     var body = document.getElementById("locDeptBody");
                     if (body.rows.length >= MAX_CHOICES) {
@@ -416,7 +416,6 @@
                     var cGov = row.insertCell(2);
                     var cIti = row.insertCell(3);
                     var cDel = row.insertCell(4);
-                    cGov.className = "selGovt";
                     cGov.align = "center";
 
                     var districtSelect = document.createElement("select");
@@ -429,34 +428,65 @@
                         o.textContent = d.name;
                         districtSelect.appendChild(o);
                     });
-                    districtSelect.onchange = function () {
-                        if (phaseOne && isDuplicateDistrict(this)) {
-                            alert("you have already Applied for this District");
-                            this.value = "";
-                            return;
-                        }
-                        if (!phaseOne) { loadItisForRow(this); }
-                    };
                     cDist.appendChild(districtSelect);
 
                     if (phaseOne) {
                         cGov.style.display = "none";
                         cIti.style.display = "none";
-                    } else {
-                        var itiSelect = document.createElement("select");
-                        itiSelect.className = "selIti";
-                        itiSelect.style.width = "320px";
-                        itiSelect.innerHTML = '<option value="">--Select ITI--</option>';
-                        itiSelect.onchange = function () {
-                            if (isAlreadyAppliedIti(this.value)) {
+                        districtSelect.onchange = function () {
+                            if (isDuplicateDistrict(this)) {
                                 alert("you have already Applied for this District");
                                 this.value = "";
                                 return;
                             }
-                            updateGovtCell(this);
+                        };
+                    } else {
+                        var govtSelect = document.createElement("select");
+                        govtSelect.className = "selGovt";
+                        govtSelect.style.width = "140px";
+                        govtSelect.innerHTML = '<option value="">--Select ITI Type--</option>'
+                            + '<option value="ALL">All</option>'
+                            + '<option value="G">Government</option>'
+                            + '<option value="P">Private</option>';
+                        govtSelect.disabled = !distCode;
+                        cGov.appendChild(govtSelect);
+
+                        var itiSelect = document.createElement("select");
+                        itiSelect.className = "selIti";
+                        itiSelect.style.width = "320px";
+                        itiSelect.innerHTML = '<option value="">--Select ITI--</option>';
+                        itiSelect.disabled = true;
+                        itiSelect.onchange = function () {
+                            if (isAlreadyAppliedIti(this.value)) {
+                                alert("you have already Applied for this ITI");
+                                this.value = "";
+                                showTrades("");
+                                return;
+                            }
                             showTrades(this.value);
                         };
                         cIti.appendChild(itiSelect);
+
+                        districtSelect.onchange = function () {
+                            var currentGovt = row.querySelector(".selGovt");
+                            var currentIti = row.querySelector(".selIti");
+                            currentIti.innerHTML = '<option value="">--Select ITI--</option>';
+                            currentIti.disabled = true;
+                            showTrades("");
+                            if (!this.value) {
+                                currentGovt.value = "";
+                                currentGovt.disabled = true;
+                            } else {
+                                currentGovt.disabled = false;
+                                if (currentGovt.value) {
+                                    loadItisForRow(row);
+                                }
+                            }
+                        };
+
+                        govtSelect.onchange = function () {
+                            loadItisForRow(row);
+                        };
                     }
 
                     var remove = document.createElement("input");
@@ -468,9 +498,15 @@
                     };
                     cDel.appendChild(remove);
 
-                    if (distCode) { districtSelect.value = distCode; }
+                    if (distCode) {
+                        districtSelect.value = distCode;
+                        if (!phaseOne) {
+                            var gSel = row.querySelector(".selGovt");
+                            if (itiType && gSel) { gSel.value = itiType; }
+                            loadItisForRow(row, itiCode);
+                        }
+                    }
                     renumberRows();
-                    if (distCode && !phaseOne) { loadItisForRow(districtSelect, itiCode); }
                 }
 
                 function renumberRows() {
@@ -478,36 +514,88 @@
                     for (var i = 0; i < rows.length; i++) { rows[i].cells[0].innerHTML = (i + 1); }
                 }
 
-                // Reuses GET /admission/eligible-itis/{distCode}. That lookup returns one row per
-                // trade, so the ITI list is de-duplicated on iti_code before it is shown.
-                function loadItisForRow(districtSelect, preselectIti) {
-                    var itiSelect = districtSelect.closest("tr").querySelector(".selIti");
-                    var distCode = districtSelect.value;
-                    itiSelect.innerHTML = '<option value="">--Select ITI--</option>';
-                    if (!distCode) { return; }
-                    $.get('${backendBaseUrl}/admission/eligible-itis/' + encodeURIComponent(distCode),
-                        function (list) {
-                            var seen = {};
-                            (list || []).forEach(function (i) {
-                                if (seen[i.itiCode]) { return; }
-                                seen[i.itiCode] = true;
-                                var o = document.createElement("option");
-                                o.value = i.itiCode;
-                                o.textContent = i.itiName + ' (' + i.ncvtCode + ')';
-                                o.dataset.govt = i.govt;
-                                itiSelect.appendChild(o);
-                            });
-                            if (preselectIti) { itiSelect.value = preselectIti; updateGovtCell(itiSelect); }
+                var DISTRICT_ITIS_CACHE = {};
+
+                function fetchEligibleItis(distCode, callback) {
+                    if (DISTRICT_ITIS_CACHE[distCode]) {
+                        callback(DISTRICT_ITIS_CACHE[distCode]);
+                        return;
+                    }
+                    $.get('${backendBaseUrl}/admission/eligible-itis/' + encodeURIComponent(distCode), function (list) {
+                        var seen = {};
+                        var unique = [];
+                        (list || []).forEach(function (i) {
+                            if (seen[i.itiCode]) { return; }
+                            seen[i.itiCode] = true;
+                            unique.push(i);
                         });
+                        DISTRICT_ITIS_CACHE[distCode] = unique;
+                        callback(unique);
+                    }).fail(function () {
+                        alert("Could not load ITIs for the selected district. Please retry.");
+                        callback([]);
+                    });
                 }
 
-                // Government/Private, shown next to the selected ITI (legacy getitibydist.jsp:87-100).
-                function updateGovtCell(itiSelect) {
-                    var cell = itiSelect.closest("tr").querySelector(".selGovt");
-                    if (!cell) { return; }
-                    var opt = itiSelect.options[itiSelect.selectedIndex];
-                    var govt = opt ? opt.dataset.govt : "";
-                    cell.innerHTML = (govt === 'G') ? 'Government' : (govt === 'P' ? 'Private' : (govt || ''));
+                function loadItisForRow(rowOrEl, preselectIti) {
+                    var row = rowOrEl.closest("tr");
+                    if (!row) { return; }
+                    var districtSelect = row.querySelector(".selDistrict");
+                    var govtSelect = row.querySelector(".selGovt");
+                    var itiSelect = row.querySelector(".selIti");
+                    var distCode = districtSelect ? districtSelect.value : "";
+                    var govtType = govtSelect ? govtSelect.value : "";
+
+                    itiSelect.innerHTML = '<option value="">--Select ITI--</option>';
+                    showTrades("");
+
+                    if (!distCode) {
+                        if (govtSelect) { govtSelect.disabled = true; }
+                        itiSelect.disabled = true;
+                        return;
+                    }
+
+                    if (govtSelect) {
+                        govtSelect.disabled = false;
+                    }
+
+                    fetchEligibleItis(distCode, function (list) {
+                        if (preselectIti && !govtType) {
+                            for (var idx = 0; idx < list.length; idx++) {
+                                if (list[idx].itiCode === preselectIti) {
+                                    govtType = list[idx].govt || "ALL";
+                                    if (govtSelect) { govtSelect.value = govtType; }
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!govtType) {
+                            itiSelect.disabled = true;
+                            return;
+                        }
+
+                        itiSelect.disabled = false;
+
+                        var filtered = list.filter(function (item) {
+                            if (govtType === "G") { return item.govt === "G"; }
+                            if (govtType === "P") { return item.govt === "P"; }
+                            return true; // "ALL"
+                        });
+
+                        filtered.forEach(function (i) {
+                            var o = document.createElement("option");
+                            o.value = i.itiCode;
+                            o.textContent = i.itiName + ' (' + i.ncvtCode + ')';
+                            o.dataset.govt = i.govt;
+                            itiSelect.appendChild(o);
+                        });
+
+                        if (preselectIti) {
+                            itiSelect.value = preselectIti;
+                            showTrades(preselectIti);
+                        }
+                    });
                 }
 
                 // Inline duplicate-district guard (legacy Editviewpage.jsp:772-789 getcollegesdist).
@@ -521,7 +609,14 @@
                     return APPLIED_CODES.indexOf(value) !== -1;
                 }
                 function isAlreadyAppliedIti(value) {
-                    return !!value && APPLIED_CODES.indexOf(value) !== -1;
+                    if (!value) { return false; }
+                    if (APPLIED_CODES.indexOf(value) !== -1) { return true; }
+                    var allItis = document.querySelectorAll(".selIti");
+                    var count = 0;
+                    for (var i = 0; i < allItis.length; i++) {
+                        if (allItis[i].value === value) { count++; }
+                    }
+                    return count > 1;
                 }
                 // Same information the legacy getTrade_info.jsp showed for the chosen ITI.
                 function showTrades(itiCode) {
@@ -768,7 +863,7 @@
         <tr bgcolor="#4ab131" style="color:#fff;">
             <th style="width:60px;">S.No</th>
             <th style="width:200px;">District</th>
-            <th id="govtColHead" style="width:120px;">Government/Private</th>
+            <th id="govtColHead" style="width:140px;">ITI Type</th>
             <th id="itiColHead">ITI</th>
             <th style="width:90px;">Remove</th>
         </tr>

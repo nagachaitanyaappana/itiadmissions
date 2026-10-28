@@ -12,7 +12,7 @@
      file - the same markup was copied verbatim from the matching
      authHome_*.jsp. Keep or drop as you prefer; it is harmless.
      =================================================================== --%>
-<ul id="menu-bar">
+<ul id="menu-bar" class="no-print">
         <li><a href="${pageContext.request.contextPath}/authHome">Home</a></li>
         <li><a href="#">ITI Services</a>
             <ul>
