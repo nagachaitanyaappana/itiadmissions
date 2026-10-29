@@ -175,13 +175,12 @@
                                     <th>Strength</th>
                                     <th>Shift</th>
                                     <th>Unit</th>
-                                    <th>Strength Vacant</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody id="entriesTableBody">
                                 <tr id="emptyRow">
-                                    <td colspan="5" class="text-center">No entries configured. Click "Add Entry" to add one.</td>
+                                    <td colspan="4" class="text-center">No entries configured. Click "Add Entry" to add one.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -343,7 +342,7 @@
                 if (entries.length === 0) {
                     const emptyRowClone = document.createElement("tr");
                     emptyRowClone.id = "emptyRow";
-                    emptyRowClone.innerHTML = '<td colspan="5" class="text-center">No entries configured. Click "Add Entry" to add one.</td>';
+                    emptyRowClone.innerHTML = '<td colspan="4" class="text-center">No entries configured. Click "Add Entry" to add one.</td>';
                     entriesTableBody.appendChild(emptyRowClone);
                     return;
                 }
@@ -372,19 +371,17 @@
                         </td>
                         <td>
                             <input type="number" class="form-control form-control-sm strength-vacant-input" 
-<<<<<<< HEAD
-                                   data-index="\${index}" value="\${entry.strengthVacant != null ? entry.strengthVacant : ''}" min="0" style="width: 100px;" readonly placeholder="Auto (not editable)">
-=======
                                    data-index="\${index}" value="\${entry.strengthVacant != null ? entry.strengthVacant : (entry.strength != null ? entry.strength : 20)}" min="0" style="width: 100px; background-color: #e9ecef; cursor: not-allowed;" placeholder="= strength" readonly tabindex="-1">
->>>>>>> 2ecc864400373754f3cb8b416f2914bd4fb5c425
                         </td>
                         <td>
+
                             <button class="btn btn-danger btn-sm remove-entry-btn" data-index="\${index}">
                                 <i class="fas fa-trash"></i> Remove
                             </button>
                         </td>
                     `;
                     entriesTableBody.appendChild(row);
+
 
                     // Strength Vacant auto-updates to match Strength when the user
                     // selects a strength from the dropdown. The field is read-only
@@ -393,15 +390,10 @@
                     const vacantInput = row.querySelector('.strength-vacant-input');
                     const syncVacant = function () {
                         vacantInput.value = this.value;
-<<<<<<< HEAD
-                    });
-                    // Initialize vacant to match the currently-selected strength
-                    vacantInput.value = strengthInput.value;
-=======
                     };
                     strengthInput.addEventListener('change', syncVacant);
                     strengthInput.addEventListener('input', syncVacant);
->>>>>>> 2ecc864400373754f3cb8b416f2914bd4fb5c425
+
                 });
 
                 // Add event listeners
@@ -445,7 +437,6 @@
                 const strengthInputs = document.querySelectorAll('.strength-input');
                 const shiftSelects = document.querySelectorAll('.shift-select');
                 const unitSelects = document.querySelectorAll('.unit-select');
-                const vacantInputs = document.querySelectorAll('.strength-vacant-input');
 
                 // Check at least one entry exists
                 if (strengthInputs.length === 0) {
@@ -460,7 +451,6 @@
                     const strength = parseInt(strengthInputs[i].value);
                     const shift = parseInt(shiftSelects[i].value);
                     const unit = parseInt(unitSelects[i].value);
-                    const vacant = parseInt(vacantInputs[i].value) || 0;
 
                     // Template literals are backslash-escaped (\${) so JSP EL
                     // leaves them for the browser: without the escape the
@@ -482,11 +472,6 @@
                         errors.push(`Entry \${i + 1}: Unit must be between 1 and 12.`);
                     }
 
-                    // Validate strength vacant
-                    if (vacant < 0) {
-                        errors.push(`Entry \${i + 1}: Strength vacant cannot be negative.`);
-                    }
-
                     // Check for duplicate shift + unit combinations
                     const shiftUnitKey = `\${shift}-\${unit}`;
                     if (shiftUnitMap.has(shiftUnitKey)) {
@@ -505,16 +490,14 @@
                 const strengthInputs = document.querySelectorAll('.strength-input');
                 const shiftSelects = document.querySelectorAll('.shift-select');
                 const unitSelects = document.querySelectorAll('.unit-select');
-                const vacantInputs = document.querySelectorAll('.strength-vacant-input');
 
                 for (let i = 0; i < entries.length; i++) {
-                    const vacantRaw = vacantInputs[i].value;
+                    const strength = parseInt(strengthInputs[i].value);
                     updatedEntries.push({
-                        strength: parseInt(strengthInputs[i].value),
+                        strength: strength,
                         shiftAllowed: parseInt(shiftSelects[i].value),
                         unitAllowed: parseInt(unitSelects[i].value),
-                        // Blank means "not specified": let the backend default it to the strength.
-                        strengthVacant: vacantRaw === '' ? null : parseInt(vacantRaw)
+                        strengthVacant: strength
                     });
                 }
 

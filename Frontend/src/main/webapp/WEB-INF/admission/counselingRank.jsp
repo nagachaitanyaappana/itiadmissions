@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css" />
 <script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
 <style>
-body{font-family:Verdana,Arial,sans-serif;background:#fff;}
+body{font-family:Verdana,Arial,sans-serif;background:#fff;padding-bottom:120px;}
 .page-title{text-align:center;font-size:20px;margin:16px 0 4px;font-weight:bold;}
 .sub-line{text-align:center;font-size:12px;margin-bottom:10px;}
 .box{width:96%;margin:0 auto 14px;border:1px solid #7a7a7a;background:#fff;}
@@ -35,10 +35,12 @@ body{font-family:Verdana,Arial,sans-serif;background:#fff;}
 .tfv-f{background:#e8f5a8;font-weight:bold;}
 .vacant-cell{background:#BCE954;font-weight:bold;}
 .student-photo{display:block;width:100px;height:130px;object-fit:cover;margin:0 auto 4px;}
-.memo{border:1px solid #7a7a7a;width:60%;margin:10px auto 50px;font-size:13px;border-collapse:collapse;}
+#admissionSection{margin-bottom:90px;}
+#admForm{margin-bottom:50px;}
+.memo{border:1px solid #7a7a7a;width:60%;margin:10px auto 100px;font-size:13px;border-collapse:collapse;}
 .memo td{border:1px solid #7a7a7a;padding:6px 8px;}
 .inline-input{padding:3px;font-size:12px;}
-#footer{position:fixed;bottom:0;width:100%;padding:8px;text-align:center;background:#0E4878;font-size:12px;color:#fff;}
+#footer{position:fixed;bottom:0;left:0;width:100%;padding:8px;text-align:center;background:#0E4878;font-size:12px;color:#fff;z-index:999;}
 #footer a{color:#fff;}
 @media print{#footer,.no-print{display:none;}}
 </style>
@@ -88,8 +90,9 @@ body{font-family:Verdana,Arial,sans-serif;background:#fff;}
 <tr><td>SSC Board: <span id="sscBoardText"></span><input type="hidden" id="sscBoard" /></td>
 <td>Type of Admission: <select id="admissionBoard"><option value="">Select Board</option></select></td></tr>
 <tr><td>SSC Month: <select id="sscMonth" class="inline-input"><option value="">Select</option><option value="03">March</option><option value="04">Supplementary</option></select></td></tr>
-<tr><td colspan="2" class="btn-row"><input type="button" class="submit-btn" id="takeBtn" value="Take Admission" onclick="takeAdmission();" /> <span class="err" id="takeErr"></span></td></tr>
+<tr><td colspan="2" class="btn-row" style="padding:15px 0 25px;"><input type="button" class="submit-btn" id="takeBtn" value="Take Admission" onclick="takeAdmission();" /> <span class="err" id="takeErr"></span></td></tr>
 </table>
+<div style="height:50px;"></div>
 </div>
 
 <table class="memo" id="memoBox" style="display:none;">
@@ -203,6 +206,49 @@ function cat(item,k){
   return c?c:{T:0,F:0,V:0};
 }
 
+function hasStudentReservation(item, cand){
+  if(!cand || !item) return false;
+  var vac = item.vacancies || {};
+  var caste = (cand.caste || '').trim();
+  var isFemale = cand.gender && String(cand.gender).toLowerCase().indexOf('f') === 0;
+  var isPhc = (cand.phc === 'Yes' || cand.phc === 't' || cand.phc === 'true' || cand.phc === true);
+  var isExs = (cand.exservice === 'Yes' || cand.exservice === 't' || cand.exservice === 'true' || cand.exservice === true);
+
+  function vCount(catName){
+    if(!catName) return 0;
+    var k1 = catName.trim();
+    var k2 = k1.replace(/_/g, '-');
+    var k3 = k1.replace(/-/g, '_');
+    return num(vac[k1] != null ? vac[k1] : (vac[k2] != null ? vac[k2] : vac[k3]));
+  }
+
+  function wCat(base){
+    if(!base) return '';
+    return base.indexOf('-') >= 0 ? (base + 'W') : (base + '-W');
+  }
+
+  var resVac = 0;
+  // 1. Candidate's caste / reservation
+  if(caste){
+    resVac += vCount(caste);
+    if(isFemale){
+      resVac += vCount(wCat(caste));
+    }
+  }
+
+  // 2. Special reservation quotas if candidate holds them
+  if(isPhc){
+    resVac += vCount('PH');
+    if(isFemale) resVac += vCount('PH-W');
+  }
+  if(isExs){
+    resVac += vCount('EX-S');
+    if(isFemale) resVac += vCount('EX-SW');
+  }
+
+  return resVac > 0;
+}
+
 function renderMatrix(){
   var b=document.getElementById('matrixBody');
   b.innerHTML='';
@@ -210,11 +256,16 @@ function renderMatrix(){
   seatMatrix.forEach(function(item,idx){
     var g=cat(item,'General'), im=cat(item,'IM'), ph=cat(item,'PH'), ex=cat(item,'EXS');
     function three(c){var vacant=num(c.V);return '<td>'+num(c.T)+'</td><td class="tfv-f">'+num(c.F)+'</td><td'+(vacant>0?' class="vacant-cell"':'')+'>'+vacant+'</td>';}
-    var hasVacancy=num(g.V)+num(im.V)+num(ph.V)+num(ex.V)>0;
+    var totalVacancy=num(g.V)+num(im.V)+num(ph.V)+num(ex.V)>0;
+    var resAvailable=item.vacancies ? hasStudentReservation(item, cur) : totalVacancy;
+    var selectable = totalVacancy && resAvailable;
+    var disabledReason = !totalVacancy
+      ? 'No vacant seats'
+      : (!resAvailable ? ('No vacant seats for candidate reservation (' + esc(cur ? cur.caste : '') + ')') : '');
     b.insertAdjacentHTML('beforeend',
       '<tr><td>'+esc(item.iti_name)+'</td><td>'+esc(item.trade_name)+'</td><td>'+txt(item.strength_total)+'</td>'+
       three(g)+three(im)+three(ph)+three(ex)+
-      '<td><input type="radio" name="seat" data-i="'+idx+'"'+(hasVacancy?'':' disabled="disabled" title="No vacant seats"')+' /></td></tr>');
+      '<td><input type="radio" name="seat" data-i="'+idx+'"'+(selectable?'':' disabled="disabled" title="'+disabledReason+'"')+' /></td></tr>');
   });
   var radios=b.querySelectorAll('input[name=seat]');
   radios.forEach(function(r){
@@ -274,6 +325,7 @@ function takeAdmission(){
     regid:cur.regid,
     trade_code:sel.trade,
     iti_code:sel.iti,
+    caste_name:cur.caste,
     idmarks1:document.getElementById('idm1').value,
     idmarks2:document.getElementById('idm2').value,
     ssc_regno:document.getElementById('sscReg').value,

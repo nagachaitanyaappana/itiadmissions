@@ -198,8 +198,11 @@ public class student_trade_selection_service {
         insertRows(regid, year, phase, rows, request.getFreezee());
 
         // Keep the staged application on the same current-cycle stamp as the choices.
+        // If the candidate had app_status 'A' from an earlier phase, reset to 'P' (Pending)
+        // so that the current phase application is pending verification.
         jdbcTemplate.update(
-                "UPDATE student_application SET entry_date = now(), year = :year, phase = :phase "
+                "UPDATE student_application SET entry_date = now(), year = :year, phase = :phase, "
+                        + "app_status = CASE WHEN app_status = 'A' THEN 'P' ELSE COALESCE(app_status, 'N') END "
                         + "WHERE regid = :regid",
                 new MapSqlParameterSource("regid", regid)
                         .addValue("year", year)

@@ -819,6 +819,7 @@ public class AdmissionProcessService {
                    sm.trade_code,
                    COALESCE(m.trade_name, m.trade_short, sm.trade_code::text) AS trade_name,
                    COALESCE(tot.total, 0) AS strength_total,
+                   sm.strength_vacant::text AS strength_vacant_text,
                    COALESCE(sm.strength -> 'OC', '0')::int + COALESCE(sm.strength -> 'OC-W', '0')::int AS gen_t,
                    COALESCE(sm.strength_fill -> 'OC', '0')::int + COALESCE(sm.strength_fill -> 'OC-W', '0')::int AS gen_f,
                    COALESCE(sm.strength_vacant -> 'OC', '0')::int + COALESCE(sm.strength_vacant -> 'OC-W', '0')::int AS gen_v,
@@ -877,6 +878,7 @@ public class AdmissionProcessService {
             categories.put("PH", tfv(row, "ph_t", "ph_f", "ph_v"));
             categories.put("EXS", tfv(row, "exs_t", "exs_f", "exs_v"));
             item.put("categories", categories);
+            item.put("vacancies", hstoreMap(row.get("strength_vacant_text")));
             data.add(item);
         }
 
@@ -918,12 +920,11 @@ public class AdmissionProcessService {
                     "No district code is available for this login; cannot resolve the rank");
         }
 
-        String itiPredicate = phase > 1 ? " AND r.iti_code = :itiCode" : "";
+        String scopePredicate = phase > 1 ? "r.iti_code = :itiCode" : "r.dist_code = :distCode";
         List<Map<String, Object>> rankRows = jdbc.queryForList(
                 "SELECT DISTINCT r.regid AS regid, r.rank AS rank FROM public.ranks r "
-                        + "WHERE r.rank::text = :rank AND r.dist_code = :distCode "
-                        + " AND r.phase = :phase AND r.year = :year"
-                        + itiPredicate + " LIMIT 1",
+                        + "WHERE r.rank::text = :rank AND " + scopePredicate
+                        + " AND r.phase = :phase AND r.year = :year LIMIT 1",
                 new MapSqlParameterSource()
                         .addValue("rank", wantedRank)
                         .addValue("distCode", distCode)
@@ -1561,6 +1562,34 @@ public class AdmissionProcessService {
 
     private static String unescapeHstore(String value) {
         return value.replace("\\\"", "\"").replace("\\\\", "\\");
+    }
+
+    private static Map<String, Integer> hstoreMap(Object value) {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        if (value == null) {
+            return result;
+        }
+        if (value instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                if (e.getKey() != null) {
+                    result.put(e.getKey().toString(), parseIntSafe(e.getValue() != null ? e.getValue().toString() : "0"));
+                }
+            }
+            return result;
+        }
+        String str = value.toString();
+        if (str == null || str.isBlank()) {
+            return result;
+        }
+        var matcher = HSTORE_INTEGER_ENTRY.matcher(str);
+        while (matcher.find()) {
+            String entryKey = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+            String entryValue = matcher.group(3) != null ? matcher.group(3) : matcher.group(4);
+            if (entryKey != null) {
+                result.put(unescapeHstore(entryKey), parseIntSafe(unescapeHstore(entryValue)));
+            }
+        }
+        return result;
     }
 
     private static String normalizeSscMonth(Object value) {

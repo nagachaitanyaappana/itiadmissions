@@ -195,10 +195,9 @@ public class DGTPermittedShiftsUnitsImpl implements DGTPermittedShiftsUnits {
 
         entity.setShiftAllowed(String.valueOf(entryDto.getShiftAllowed()));
         entity.setUnitAllowed(String.valueOf(entryDto.getUnitAllowed()));
-        entity.setStrength(entryDto.getStrength());
         // Strength is entered directly on this screen (the permitted capacity for the shift/unit).
-        // Strength vacant is not editable here: it always equals strength (all seats vacant).
-        // Any client-sent strength_vacant value is ignored.
+        entity.setStrength(entryDto.getStrength());
+        // Strength vacant is always inserted with whatever the user selects as the strength
         entity.setStrengthVacant(entryDto.getStrength());
 
         return entity;

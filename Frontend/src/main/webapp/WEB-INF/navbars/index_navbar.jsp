@@ -16,7 +16,7 @@
      nodal_navbar.jsp / state_navbar.jsp and is dispatched by
      reports/header.jsp.
      =================================================================== --%>
-<ul id="menu-bar">
+<ul id="menu-bar" class="no-print">
 
 <li>
     <a href="${pageContext.request.contextPath}/">
