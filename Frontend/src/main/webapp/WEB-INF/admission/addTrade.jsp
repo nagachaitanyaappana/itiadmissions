@@ -51,7 +51,7 @@
 <br/>
 <c:choose>
   <c:when test="${not empty sessionScope.roleId}"><%@ include file="/WEB-INF/reports/header.jsp" %></c:when>
-  <c:otherwise><%@ include file="/WEB-INF/bannernew.jsp" %><%@ include file="/WEB-INF/navbars/openNavbar.jsp" %></c:otherwise>
+  <c:otherwise><%@ include file="/WEB-INF/jsp/header.jsp" %></c:otherwise>
 </c:choose>
 <div class="page-title">Add Trade and Reservation Matrix in selected ITI</div>
 <div class="req-note">* Denotes Required Field</div>
