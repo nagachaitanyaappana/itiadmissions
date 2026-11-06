@@ -30,7 +30,7 @@
 <body onload="return checkToken();">
 
 	<div id="404Msg" align="center">
-		<img src="./images/gen.jpg" class="img-fluid" />
+		
 	</div>
 
 
