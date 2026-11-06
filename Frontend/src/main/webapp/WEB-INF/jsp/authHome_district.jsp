@@ -146,13 +146,9 @@
     </style>
 </head>
 <body>
+    <%@ include file="bannernew.jsp" %>
 
-    <!-- Header Banner -->
-    <center>
-        <img src="${pageContext.request.contextPath}/images/gen.jpg" width="100%" alt="ITI Portal Banner" />
-    </center>
-
-    <!-- District Navbar -->
+<!-- District Navbar -->
     <%@ include file="../navbars/district_navbar.jsp" %>
 
     <div class="main-dashboard-content">
