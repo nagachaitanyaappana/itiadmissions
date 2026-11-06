@@ -47,7 +47,7 @@ body{font-family:Verdana,Arial,sans-serif;background:#fff;padding-bottom:120px;}
 </head>
 <body>
 <br/>
-<c:choose><c:when test="${not empty sessionScope.roleId}"><%@ include file="/WEB-INF/reports/header.jsp" %></c:when><c:otherwise><%@ include file="/WEB-INF/bannernew.jsp" %><%@ include file="/WEB-INF/navbars/openNavbar.jsp" %></c:otherwise></c:choose>
+<c:choose><c:when test="${not empty sessionScope.roleId}"><%@ include file="/WEB-INF/reports/header.jsp" %></c:when><c:otherwise><%@ include file="/WEB-INF/jsp/header.jsp" %></c:otherwise></c:choose>
 <div class="page-title">Admission Counseling</div>
 <div class="sub-line no-print">Enter the merit rank for the running phase. Candidate and seat matrix are resolved from the live admission database.</div>
 <c:if test="${not admissionWindowOpen}"><div class="notice no-print">Admission Date is Expired or no admission window is configured.</div></c:if>
