@@ -569,3 +569,222 @@ body .api-badge {
     background: #e2e8f0 !important;
     color: #334155 !important;
 }
+
+
+/* ---- 7. Unified navbar alignment: public, authenticated, and role menus ---- */
+/*
+ * Keep the role-specific menu items and their authorization logic intact.
+ * This layer only normalizes presentation to match openNavbar.jsp.
+ */
+:root {
+    --portal-navbar-blue: #2f6fa5;
+    --portal-navbar-hover: #1e4f7a;
+    --portal-navbar-height: 44px;
+}
+
+body .custom-navbar,
+body .authenticated-navbar,
+body #menu-bar {
+    background: var(--portal-navbar-blue) !important;
+    border-top: 2px solid #ffffff !important;
+    border-bottom: 2px solid var(--portal-navbar-hover) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    box-sizing: border-box;
+}
+
+body .custom-navbar .nav-menu > li,
+body .authenticated-navbar .nav-menu > li,
+body #menu-bar > li {
+    border-right: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+body .custom-navbar .nav-menu > li:last-child,
+body .authenticated-navbar .nav-menu > li:last-child,
+body #menu-bar > li:last-child,
+body #menu-bar > li.welcome-tag {
+    border-right: 0 !important;
+}
+
+body .custom-navbar .nav-menu > li > .nav-link,
+body .authenticated-navbar .nav-menu > li > .nav-link,
+body #menu-bar > li > a {
+    display: block !important;
+    min-height: var(--portal-navbar-height);
+    padding: 8px 14px !important;
+    color: #ffffff !important;
+    background: var(--portal-navbar-blue) !important;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+    text-decoration: none !important;
+    text-transform: none !important;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, color 0.2s ease !important;
+}
+
+body .custom-navbar .nav-menu > li:hover > .nav-link,
+body .custom-navbar .nav-menu > li > .nav-link:hover,
+body .authenticated-navbar .nav-menu > li:hover > .nav-link,
+body .authenticated-navbar .nav-menu > li > .nav-link:hover,
+body #menu-bar > li:hover > a,
+body #menu-bar > li > a:hover,
+body #menu-bar > li > a:focus-visible {
+    color: #ffffff !important;
+    background: var(--portal-navbar-hover) !important;
+}
+
+body .custom-navbar .nav-menu > li > .nav-link:focus-visible,
+body .authenticated-navbar .nav-menu > li > .nav-link:focus-visible {
+    color: #ffffff !important;
+    background: var(--portal-navbar-hover) !important;
+    outline: 2px solid #ffeb3b;
+    outline-offset: -2px;
+}
+
+/* Legacy role menus retain their existing URLs and role-specific contents. */
+body #menu-bar {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    min-height: var(--portal-navbar-height);
+    margin: 0 !important;
+    padding: 0 10px !important;
+    list-style: none !important;
+    line-height: normal !important;
+    position: relative !important;
+    z-index: 1050 !important;
+}
+
+body #menu-bar > li {
+    float: none !important;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+}
+
+body #menu-bar > li > ul {
+    display: none;
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    z-index: 1060 !important;
+    min-width: 250px !important;
+    max-width: min(360px, calc(100vw - 24px));
+    max-height: min(70vh, 520px);
+    overflow-y: auto;
+    margin: 0 !important;
+    padding: 6px 0 !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+    list-style: none !important;
+}
+
+body #menu-bar > li:hover > ul,
+body #menu-bar > li:focus-within > ul {
+    display: block !important;
+}
+
+body #menu-bar > li > ul > li {
+    float: none !important;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+body #menu-bar > li > ul > li:last-child {
+    border-bottom: 0 !important;
+}
+
+body #menu-bar > li > ul > li > a {
+    display: block !important;
+    min-height: 0;
+    padding: 9px 18px !important;
+    color: #334155 !important;
+    background: #ffffff !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+    white-space: normal;
+}
+
+body #menu-bar > li > ul > li > a:hover,
+body #menu-bar > li > ul > li > a:focus-visible {
+    padding-left: 22px !important;
+    color: #ffffff !important;
+    background: var(--portal-navbar-blue) !important;
+    outline: none;
+}
+
+/* Keep the existing welcome badge in the menu flow instead of overlaying links. */
+body #menu-bar > li.welcome-tag {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    transform: none !important;
+    margin: 0 0 0 12px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    z-index: auto !important;
+}
+
+body #menu-bar .welcome-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 4px 12px !important;
+    overflow: hidden;
+    color: #ffffff !important;
+    background: linear-gradient(135deg, rgba(0, 34, 68, 0.6), rgba(10, 45, 80, 0.5)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18) !important;
+    font-size: 13px !important;
+    white-space: nowrap;
+}
+
+body #menu-bar .welcome-highlight {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 1199.98px) {
+    body #menu-bar {
+        padding: 4px 8px !important;
+    }
+
+    body #menu-bar > li.welcome-tag {
+        flex: 1 0 100%;
+        justify-content: center;
+        margin: 6px 0 2px !important;
+    }
+
+    body #menu-bar > li > ul {
+        max-width: calc(100vw - 24px);
+    }
+}
+
+@media (max-width: 575.98px) {
+    body #menu-bar > li > a {
+        padding: 8px 10px !important;
+        font-size: 13px !important;
+    }
+
+    body #menu-bar > li > ul {
+        position: fixed !important;
+        top: auto !important;
+        left: 12px !important;
+        right: 12px !important;
+        min-width: 0 !important;
+        max-width: none;
+        max-height: 60vh;
+    }
+}
