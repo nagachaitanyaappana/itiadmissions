@@ -26,6 +26,7 @@
         .report-meta-box span.meta-val { font-weight: 700; color: #003366; }
     </style>
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal-theme.css?v=2">
+    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>
 <body class="nodal-body">
     <c:set var="hideNavbar" value="true" scope="request" />
