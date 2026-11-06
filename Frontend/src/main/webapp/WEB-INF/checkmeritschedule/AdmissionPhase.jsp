@@ -22,9 +22,7 @@
         .admission-phase-submit { min-width: 130px; }
         .admission-phase-error { color: #b42318; font-weight: 600; }
         @media (max-width: 575.98px) { .admission-phase-card { margin: 1rem .75rem; } .admission-phase-card__body { padding: 1rem; } .admission-phase-field { grid-template-columns: 1fr; gap: .35rem; } }
-    </style>
-    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
-</head>
+    </style></head>
 <body>
     <jsp:include page="/WEB-INF/reports/header.jsp" />
 
