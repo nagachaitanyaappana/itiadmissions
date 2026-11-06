@@ -151,6 +151,7 @@
 
         document.addEventListener('DOMContentLoaded', loadAllDistricts);
     </script>
+    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
     <%@ include file="header.jsp" %>
