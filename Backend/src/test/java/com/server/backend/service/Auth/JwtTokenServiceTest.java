@@ -26,11 +26,10 @@ class JwtTokenServiceTest {
     @Test
     void rejectsTokenSignedByAnotherKey() {
         JwtTokenService issuer = new JwtTokenService(SECRET, "itiadmissions");
+        byte[] otherKey = new byte[32];
+        otherKey[0] = 1;
         JwtTokenService verifier = new JwtTokenService(
-                Base64.getEncoder().encodeToString(new byte[32].clone().length == 0
-                        ? new byte[32] : new byte[]{1, 2, 3, 4, 5, 6, 7, 8,
-                        9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-                        25, 26, 27, 28, 29, 30, 31, 32}), "itiadmissions");
+                Base64.getEncoder().encodeToString(otherKey), "itiadmissions");
         String token = issuer.issue("official-user", 4, "ITI-001").value();
         assertThrows(JwtException.class, () -> verifier.verify(token));
     }
