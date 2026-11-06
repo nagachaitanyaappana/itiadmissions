@@ -84,9 +84,7 @@
         .btn-continue:disabled { opacity: .55; }
     </style>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css">
-    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
-</head>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/legacy-form.css"></head>
 
 <body>
     <!-- Global Header -->
