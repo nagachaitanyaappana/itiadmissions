@@ -322,3 +322,78 @@ body.legacy-success-page .success-panel {
     overflow-x: auto;
   }
 }
+
+
+/* Online application verification and data-heavy report views. */
+#verifyForm {
+  width: min(100% - 2rem, 620px) !important;
+  max-width: none !important;
+  margin: 1.5rem auto 2rem !important;
+  padding: 1.5rem !important;
+  border: 1px solid var(--portal-border) !important;
+  border-top: 5px solid var(--portal-primary) !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
+}
+#verifyForm h2 {
+  color: var(--portal-navy) !important;
+  text-decoration: none !important;
+  font-weight: 750;
+}
+#verifyForm input {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: .55rem .75rem;
+}
+#verifyForm .btn-submit {
+  background: var(--portal-primary) !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  padding: .65rem 1.4rem !important;
+}
+#resultCard {
+  border: 1px solid var(--portal-border) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .07) !important;
+  overflow: hidden;
+}
+#resultHeader {
+  background: var(--portal-navy) !important;
+  color: #fff !important;
+  border: 0 !important;
+}
+#resultHeader h5 { color: #fff !important; }
+#pageTitle {
+  color: var(--portal-navy) !important;
+  font: 700 1.35rem "Segoe UI", Roboto, Arial, sans-serif !important;
+}
+#tabcolor {
+  width: min(100% - 2rem, 1100px);
+  margin: 1rem auto;
+  border-collapse: collapse;
+  background: #fff !important;
+  border: 1px solid var(--portal-border);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, .05);
+}
+#tabcolor thead tr,
+#tabcolor thead th,
+#tabcolor thead td {
+  background: var(--portal-navy) !important;
+  color: #fff !important;
+  font-weight: 700;
+}
+#tabcolor th,
+#tabcolor td {
+  padding: .65rem .8rem;
+  border: 1px solid #e2e8f0;
+}
+#contentDiv > .container {
+  background: #fff !important;
+  border: 1px solid var(--portal-border) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .06) !important;
+}
