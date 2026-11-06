@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <!DOCTYPE html><html>
     <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <jsp:include page="/WEB-INF/jsp/_api_base_url.jsp"/>
         <script language="javascript" type="text/javascript">
             function checkRange() {
