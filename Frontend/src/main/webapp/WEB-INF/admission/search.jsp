@@ -44,6 +44,7 @@
     .submit-btn, .reset-btn { padding:6px 26px; font-size:14px; }
   }
 </style>
+    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
 <br/>
