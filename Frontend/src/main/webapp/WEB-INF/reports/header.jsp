@@ -1,6 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-    <%@ include file="../bannernew.jsp" %>
+    <%@ include file="../jsp/bannernew.jsp" %>
     <c:choose>
         <%-- logged-in: show the dashboard navbar matching the session role (same as authHome_*.jsp) --%>
         <c:when test="${not empty sessionScope.roleId}">
