@@ -173,9 +173,7 @@
     </style>
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal-theme.css?v=2">
 </head>
-<body>
-    <c:set var="hideNavbar" value="true" scope="request" />
-    <%@ include file="header.jsp" %>
+<body><%@ include file="header.jsp" %>
 
     <br>
     <div align="center">
