@@ -25,9 +25,7 @@
         .report-meta-box { background: #f8fbff; border: 1px solid #d4e3f5; border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; font-size: 0.95rem; }
         .report-meta-box span.meta-val { font-weight: 700; color: #003366; }
     </style>
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal-theme.css?v=2">
-    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
-</head>
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal-theme.css?v=2"></head>
 <body class="nodal-body">
     <c:set var="hideNavbar" value="true" scope="request" />
     <%@ include file="header.jsp" %>
