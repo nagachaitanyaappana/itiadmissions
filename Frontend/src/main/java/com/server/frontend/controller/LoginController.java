@@ -61,8 +61,10 @@ public class LoginController {
             return devLogin ? "redirect:/dev/login?error=" + err : "redirect:/?error=" + err;
         }
 
-        // 3. store the authenticated user in session
+        // 3. Prevent session fixation: rotate the session identifier after
+        // successful authentication before storing any authenticated identity.
         HttpSession session = request.getSession(true);
+        request.changeSessionId();
         session.setAttribute("sessionUser", result);
         session.setAttribute("username", result.get("username"));
         session.setAttribute("roleId", result.get("roleId"));
