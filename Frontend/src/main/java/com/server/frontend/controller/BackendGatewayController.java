@@ -5,10 +5,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.Set;
+import java.util.Base64;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -22,27 +24,19 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-/**
- * Same-origin gateway for authenticated official workflows.
- * Public candidate endpoints are intentionally not exposed here until their
- * exact route allowlist and ownership rules have been audited.
- */
+/** Same-origin gateway: browser -> Frontend -> Backend. */
 @RestController
 public class BackendGatewayController {
     private static final Set<String> METHODS =
             Set.of("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS");
     private static final Set<String> REQUEST_HEADERS =
             Set.of("accept", "content-type", "if-match", "if-none-match", "range");
-    private static final String CSRF_SESSION_ATTRIBUTE = "ITIAP_CSRF_TOKEN";
-    private static final String CSRF_HEADER = "X-CSRF-TOKEN";
     private static final Set<String> RESPONSE_HEADERS =
             Set.of("content-type", "content-disposition", "cache-control", "etag",
                     "last-modified", "accept-ranges", "content-range");
 
     private final RestTemplate rest;
-
     private final String backendBaseUrl;
-
     @Value("${app.internal-auth.secret:}")
     private String internalApiSecret;
 
@@ -51,40 +45,29 @@ public class BackendGatewayController {
             @Value("${backend.gateway.connect-timeout:3s}") Duration connectTimeout,
             @Value("${backend.gateway.read-timeout:30s}") Duration readTimeout) {
         this.backendBaseUrl = backendBaseUrl;
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(connectTimeout);
-        requestFactory.setReadTimeout(readTimeout);
-        this.rest = new RestTemplate(requestFactory);
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(connectTimeout);
+        factory.setReadTimeout(readTimeout);
+        this.rest = new RestTemplate(factory);
     }
 
     @RequestMapping("/backend/**")
     public ResponseEntity<byte[]> proxy(HttpServletRequest request) throws IOException {
-        String accessToken = accessToken(request);
-        if (accessToken == null) {
+        String accessToken = cookie(request, "ITIAP_ACCESS_TOKEN");
+        if (accessToken == null || accessToken.isBlank() || accessToken.length() > 8192)
             return ResponseEntity.status(401).build();
-        }
-        HttpSession session = request.getSession(false);
         String methodName = request.getMethod().toUpperCase();
-        if (!METHODS.contains(methodName)) {
-            return ResponseEntity.status(405).build();
-        }
-        if (internalApiSecret == null || internalApiSecret.length() < 32) {
+        if (!METHODS.contains(methodName)) return ResponseEntity.status(405).build();
+        if (internalApiSecret == null || internalApiSecret.length() < 32)
             return ResponseEntity.status(503).build();
-        }
-        if (requiresCsrf(methodName)
-                && (session == null || !validCsrfToken(session.getAttribute(CSRF_SESSION_ATTRIBUTE),
-                        request.getHeader(CSRF_HEADER)))) {
+        if (requiresCsrf(methodName) && !validCsrfToken(
+                cookie(request, "ITIAP_CSRF_TOKEN"), request.getHeader("X-CSRF-TOKEN"), internalApiSecret))
             return ResponseEntity.status(403).build();
-        }
 
         String requestPath = request.getRequestURI().substring(request.getContextPath().length());
-        if (!requestPath.startsWith("/backend/")) {
-            return ResponseEntity.badRequest().build();
-        }
+        if (!requestPath.startsWith("/backend/")) return ResponseEntity.badRequest().build();
         String path = requestPath.substring("/backend".length());
-        if (!safePath(path)) {
-            return ResponseEntity.badRequest().build();
-        }
+        if (!safePath(path)) return ResponseEntity.badRequest().build();
 
         HttpMethod method = HttpMethod.valueOf(methodName);
         String target = UriComponentsBuilder.fromUriString(backendBaseUrl)
@@ -98,7 +81,6 @@ public class BackendGatewayController {
         }
         byte[] body = method == HttpMethod.GET || method == HttpMethod.HEAD
                 ? new byte[0] : StreamUtils.copyToByteArray(request.getInputStream());
-
         try {
             ResponseEntity<byte[]> upstream = rest.exchange(
                     target, method, new HttpEntity<>(body, headers), byte[].class);
@@ -119,16 +101,10 @@ public class BackendGatewayController {
         return new ResponseEntity<>(body, safe, status);
     }
 
-    private static String accessToken(HttpServletRequest request) {
+    private static String cookie(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) return null;
-        for (Cookie cookie : cookies) {
-            if ("ITIAP_ACCESS_TOKEN".equals(cookie.getName())
-                    && cookie.getValue() != null && !cookie.getValue().isBlank()
-                    && cookie.getValue().length() <= 8192) {
-                return cookie.getValue();
-            }
-        }
+        for (Cookie cookie : cookies) if (name.equals(cookie.getName())) return cookie.getValue();
         return null;
     }
 
@@ -137,23 +113,30 @@ public class BackendGatewayController {
                 || "OPTIONS".equalsIgnoreCase(method));
     }
 
-    static boolean validCsrfToken(Object expected, String supplied) {
-        if (!(expected instanceof String expectedToken) || supplied == null
-                || expectedToken.isBlank() || supplied.isBlank()) {
+    static boolean validCsrfToken(String cookieToken, String supplied, String secret) {
+        if (cookieToken == null || supplied == null || secret == null || secret.length() < 32
+                || cookieToken.isBlank() || !MessageDigest.isEqual(
+                    cookieToken.getBytes(StandardCharsets.UTF_8),
+                    supplied.getBytes(StandardCharsets.UTF_8))) return false;
+        int separator = cookieToken.lastIndexOf('.');
+        if (separator <= 0 || separator == cookieToken.length() - 1) return false;
+        String nonce = cookieToken.substring(0, separator);
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            byte[] expected = mac.doFinal(nonce.getBytes(StandardCharsets.UTF_8));
+            byte[] actual = Base64.getUrlDecoder().decode(cookieToken.substring(separator + 1));
+            return MessageDigest.isEqual(expected, actual);
+        } catch (Exception ex) {
             return false;
         }
-        return MessageDigest.isEqual(
-                expectedToken.getBytes(StandardCharsets.UTF_8),
-                supplied.getBytes(StandardCharsets.UTF_8));
     }
 
     static boolean safePath(String path) {
         if (path == null || !path.startsWith("/") || path.startsWith("//")
                 || path.contains("\\") || path.contains("..") || path.indexOf(0) >= 0
                 || path.indexOf('\r') >= 0 || path.indexOf('\n') >= 0
-                || path.matches("(?i).*%(2f|5c|2e|25).*")) {
-            return false;
-        }
+                || path.matches("(?i).*%(2f|5c|2e|25).*")) return false;
         String lower = path.toLowerCase();
         return !lower.startsWith("/actuator") && !lower.startsWith("/swagger")
                 && !lower.startsWith("/v3/api-docs") && !lower.startsWith("/error")
