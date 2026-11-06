@@ -33,7 +33,7 @@
     </style>
 </head>
 <body>
-    <center><img src="${pageContext.request.contextPath}/images/gen.jpg" width="100%" alt="Banner" /></center>
+    <%@ include file="header.jsp" %>
     <div class="disclaimer-card">
         <h2>Disclaimer</h2>
         <p>
