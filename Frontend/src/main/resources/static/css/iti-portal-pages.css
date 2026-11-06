@@ -614,3 +614,33 @@ body .btn-outline-primary:hover {
   background: var(--portal-primary) !important;
   color: #fff !important;
 }
+
+
+/* Keep wide legacy result tables usable on narrow screens. */
+.res-wrap,
+.result-wrap,
+.memo-wrap,
+.cl-wrap {
+  max-width: calc(100% - 1.5rem);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.res-table,
+.trade-table,
+.slip-table {
+  min-width: 640px;
+}
+@media print {
+  .res-wrap,
+  .result-wrap,
+  .memo-wrap,
+  .cl-wrap {
+    max-width: 100%;
+    overflow: visible;
+  }
+  .res-table,
+  .trade-table,
+  .slip-table {
+    min-width: 0;
+  }
+}
