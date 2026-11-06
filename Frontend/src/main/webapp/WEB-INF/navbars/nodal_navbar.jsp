@@ -5,6 +5,14 @@
      Exact navigation menu matching itiadmissions project.
      UI/design styled via #menu-bar in style.css / iti-portal.css.
      =================================================================== --%>
+<!-- Shared homepage title and announcement rows -->
+<div class="top-header-bar text-center px-2">
+    AP ITI ADMISSIONS - 2026
+</div>
+<div class="announcement-bar px-3">
+    A Common Application for seeking Admission into all courses of Advanced Technology Centers (ATC's), Govt. ITI's and Pvt. ITI's in Andhra Pradesh State
+</div>
+
 <nav class="navbar navbar-expand-lg custom-navbar role-dashboard-navbar">
   <div class="container-fluid">
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#NodalNav" aria-controls="NodalNav" aria-expanded="false" aria-label="Toggle navigation">
