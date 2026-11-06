@@ -2,7 +2,6 @@ package com.server.backend.service.Student;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Arrays;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -37,40 +36,12 @@ public class StudentPhotoService {
         if (photo == null || photo.isEmpty()) {
             throw new IllegalArgumentException("Please select a photograph to upload");
         }
-        // Do not trust the browser-supplied Content-Type or filename. Enforce the
-        // configured upload limit here as well as in servlet multipart configuration.
-        final long maxBytes = 5L * 1024L * 1024L;
-        if (photo.getSize() > maxBytes) {
-            throw new IllegalArgumentException("Photograph must not exceed 5 MB");
-        }
-
-        applicationRepository.findById(regid)
-                .orElseThrow(() -> new IllegalArgumentException("Student Not Found"));
-
+        // Decode, validate dimensions and re-encode to strip metadata and trailing payloads.
         final byte[] bytes;
         try {
-            bytes = photo.getBytes();
-        } catch (Exception ex) {
+            bytes = CandidatePhotoValidator.validateAndNormalize(photo.getBytes());
+        } catch (java.io.IOException ex) {
             throw new IllegalArgumentException("Could not read the uploaded photograph");
-        }
-        if (bytes.length == 0) {
-            throw new IllegalArgumentException("The uploaded photograph is empty");
-        }
-        if (bytes.length > maxBytes) {
-            throw new IllegalArgumentException("Photograph must not exceed 5 MB");
-        }
-
-        // Validate actual file signatures, not just the MIME header. PNG has a fixed
-        // 8-byte signature; JPEG files begin with SOI (FF D8 FF).
-        boolean isPng = bytes.length >= 8
-                && Arrays.equals(Arrays.copyOf(bytes, 8),
-                        new byte[] {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
-        boolean isJpeg = bytes.length >= 3
-                && (bytes[0] & 0xFF) == 0xFF
-                && (bytes[1] & 0xFF) == 0xD8
-                && (bytes[2] & 0xFF) == 0xFF;
-        if (!isPng && !isJpeg) {
-            throw new IllegalArgumentException("Photograph must be a valid PNG or JPEG image");
         }
 
         Integer existing = jdbcTemplate.queryForObject(
