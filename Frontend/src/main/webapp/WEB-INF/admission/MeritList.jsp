@@ -86,7 +86,7 @@
 </head>
 <body class="bg-light">
     <!-- Header Content -->
-    <jsp:include page="/WEB-INF/bannernew.jsp" />
+    <jsp:include page="/WEB-INF/jsp/bannernew.jsp" />
     <jsp:include page="/WEB-INF/navbars/iti_navbar.jsp" />
 
     <div class="container form-container">
