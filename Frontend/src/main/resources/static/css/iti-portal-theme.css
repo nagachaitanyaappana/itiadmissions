@@ -1,282 +1,571 @@
 /* ==========================================================================
    iti-portal-theme.css
    --------------------------------------------------------------------------
-   Recolours the report pages from the legacy navy/blue theme to the
-   index.jsp palette:
+   Unified Home Page Design System for the AP ITI Admissions Portal.
+   Aligns all report pages, dashboards, and internal modules with the exact
+   design palette and typography established on index.jsp:
 
-       pale yellow-green bar   #e4eeb9   (index.jsp #menu-bar background)
-       bar text                #000000
-       hover / active          linear-gradient(#EB4954 -> #A19197), white text
-       dropdown panel          gold #FFD700, grey text
-       dropdown hover          lightblue #ADD8E6, black text
-       action buttons          green #4CAF50, focus orangered
-       page-title / table head same pale yellow-green, black text
-
-   Loaded AFTER style.css and iti-portal.css on every report page.
-
-   `!important` is used on colour properties on purpose: the blue values are
-   also hard-coded in (a) each report page's inline <style> block and (b) the
-   shared partials (bannernew.jsp, *_navbar.jsp) which are rendered *inside*
-   <body>, so an un-flagged rule would lose on source order.
-
-   Structure and layout are untouched - only colours.
+       Primary Portal Blue     #2f6fa5   (Main navbar & primary action buttons)
+       Navbar Hover / Active   #1e4f7a   (Darker navy blue hover state)
+       Header Navy             #003366   (Official state branding text)
+       Header Green            #006600   (Department text)
+       Top Header Bar          #003366 -> #005073 (Dark teal gradient)
+       Announcement Bar        #007ba7   (Admissions notice light blue)
+       News Marquee            #145a67   (Dark teal announcement strip)
+       Page Background         #f8fafc   (Clean off-white slate)
+       Cards & Panels          #ffffff   (Rounded cards with subtle shadow)
    ========================================================================== */
 
 :root {
-    /* index.jsp palette */
-    --iti-bar: #e4eeb9;
-    --iti-bar-border: #b9c46d;
-    --iti-text: #000000;
-    --iti-red: #EB4954;
-    --iti-mauve: #A19197;
-    --iti-gold: #FFD700;
-    --iti-hover: #ADD8E6;
-    --iti-green: #4CAF50;
-    --iti-green-dark: #3d8b40;
-    --iti-focus: #FF4500;
-    --iti-panel: #f9f9f9;
+    /* Core Home Page Palette */
+    --primary-blue: #2f6fa5;
+    --primary-hover: #1e4f7a;
+    --dark-blue: #003366;
+    --secondary-teal: #176b8e;
+    --bar-dark-teal: #005073;
+    --bar-light-blue: #007ba7;
+    --marquee-teal: #145a67;
+    --header-navy: #003366;
+    --header-green: #006600;
+    --navbar-dark-blue: #2f6fa5;
+    --light-bg: #f8fafc;
+    --border-subtle: #e2e8f0;
 
-    /* remap the style.css chrome variables */
-    --header-navy: #000000;
-    --header-green: #4CAF50;
-    --bar-dark-teal: #e4eeb9;
-    --bar-light-blue: #e4eeb9;
-    --navbar-dark-blue: #e4eeb9;
-    --marquee-teal: #e4eeb9;
-    --secondary-teal: #e4eeb9;
-    --primary-blue: #4CAF50;
-    --nodal-navy: #000000;
-    --nodal-accent: #4CAF50;
-    --nodal-subnav-bg: #e4eeb9;
-    --nodal-active-bg: #4CAF50;
-    --nodal-bg-gradient: linear-gradient(180deg, #e4eeb9 0%, #ffffff 100%);
+    /* Semantic Mappings for legacy selectors */
+    --iti-bar: #2f6fa5;
+    --iti-bar-border: #1e4f7a;
+    --iti-text: #ffffff;
+    --iti-hover: #1e4f7a;
+    --iti-panel: #ffffff;
+    --iti-green: #2f6fa5;
+    --iti-green-dark: #1e4f7a;
+
+    --nodal-navy: #003366;
+    --nodal-accent: #2f6fa5;
+    --nodal-subnav-bg: #2f6fa5;
+    --nodal-active-bg: #1e4f7a;
+    --nodal-bg-gradient: linear-gradient(135deg, #195695 0%, #2f6fa5 100%);
 }
 
-/* ---- 1. Top header bars (bannernew.jsp) -------------------------------- */
+/* ---- 0. Global Body & Typography -------------------------------------- */
+body {
+    background-color: #f8fafc !important;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    color: #1e293b;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main, .main-dashboard-content, .reports-dashboard {
+    flex: 1 0 auto;
+    background-color: #f8fafc !important;
+}
+
+/* ---- 1. Top Header Bars (bannernew.jsp) ------------------------------- */
 body .top-header-bar {
-    background: #e4eeb9 !important;
-    color: #000000 !important;
-    border-bottom: 1px solid #b9c46d;
+    background: linear-gradient(90deg, #003366 0%, #005073 50%, #003366 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    padding: 14px 0;
+    font-size: 18px;
+    letter-spacing: 1.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.1);
+    border-bottom: none !important;
 }
 
 body .announcement-bar {
-    background-color: #e4eeb9 !important;
-    color: #333333 !important;
-    border-bottom: 1px solid #b9c46d;
+    background-color: #007ba7 !important;
+    color: #ffffff !important;
+    padding: 8px 0;
+    font-size: 14px;
+    text-align: center;
+    border-bottom: none !important;
 }
 
 body .sub-header-bar {
-    background-color: #e4eeb9 !important;
-    color: #000000 !important;
+    background-color: #176b8e !important;
+    color: #ffffff !important;
+    font-weight: bold;
 }
 
-body .header-text-main { color: #000000 !important; }
-body .header-text-sub { color: #4CAF50 !important; }
+body .header-text-main {
+    color: #003366 !important;
+    font-weight: bold;
+    font-family: Arial, sans-serif;
+}
 
-/* ---- 2. Main navbar (openNavbar.jsp / style.css) ----------------------- */
+body .header-text-sub {
+    color: #006600 !important;
+    font-weight: bold;
+}
+
+/* ---- 2. Main Navbar (openNavbar.jsp & authenticated-navbar) ----------- */
 body .custom-navbar,
 body .authenticated-navbar {
-    background-color: #e4eeb9 !important;
+    background-color: #2f6fa5 !important;
     border-top: 2px solid #ffffff !important;
-    border-bottom: 2px solid #b9c46d !important;
+    border-bottom: 2px solid #1e4f7a !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
-body .nav-menu > li { border-right: 1px solid #c8d18a !important; }
-body .nav-menu > li:last-child { border-right: none !important; }
+body .nav-menu > li {
+    border-right: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+body .nav-menu > li:last-child {
+    border-right: none !important;
+}
 
 body .nav-menu > li > a,
 body .authenticated-navbar .nav-link {
-    color: #000000 !important;
-    font-weight: 600;
+    color: #ffffff !important;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 8px 14px;
+    transition: background-color 0.2s ease;
 }
 
-body .nav-menu > li:hover,
+body .nav-menu > li:hover > a,
+body .nav-menu > li > a:hover,
 body .authenticated-navbar .nav-link:hover {
-    background: linear-gradient(to bottom, #EB4954, #A19197) !important;
+    background-color: #1e4f7a !important;
+    background-image: none !important;
     color: #ffffff !important;
 }
 
-body .custom-navbar .navbar-toggler { background-color: #e4eeb9 !important; }
+body .custom-navbar .navbar-toggler {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1;
+}
 
-/* dropdowns -> gold, echoing index.jsp's #menu-bar ul */
+/* Modern Clean Dropdowns */
 body .dropdown-menu {
-    background-color: #FFD700 !important;
-    border: 1px solid #b9c46d !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+    padding: 6px 0;
 }
 
 body .dropdown-menu .dropdown-item,
-body .authenticated-navbar .dropdown-item { color: #555555 !important; }
+body .authenticated-navbar .dropdown-item {
+    color: #334155 !important;
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 8px 18px;
+    transition: all 0.2s ease;
+}
 
 body .dropdown-menu .dropdown-item:hover,
 body .authenticated-navbar .dropdown-item:hover {
-    background-color: #ADD8E6 !important;
-    color: #000000 !important;
-    padding-left: 25px;
+    background-color: #2f6fa5 !important;
+    color: #ffffff !important;
+    padding-left: 22px;
 }
 
-/* news marquee strip */
+/* News Marquee */
 body .news-marquee,
-body .marquee-content { background-color: #e4eeb9 !important; }
+body .marquee-content {
+    background-color: #145a67 !important;
+    color: #ffffff !important;
+}
 
 body .news-marquee span,
-body .marquee-content span { color: #000000 !important; }
+body .marquee-content span {
+    color: #ffffff !important;
+}
 
-/* ---- 3. Role navbars (iti/district/state/nodal partials) --------------- */
+/* ---- 3. Role Navbars (#menu-bar) -------------------------------------- */
+body #menu-bar {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 10px !important;
+    height: auto !important;
+    min-height: 42px !important;
+    line-height: normal !important;
+    border-radius: 0 !important;
+    -webkit-border-radius: 0 !important;
+    -moz-border-radius: 0 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    -webkit-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    -moz-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    background: #2f6fa5 !important;
+    border-top: 2px solid #ffffff !important;
+    border-bottom: 2px solid #1e4f7a !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    z-index: 999;
+}
+
+body #menu-bar li {
+    margin: 0 !important;
+    padding: 0 !important;
+    float: left !important;
+    position: relative !important;
+    list-style: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+body #menu-bar li:last-child {
+    border-right: none !important;
+}
+
+body #menu-bar a {
+    font-weight: 500 !important;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 14px !important;
+    color: #ffffff !important;
+    background: #2f6fa5 !important;
+    text-decoration: none !important;
+    display: block !important;
+    padding: 10px 16px !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    -webkit-border-radius: 0 !important;
+    -moz-border-radius: 0 !important;
+    transition: background-color 0.2s ease !important;
+}
+
+body #menu-bar .active a,
+body #menu-bar li:hover > a {
+    background-color: #1e4f7a !important;
+    background-image: none !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    -moz-box-shadow: none !important;
+}
+
+body #menu-bar ul {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+    -webkit-box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+    border-radius: 8px !important;
+    min-width: 250px !important;
+    width: auto !important;
+    top: 100% !important;
+    padding: 6px 0 !important;
+}
+
+body #menu-bar ul li {
+    float: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+body #menu-bar ul li:last-child {
+    border-bottom: none !important;
+}
+
+body #menu-bar ul li a,
+body #menu-bar li:hover li a {
+    background: #ffffff !important;
+    color: #334155 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 9px 18px !important;
+    text-transform: none !important;
+    transition: all 0.2s ease !important;
+}
+
+body #menu-bar ul li:hover a,
+body #menu-bar ul a:hover {
+    background: #2f6fa5 !important;
+    color: #ffffff !important;
+    padding-left: 24px !important;
+}
+
+/* Dashboard Navigation Bars */
 body .district-dashboard-navbar,
 body .state-dashboard-navbar,
 body .iti-dashboard-navbar,
 body .nodal-dashboard-navbar {
-    background: #e4eeb9 !important;
-    border-bottom: 1px solid #b9c46d !important;
+    background: #2f6fa5 !important;
+    border-bottom: 2px solid #1e4f7a !important;
 }
 
 body .district-dashboard-link,
 body .state-dashboard-link,
 body .iti-dashboard-link,
-body .nodal-dashboard-link { color: #333333 !important; }
+body .nodal-dashboard-link {
+    color: #ffffff !important;
+    font-weight: 500;
+}
 
-/* style.css sets gold (#ffd700) on hover / #ffca28 on .ms-auto, which is
-   unreadable on the pale #e4eeb9 bar - force dark instead. */
-body .nodal-dashboard-link:hover,
-body .nodal-dashboard-link.ms-auto { color: #000000 !important; }
+body .district-dashboard-link:hover,
+body .state-dashboard-link:hover,
+body .iti-dashboard-link:hover,
+body .nodal-dashboard-link:hover {
+    background-color: #1e4f7a !important;
+    color: #ffffff !important;
+}
 
 body .district-dashboard-link.active,
 body .state-dashboard-link.active,
 body .iti-dashboard-link.active,
 body .nodal-dashboard-link.active {
-    background: #4CAF50 !important;
+    background: #1e4f7a !important;
     color: #ffffff !important;
 }
 
-body .nodal-subnav { background: #e4eeb9 !important; }
+body .nodal-subnav {
+    background: #1e4f7a !important;
+}
 
-/* ---- 4. Page titles ---------------------------------------------------- */
-body .nodal-page-title-dashboard,
-body .nodal-page-title,
+/* ---- 4. Page Titles & Hero Headers ------------------------------------ */
+body .dashboard-hero {
+    background: linear-gradient(135deg, #195695 0%, #2f6fa5 100%) !important;
+    color: #ffffff !important;
+    border-radius: 12px !important;
+    padding: 24px 28px !important;
+    box-shadow: 0 4px 14px rgba(25, 86, 149, 0.15) !important;
+    margin-bottom: 24px !important;
+}
+
+body .dashboard-hero h2,
+body .dashboard-hero h3 {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+body .dashboard-hero p {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+body .report-section-title,
+body .section-title,
 body .custom-page-title,
 body .main-title,
 body .report-header,
 body .section-header,
-body .section-title,
 body .report-group-title,
 body .category-header,
 body .detail-section-header,
 body .blue-title-bar {
-    background: #e4eeb9 !important;
-    color: #000000 !important;
-    border-bottom: 1px solid #b9c46d !important;
+    color: #003366 !important;
+    font-weight: 700 !important;
+    border-left: 5px solid #2f6fa5 !important;
+    background: transparent !important;
+    padding-left: 14px !important;
+    margin-top: 24px !important;
+    margin-bottom: 18px !important;
+    border-bottom: none !important;
 }
 
-body .nodal-page-title-dashboard h1,
-body .nodal-page-title-dashboard h2,
-body .nodal-page-title h1,
-body .nodal-page-title h2,
-body .custom-page-title h1,
-body .main-title h1 { color: #000000 !important; }
+/* ---- 5. Cards & Panels ------------------------------------------------ */
+body .card-custom,
+body .report-card,
+body .nodal-report-card,
+body .modern-card {
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
 
-/* ---- 5. Card / panel headers ------------------------------------------- */
+body .report-card:hover,
+body .nodal-report-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
+    border-color: #2f6fa5 !important;
+}
+
+body .card-custom .card-header-custom,
 body .nodal-card-header-dashboard,
 body .nodal-card-header {
-    background: linear-gradient(135deg, #EB4954 0%, #A19197 100%) !important;
+    background: #2f6fa5 !important;
     color: #ffffff !important;
-    border-color: #A19197 !important;
+    font-weight: 600 !important;
+    font-size: 1.05rem !important;
+    padding: 12px 20px !important;
+    border: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-body .nodal-card-header-dashboard i { background: rgba(255, 255, 255, 0.25) !important; }
-
-body .nodal-report-card {
-    border-color: #e4eeb9 !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+body .nodal-card-header-dashboard i {
+    background: rgba(255, 255, 255, 0.2) !important;
 }
 
-/* ---- 6. Tables --------------------------------------------------------- */
+body .report-card i,
+body .report-card-official i {
+    color: #2f6fa5 !important;
+}
+
+body .role-tabbar a {
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: #2f6fa5 !important;
+    background: #ffffff !important;
+    border: 2px solid #2f6fa5 !important;
+    border-radius: 999px;
+    padding: 7px 20px;
+    transition: all 0.2s ease;
+}
+
+body .role-tabbar a:hover {
+    background: #2f6fa5 !important;
+    color: #ffffff !important;
+}
+
+/* ---- 6. Tables (Clean Portal Design) ---------------------------------- */
+body .table thead th,
+body .table-blue th,
 body .report-table th,
 body .report-table thead th,
 body .nodal-table th,
-body .nodal-table thead th {
-    background: #e4eeb9 !important;
-    color: #000000 !important;
-    border-color: #b9c46d !important;
+body .nodal-table thead th,
+body .table-custom thead th {
+    background-color: #2f6fa5 !important;
+    color: #ffffff !important;
+    border-color: #1e4f7a !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    text-align: center;
+    vertical-align: middle;
+    padding: 10px 12px;
 }
 
+body .table tbody td,
+body .table-blue td,
 body .report-table td,
-body .nodal-table td { border-color: #eef2df !important; }
+body .nodal-table td,
+body .table-custom td {
+    border-color: #e2e8f0 !important;
+    color: #1e293b;
+    padding: 9px 12px;
+    vertical-align: middle;
+}
+
+body .table-striped tbody tr:nth-of-type(odd) {
+    background-color: #f8fafc;
+}
+
+body .table tbody tr:hover {
+    background-color: #f1f5f9 !important;
+}
 
 body .total-row,
 body .total-row td,
 body .nodal-total-row,
 body .nodal-total-row td {
-    background: #e4eeb9 !important;
-    color: #000000 !important;
-    border-color: #b9c46d !important;
+    background: #e2e8f0 !important;
+    color: #003366 !important;
+    font-weight: 700 !important;
+    border-color: #cbd5e1 !important;
 }
 
-/* ---- 7. Forms ---------------------------------------------------------- */
+/* ---- 7. Forms & Inputs ------------------------------------------------ */
+body .form-label,
 body .form-label-official,
-body .selection-form label { color: #000000 !important; }
+body .selection-form label {
+    font-weight: 600;
+    color: #334155 !important;
+    font-size: 0.9rem;
+}
 
+body .form-control:focus,
+body .form-select:focus,
 body .form-select-official:focus,
 body .form-control-official:focus {
-    border-color: #4CAF50 !important;
-    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.25) !important;
+    border-color: #2f6fa5 !important;
+    box-shadow: 0 0 0 3px rgba(47, 111, 165, 0.25) !important;
+    outline: none;
 }
 
-body .form-select-official,
-body .form-control-official { color: #2d3748; }
-
-/* ---- 8. Action buttons -> index.jsp green ----------------------------- */
+/* ---- 8. Action Buttons ------------------------------------------------ */
+body .btn-primary,
+body .btn-primary-custom,
 body .btn-submit-official-navy,
 body .nodal-btn-primary,
-body .page-btn.active {
-    background-color: #4CAF50 !important;
-    background-image: none !important;
+button[type="submit"].btn-primary {
+    background-color: #2f6fa5 !important;
+    border-color: #2f6fa5 !important;
     color: #ffffff !important;
-    border: none;
+    font-weight: 600;
+    border-radius: 8px !important;
+    padding: 9px 20px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(47, 111, 165, 0.25);
 }
 
+body .btn-primary:hover,
+body .btn-primary-custom:hover,
 body .btn-submit-official-navy:hover,
-body .nodal-btn-primary:hover {
-    background-color: #3d8b40 !important;
+body .nodal-btn-primary:hover,
+button[type="submit"].btn-primary:hover {
+    background-color: #1e4f7a !important;
+    border-color: #1e4f7a !important;
     color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(47, 111, 165, 0.35);
 }
 
-body .btn-submit-official-navy:focus,
-body .nodal-btn-primary:focus {
-    background-color: #FF4500 !important;
+body .btn-secondary,
+body .btn-secondary-custom {
+    background-color: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+    font-weight: 600;
+    border-radius: 8px !important;
+    padding: 9px 20px;
+    transition: all 0.2s ease;
+}
+
+body .btn-secondary:hover,
+body .btn-secondary-custom:hover {
+    background-color: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+body .page-btn.active {
+    background-color: #2f6fa5 !important;
     color: #ffffff !important;
+    border-color: #2f6fa5 !important;
 }
 
 body .page-btn {
-    background-color: #e4eeb9 !important;
-    color: #000000 !important;
+    background-color: #ffffff !important;
+    color: #334155 !important;
+    border: 1px solid #cbd5e1 !important;
 }
 
-body .nodal-download-btn-light { background-color: #e4eeb9 !important; color: #000000 !important; }
-body .nodal-download-btn-black { background-color: #4CAF50 !important; color: #ffffff !important; }
-
-/* ---- 9. Accents, icons, misc ------------------------------------------ */
-body .report-section-title {
-    color: #000000 !important;
-    border-left: 5px solid #4CAF50 !important;
+body .nodal-download-btn-black,
+body .nodal-download-btn-light {
+    background-color: #2f6fa5 !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
 }
 
-body .report-card i,
-body .report-card-official i { color: #4CAF50 !important; }
-
-body .report-card {
-    border-color: #e4eeb9 !important;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06) !important;
+/* ---- 9. Footer -------------------------------------------------------- */
+body #footer,
+body footer .lower-footer,
+body .lower-footer {
+    background-color: #2f6fa5 !important;
+    color: #ffffff !important;
+    padding: 12px 0 !important;
+    font-size: 13px !important;
+    text-align: center !important;
+    border-top: none !important;
+    width: 100% !important;
+    margin-top: auto !important;
 }
 
-body .report-card:hover { box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12) !important; }
+body #footer a,
+body footer .lower-footer a {
+    color: #ffffff !important;
+}
 
-body .api-badge { background: #f3f6de !important; color: #555555 !important; }
-
-body .loader-spinner { color: #000000 !important; }
-body .stat-fill { background-color: #4CAF50 !important; }
-body .district-link { color: #000000 !important; }
-body .reports-dashboard { background: #f7f9ee !important; }
-body .nodal-dist-name { color: #000000 !important; }
-body .nodal-report-title { color: #000000 !important; }
-body .nodal-bold-aesthetic-text,
-body .nodal-bold-aesthetic-number { color: #000000 !important; }
+body .api-badge {
+    background: #e2e8f0 !important;
+    color: #334155 !important;
+}

@@ -1,94 +1,56 @@
 <%@ page language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%-- ===================================================================
-     DISTRICT dashboard navbar (roleId 3, matching itiap_new).
+     DISTRICT dashboard navbar (roleId 3).
+     Exact navigation menu matching itiadmissions project.
+     UI/design styled via #menu-bar in style.css / iti-portal.css.
      =================================================================== --%>
-<ul id="menu-bar">
+<ul id="menu-bar" class="no-print">
     <li><a href="${pageContext.request.contextPath}/authHome">Home</a></li>
-
-    <li><a href="#">Reports</a>
+    <li><a href="#">ITI Services</a><ul></ul></li>
+    <li><a href="#">ITI Reports</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/reports/trade-display1">Update ITI</a></li>
-            <li><a href="${pageContext.request.contextPath}/reports/applicant-report">Applicant Report</a></li>
+            <li><a href="${pageContext.request.contextPath}/reports/applicant-address-with-mobile">Applicant Address With Mobile</a></li>
+            <li><a href="${pageContext.request.contextPath}/reports/api-dashboard-district">API Dashboard (District)</a></li>
             <li><a href="${pageContext.request.contextPath}/reports/caste-wise-admissions-abstract">Caste Wise Admissions Abstract</a></li>
-            <li><a href="${pageContext.request.contextPath}/reports/applicant-address-with-mobile">Applicant Address with Mobile</a></li>
-            <li><a href="${pageContext.request.contextPath}/reports/api-dashboard-district">API Dashboard</a></li>
+            <li><a href="${pageContext.request.contextPath}/reports/verification-report">Verification Report</a></li>
         </ul>
     </li>
-
     <li><a href="#">Admissions</a>
         <ul>
-            <li><a href="${pageContext.request.contextPath}/VerifyApplication">Verification for Online Applications</a></li>
-            <li><a href="${pageContext.request.contextPath}/VerifyApplication">Re-Verification for Online Applications</a></li>
-            <li><a href="${pageContext.request.contextPath}/reports/shift-unit-report">DGT Permitted Shifts Units Report</a></li>
-            <li><a href="${pageContext.request.contextPath}/iti-trade-selection">DGT Permitted Shifts Units</a></li>
-            <li><a href="${pageContext.request.contextPath}/reports/shift-unit-verify">Shift-Unit Verify</a></li>
-            <li><a href="${pageContext.request.contextPath}/admissions/reprint-verified-application">Reprint Verified Application</a></li>
-            <li><a href="${pageContext.request.contextPath}/reports/verification-report">Verification Report - Dist wise</a></li>
             <li><a href="${pageContext.request.contextPath}/AdmissionPhase">ADMISSIONS PHASE 1</a></li>
-            <li><a href="${pageContext.request.contextPath}/SeatMatrix">seatmatrix</a></li>
-            <li><a href="${pageContext.request.contextPath}/AddTrade">Add Trade</a></li>
-            <li><a href="${pageContext.request.contextPath}/admissions/application-reprint">Application Reprint</a></li>
             <li><a href="${pageContext.request.contextPath}/reports/dsc-list">DSC List</a></li>
-            <li><a href="${pageContext.request.contextPath}/MeritList">Merit List with GPA</a></li>
-            <li><a href="${pageContext.request.contextPath}/admissions/print-admission-slip">Print Admission Slip</a></li>
+            <li><a href="${pageContext.request.contextPath}/SeatMatrix">seatmatrix</a></li>
+            <li><a href="${pageContext.request.contextPath}/CallLetterView">Call Letter</a></li>
+            <li><a href="${pageContext.request.contextPath}/iti-trade-selection">DGT Permitted Shifts Units</a></li>
+            <li><a href="${pageContext.request.contextPath}/AddTrade">Add Trade</a></li>
+            <li><a href="${pageContext.request.contextPath}/ReservationEntry">Reservation Entry</a></li>
+            <li><a href="${pageContext.request.contextPath}/SeatCorrection">Seat Correction</a></li>
+            <li><a href="${pageContext.request.contextPath}/reports/shift-unit-report">DGT Permitted Shifts Units Report</a></li>
+            <li><a href="${pageContext.request.contextPath}/admissions/discharge">Discharge Admission</a></li>
             <li><a href="${pageContext.request.contextPath}/ScheduleEntry">Schedule Entry</a></li>
-            <li><a href="${pageContext.request.contextPath}/CallLetterView">CALL LETTER</a></li>
-            <li><a href="${pageContext.request.contextPath}/admissions/discharge">DISCHARGE ADMISSION</a></li>
+            <li><a href="${pageContext.request.contextPath}/DeleteScheduleEntry">Delete Schedule Entry</a></li>
+            <li><a href="${pageContext.request.contextPath}/VerifyApplication">Verification For Online Application</a></li>
+            <li><a href="${pageContext.request.contextPath}/reports/shift-unit-verify">Shift &amp; Unit Verification</a></li>
+            <li><a href="${pageContext.request.contextPath}/MeritList">Generate Merit List</a></li>
+            <li><a href="${pageContext.request.contextPath}/OpenPoolDistrict">Open General Pool</a></li>
         </ul>
     </li>
-
-    <li><a href="#">Exams and Sem</a>
-        <ul>
-            <li><a href="#">Exam Apply</a></li>
-            <li><a href="#">DOWNLOAD EXAM MASTER DATA</a></li>
-            <li><a href="#">Semester Hallticket Download</a></li>
-            <li><a href="#">HT Download Nonsem</a></li>
-            <li><a href="#">HT Approval/Nominal Rolls</a></li>
-        </ul>
-    </li>
-
-    <li><a href="#">HRMS</a>
-        <ul>
-            <li><a href="#">Employee ID Edit</a></li>
-        </ul>
-    </li>
-
-    <li><a href="#">Placements</a>
-        <ul>
-            <li><a href="#">Placement Schedule Entry</a></li>
-            <li><a href="#">Placement Dist Report</a></li>
-        </ul>
-    </li>
-
-    <li><a href="#">Achievements</a>
-        <ul>
-            <li><a href="#">ITI WISE REPORT</a></li>
-            <li><a href="#">ACHIEVEMENT ENTRY</a></li>
-        </ul>
-    </li>
-
-    <li><a href="#">Abstracts</a>
-        <ul>
-            <li><a href="#">Caste wise year wise abstract</a></li>
-        </ul>
-    </li>
-
     <li><a href="#">SCVT Exams</a>
         <ul>
             <li><a href="${pageContext.request.contextPath}/scvt/exam-verification">SCVT Exam Verification</a></li>
-            <li><a href="#">SCVT MARKS ENTRY</a></li>
             <li><a href="${pageContext.request.contextPath}/scvt/certificate">SCVT Certificate</a></li>
         </ul>
     </li>
-
-    <li><a href="${pageContext.request.contextPath}/logout">Logout</a>
-        <ul>
-            <li><a href="${pageContext.request.contextPath}/services/password-change">Change Password</a></li>
-        </ul>
-    </li>
-
+    <li><a href="${pageContext.request.contextPath}/logout">Logout</a></li>
     <c:if test="${not empty sessionScope.username}">
-        <li class="welcome-tag">Welcome, ${fullName}<br>District</li>
+        <c:set var="districtDisplay" value="${not empty sessionScope.distName ? sessionScope.distName : (not empty sessionScope.fullName ? sessionScope.fullName : sessionScope.username)}" />
+        <li class="welcome-tag">
+            <div class="welcome-badge">
+                <i class="fas fa-city"></i>
+                <span>Welcome <strong>District</strong>,</span>
+                <span class="welcome-highlight">${districtDisplay}</span>
+            </div>
+        </li>
     </c:if>
 </ul>

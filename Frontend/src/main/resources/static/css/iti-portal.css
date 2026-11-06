@@ -31,72 +31,82 @@
 #menu-bar {
   width: 100%;
   margin: 0px;
-  padding: 0px;
-  height: 30px;
-  line-height: 100%;
+  padding: 0px 8px;
+  min-height: 42px;
+  line-height: normal;
   border-radius: 0px;
-  -webkit-border-radius: 24px;
-  -moz-border-radius: 24px;
-  box-shadow: 2px 2px 2px #666666;
-  -webkit-box-shadow: 2px 2px 2px #666666;
-  -moz-box-shadow: 2px 2px 2px #666666;
-  background: #e4eeb9;
+  -webkit-border-radius: 0px;
+  -moz-border-radius: 0px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  -webkit-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  -moz-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  background: #2f6fa5;
+  border-top: 2px solid #ffffff;
+  border-bottom: 2px solid #1e4f7a;
   position: relative;
   z-index: 999;
-  display: inline-block;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 #menu-bar li {
-  margin: 0px 0px 6px 0px;
-  padding: 0px 6px 0px 6px;
-  float: left;
+  margin: 0px;
+  padding: 0px;
+  float: none;
   position: relative;
   list-style: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#menu-bar li:last-child {
+  border-right: none;
 }
 
 #menu-bar a {
-  font-weight: bold;
-  font-family: verdana;
+  font-weight: 500;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
-  color: #000000;
-  background: #e4eeb9;
+  color: #ffffff;
+  background: #2f6fa5;
   text-decoration: none;
   display: block;
-  padding: 6px 20px 6px 20px;
+  padding: 10px 16px;
   margin: 0;
-  margin-bottom: 6px;
-  -webkit-border-radius: 10px;
-  -moz-border-radius: 10px;
+  border-radius: 0px;
+  -webkit-border-radius: 0px;
+  -moz-border-radius: 0px;
+  transition: background-color 0.2s ease;
 }
 
 #menu-bar li ul li a {
   margin: 0;
 }
 
-/* Hover / active top-level item: red-coral -> grey-mauve gradient, white text.
-   `background-color` stays lightblue as the no-gradient fallback. */
+/* Hover / active top-level item */
 #menu-bar .active a,
 #menu-bar li:hover > a {
-  background-color: lightblue;
-  background-image: linear-gradient(to bottom, #EB4954, #A19197);
-  color: white;
-  -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, .2);
-  -moz-box-shadow: 0 1px 1px rgba(0, 0, 0, .2);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, .2);
+  background-color: #1e4f7a;
+  background-image: none;
+  color: #ffffff;
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  box-shadow: none;
 }
 
 #menu-bar ul li:hover a,
 #menu-bar li:hover li a {
-  background: lightgoldenrodyellow;
-  color: #000000;
+  background: #ffffff;
+  color: #334155;
   -webkit-box-shadow: none;
   -moz-box-shadow: none;
   box-shadow: none;
 }
 
 #menu-bar ul a:hover {
-  background: lightblue !important;
-  color: black !important;
+  background: #2f6fa5 !important;
+  color: #ffffff !important;
   border-radius: 0;
   -webkit-border-radius: 0;
   -moz-border-radius: 0;
@@ -107,47 +117,55 @@
 }
 
 #menu-bar ul {
-  background-color: #FFD21C;
-  background-image: linear-gradient(to bottom, #FFD21C, #CF7688);
+  background-color: #ffffff;
+  background-image: none;
   display: none;
   margin: 0;
-  padding: 0;
-  width: 300px;
+  padding: 6px 0;
+  min-width: 250px;
   position: absolute;
-  top: 30px;
+  top: 100%;
   left: 0;
-  border-radius: 0px;
-  -webkit-border-radius: 10px;
-  -moz-border-radius: 10px;
-  -webkit-box-shadow: 2px 2px 3px #222222;
-  -moz-box-shadow: 2px 2px 3px #222222;
-  box-shadow: 2px 2px 3px #222222;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  -webkit-border-radius: 8px;
+  -moz-border-radius: 8px;
+  -webkit-box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  -moz-box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 }
 
 #menu-bar ul li {
   float: none;
   margin: 0;
   padding: 0;
+  border-right: none;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+#menu-bar ul li:last-child {
+  border-bottom: none;
 }
 
 #menu-bar ul a {
-  padding: 10px 0px 10px 15px;
-  background: gold;
-  color: grey;
+  padding: 9px 18px;
+  background: #ffffff;
+  color: #334155;
   font-size: 13px;
   font-style: normal;
-  font-family: verdana;
-  font-weight: normal;
-  text-shadow: 2px 2px 3px #FFFFFF;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-weight: 500;
+  text-shadow: none;
+  transition: all 0.2s ease;
 }
 
 #menu-bar ul li:first-child > a {
-  border-top-left-radius: 10px;
-  -webkit-border-top-left-radius: 10px;
-  -moz-border-radius-topleft: 10px;
-  border-top-right-radius: 10px;
-  -webkit-border-top-right-radius: 10px;
-  -moz-border-radius-topright: 10px;
+  border-top-left-radius: 8px;
+  -webkit-border-top-left-radius: 8px;
+  -moz-border-radius-topleft: 8px;
+  border-top-right-radius: 8px;
+  -webkit-border-top-right-radius: 8px;
+  -moz-border-radius-topright: 8px;
 }
 
 #menu-bar ul li:last-child > a {
@@ -183,59 +201,162 @@ html[xmlns] #menu-bar {
 .dropdown-content {
   display: none;
   position: absolute;
-  background-color: #f9f9f9;
-  min-width: 160px;
+  background-color: #ffffff;
+  min-width: 240px;
   z-index: 1000;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  padding: 6px 0;
+  top: 100%;
+  left: 0;
 }
 
 .dropdown-content a {
-  padding: 12px 16px;
+  padding: 8px 16px;
   display: block;
+  color: #334155 !important;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.dropdown-content a:hover,
+.dropdown-content a.active {
+  background: #2f6fa5 !important;
+  color: #ffffff !important;
+  padding-left: 20px;
 }
 
 .dropdown:hover .dropdown-content { display: block; }
 
-/* ===== 3. HOME-PAGE ELEMENT STYLES (scoped to body.portal-page only) ===== */
+/* ===== 3. PORTAL ELEMENT STYLES ===== */
 
-body.portal-page a:link { color: lightblue; background-color: transparent; text-decoration: underline; }
-body.portal-page a:visited { color: blue; background-color: transparent; text-decoration: none; }
-body.portal-page a:hover { color: red; background-color: transparent; text-decoration: underline; }
-body.portal-page a:active { color: yellow; background-color: transparent; text-decoration: underline; }
-
-body.portal-page input[type=submit] {
-  background-color: #4CAF50; border: none; color: white; padding: 8px 30px;
-  text-align: center; text-decoration: none; display: inline-block; font-size: 16px;
-  margin: 4px 2px; transition-duration: 0.4s; cursor: pointer;
+body.portal-page {
+  background-color: #f8fafc;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #1e293b;
 }
 
-body.portal-page input[type=submit]:focus { background-color: orangered; }
+body.portal-page a {
+  color: #2f6fa5;
+  text-decoration: none;
+}
+
+body.portal-page a:hover {
+  color: #1e4f7a;
+  text-decoration: underline;
+}
+
+body.portal-page input[type=submit],
+body.portal-page .btn-primary {
+  background-color: #2f6fa5;
+  border: 1px solid #2f6fa5;
+  color: white;
+  padding: 8px 24px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+body.portal-page input[type=submit]:hover,
+body.portal-page .btn-primary:hover {
+  background-color: #1e4f7a;
+  border-color: #1e4f7a;
+}
 
 body.portal-page input[type=text],
 body.portal-page input[type=password] {
-  padding: 6px 8px; margin: 8px 0; border: 1px solid #555;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
 }
 
 body.portal-page input[type=password]:focus,
-body.portal-page input[type=text]:focus { background-color: yellow; }
+body.portal-page input[type=text]:focus {
+  border-color: #2f6fa5;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(47, 111, 165, 0.2);
+  background-color: #ffffff;
+}
 
-body.portal-page #mysubmit {
-  font-weight: bolder; color: black; font-size: 15px; border-radius: 10%;
+.welcome-tag {
+  color: #ffffff !important;
+  font-size: 12px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
 }
 
 
 /* Dashboard "Welcome" tag (from authHome_*.jsp inline CSS) */
 #menu-bar .welcome-tag {
-    margin-left: auto;
-    padding-right: 15px;
-    color: blue;
-    font-size: 11px;
-    text-align: left;
-    line-height: 1.5;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0;
+    margin: 0;
+    border-right: none;
+    background: transparent;
+    z-index: 1000;
+}
+
+.welcome-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: linear-gradient(135deg, rgba(0, 34, 68, 0.6), rgba(10, 45, 80, 0.5));
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 24px;
+    padding: 4px 12px;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    white-space: nowrap;
+}
+
+.welcome-badge i {
+    color: #93c5fd;
+    font-size: 13px;
+}
+
+.welcome-badge strong {
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.welcome-highlight {
+    background: #ffeb3b;
+    color: #002b49;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+@media (max-width: 1199.98px) {
+    #menu-bar .welcome-tag {
+        position: static;
+        transform: none;
+        margin: 6px auto;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
 }
 
 
 /* Active item inside index-style dropdown menus (role report navbars) */
 #menu-bar .dropdown-content a.active {
-    background: #e4eeb9 !important;
-    color: black !important;
+    background: #2f6fa5 !important;
+    color: #ffffff !important;
 }

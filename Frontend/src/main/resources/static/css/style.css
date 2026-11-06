@@ -41,9 +41,9 @@ footer {
     background: linear-gradient(90deg, #003366 0%, #005073 50%, #003366 100%);
     color: white;
     font-weight: 700;
-    padding: 14px 0;
-    font-size: 18px;
-    letter-spacing: 1.5px;
+    padding: 8px 0;
+    font-size: 16px;
+    letter-spacing: 1.2px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.1);
 }
@@ -52,8 +52,8 @@ footer {
 .announcement-bar {
     background-color: var(--bar-light-blue);
     color: white;
-    padding: 8px 0;
-    font-size: 14px;
+    padding: 4px 0;
+    font-size: 13px;
     text-align: center;
 }
 
@@ -85,12 +85,13 @@ footer {
 .nav-menu>li>a,
 .authenticated-navbar .nav-link {
     display: block;
-    padding: 6px 12px;
+    padding: 7px 11px;
     color: white !important;
     text-decoration: none;
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 500;
     text-transform: none !important;
+    white-space: nowrap;
 }
 
 /* HOVER EFFECT (IMPORTANT) */
@@ -104,31 +105,80 @@ footer {
     display: none;
     position: absolute;
     background-color: #fff;
-    min-width: 260px;
+    min-width: 250px;
     top: 100%;
     left: 0;
     z-index: 1000;
-    border: 1px solid #121c78;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    padding: 6px 0;
 }
 
 /* DROPDOWN ITEMS */
-.dropdown-menu li a {
+.dropdown-menu li a,
+.dropdown-menu .dropdown-item {
     display: block;
-    padding: 10px;
-    color: black;
+    padding: 8px 16px;
+    color: #334155 !important;
     text-decoration: none;
     font-size: 13px;
     text-transform: none !important;
+    transition: all 0.2s ease;
 }
 
 /* DROPDOWN HOVER */
-.dropdown-menu li a:hover {
-    background-color: #2f6fa5;
-    color: rgb(16, 10, 177);
+.dropdown-menu li a:hover,
+.dropdown-menu .dropdown-item:hover {
+    background-color: #2f6fa5 !important;
+    color: #ffffff !important;
+    padding-left: 20px;
 }
 
-/* SHOW DROPDOWN ON CLICK (Handled by Bootstrap JS) */
+/* SHOW DROPDOWN ON HOVER (DESKTOP) & CLICK */
+@media (min-width: 992px) {
+    .nav-menu .dropdown:hover > .dropdown-menu {
+        display: block !important;
+    }
+}
+
 .dropdown-menu.show {
+    display: block !important;
+}
+
+/* PURE-CSS DROPDOWN CONTENT (Index / Legacy Navbars) */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #ffffff;
+    min-width: 240px;
+    z-index: 1000;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    padding: 6px 0;
+    top: 100%;
+    left: 0;
+}
+
+.dropdown-content a {
+    padding: 8px 16px;
+    display: block;
+    color: #334155 !important;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.dropdown-content a:hover,
+.dropdown-content a.active {
+    background: #2f6fa5 !important;
+    color: #ffffff !important;
+    padding-left: 20px;
+}
+
+.dropdown:hover .dropdown-content {
     display: block !important;
 }
 
@@ -137,6 +187,188 @@ footer {
 .authenticated-navbar {
     background-color: #2f6fa5 !important;
     border-top: 2px solid #ffffff !important;
+}
+
+/* Legacy & Role Navbars (#menu-bar) Matching Home Page */
+#menu-bar,
+ul#menu-bar {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 10px !important;
+    height: auto !important;
+    min-height: 42px !important;
+    line-height: normal !important;
+    border-radius: 0 !important;
+    background: #2f6fa5 !important;
+    border-top: 2px solid #ffffff !important;
+    border-bottom: 2px solid #1e4f7a !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    list-style: none !important;
+    display: flex !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+#menu-bar li,
+ul#menu-bar li {
+    margin: 0 !important;
+    padding: 0 !important;
+    position: relative !important;
+    list-style: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+#menu-bar li:last-child,
+ul#menu-bar li:last-child {
+    border-right: none !important;
+}
+
+#menu-bar a,
+ul#menu-bar a {
+    font-weight: 500 !important;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 14px !important;
+    color: #ffffff !important;
+    background: #2f6fa5 !important;
+    text-decoration: none !important;
+    display: block !important;
+    padding: 10px 16px !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    transition: background-color 0.2s ease !important;
+}
+
+#menu-bar .active a,
+#menu-bar li:hover > a,
+ul#menu-bar .active a,
+ul#menu-bar li:hover > a {
+    background: #1e4f7a !important;
+    color: #ffffff !important;
+}
+
+#menu-bar ul,
+ul#menu-bar ul {
+    position: absolute !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+    border-radius: 6px !important;
+    min-width: 250px !important;
+    width: auto !important;
+    top: 100% !important;
+    left: 0 !important;
+    padding: 6px 0 !important;
+    z-index: 9999 !important;
+    display: none;
+    list-style: none !important;
+    margin: 0 !important;
+}
+
+#menu-bar li:hover > ul,
+ul#menu-bar li:hover > ul {
+    display: block !important;
+}
+
+#menu-bar ul li,
+ul#menu-bar ul li {
+    float: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+#menu-bar ul li:last-child,
+ul#menu-bar ul li:last-child {
+    border-bottom: none !important;
+}
+
+#menu-bar ul li a,
+#menu-bar li:hover li a,
+ul#menu-bar ul li a,
+ul#menu-bar li:hover li a {
+    background: #ffffff !important;
+    color: #334155 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 9px 18px !important;
+    text-transform: none !important;
+    transition: all 0.2s ease !important;
+}
+
+#menu-bar ul li:hover a,
+#menu-bar ul a:hover,
+ul#menu-bar ul li:hover a,
+ul#menu-bar ul a:hover {
+    background: #2f6fa5 !important;
+    color: #ffffff !important;
+    padding-left: 22px !important;
+}
+
+#menu-bar .welcome-tag,
+ul#menu-bar .welcome-tag {
+    position: absolute !important;
+    right: 15px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-right: none !important;
+    background: transparent !important;
+    z-index: 1000 !important;
+}
+
+.welcome-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    background: linear-gradient(135deg, rgba(0, 34, 68, 0.6), rgba(10, 45, 80, 0.5)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    border-radius: 24px !important;
+    padding: 4px 12px !important;
+    color: #ffffff !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18) !important;
+    white-space: nowrap !important;
+}
+
+.welcome-badge i {
+    color: #93c5fd !important;
+    font-size: 13px !important;
+}
+
+.welcome-badge strong {
+    font-weight: 700 !important;
+    color: #ffffff !important;
+}
+
+.welcome-highlight {
+    background: #ffeb3b !important;
+    color: #002b49 !important;
+    font-weight: 700 !important;
+    padding: 2px 9px !important;
+    border-radius: 12px !important;
+    font-size: 12px !important;
+    letter-spacing: 0.3px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+    text-transform: uppercase !important;
+    display: inline-block !important;
+}
+
+@media (max-width: 1199.98px) {
+    #menu-bar .welcome-tag,
+    ul#menu-bar .welcome-tag {
+        position: static !important;
+        transform: none !important;
+        margin: 6px auto !important;
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
 }
 
 /* PRIMARY / SUBMIT BUTTONS (Matches Navbar Blue #2f6fa5) */
@@ -182,8 +414,9 @@ button[type="submit"].btn-primary:active {
 .news-marquee {
     background-color: var(--marquee-teal);
     color: white;
-    padding: 6px 0;
+    padding: 4px 0;
     font-weight: normal;
+    font-size: 13px;
     overflow: hidden;
     white-space: nowrap;
     position: relative;
@@ -933,8 +1166,9 @@ footer {
 .news-marquee {
     background-color: var(--marquee-teal);
     color: white;
-    padding: 6px 0;
+    padding: 4px 0;
     font-weight: normal;
+    font-size: 13px;
     overflow: hidden;
     white-space: nowrap;
     position: relative;
@@ -1382,4 +1616,130 @@ footer {
         transform: translateY(0);
     }
 }
+
+/* ==========================================================================
+   Admission Slip & Form UI (Matches Home Page Theme)
+   ========================================================================== */
+.call-box {
+    width: 520px;
+    max-width: 94%;
+    margin: 24px auto;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.call-box table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px;
+}
+
+.call-box td {
+    border: 1px solid #e2e8f0;
+    padding: 10px 14px;
+}
+
+.call-box td.label {
+    width: 42%;
+    background: #f8fafc;
+    font-weight: 600;
+    color: #003366;
+}
+
+.call-box input[type="text"],
+.call-box input[type="password"],
+.call-box select {
+    width: 96%;
+    padding: 6px 10px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.call-box input[type="text"]:focus,
+.call-box input[type="password"]:focus,
+.call-box select:focus {
+    border-color: #2f6fa5;
+    box-shadow: 0 0 0 3px rgba(47, 111, 165, 0.2);
+}
+
+.submit-btn {
+    background-color: #2f6fa5 !important;
+    border: none !important;
+    color: #ffffff !important;
+    padding: 8px 36px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.submit-btn:hover {
+    background-color: #1e4f7a !important;
+}
+
+.submit-btn:disabled {
+    opacity: 0.55 !important;
+    cursor: default !important;
+}
+
+.reset-btn {
+    background-color: #dc2626 !important;
+    border: none !important;
+    color: #ffffff !important;
+    padding: 8px 36px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    margin-left: 8px !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.reset-btn:hover {
+    background-color: #b91c1c !important;
+}
+
+.slip-table {
+    border-collapse: collapse !important;
+    margin: 20px auto !important;
+    font-size: 13px !important;
+    background: #ffffff !important;
+    width: 100% !important;
+    max-width: 760px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+}
+
+.slip-table th,
+.slip-table td {
+    border: 1px solid #e2e8f0 !important;
+    padding: 10px 14px !important;
+    text-align: left !important;
+    vertical-align: top !important;
+}
+
+.slip-table th {
+    background: #e8f4fd !important;
+    color: #003366 !important;
+    font-weight: 600 !important;
+    width: 44% !important;
+}
+
+.sec-title {
+    background-color: #e8f4fd !important;
+    color: #003366 !important;
+    font-weight: 700 !important;
+    border-left: 4px solid #2f6fa5 !important;
+}
+
 
