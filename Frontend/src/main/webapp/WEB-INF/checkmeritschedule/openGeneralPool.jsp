@@ -53,6 +53,7 @@
         }
     </style>
     <link rel="stylesheet" href="<%= request.getContextPath() %>/css/iti-portal.css">
+    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
 
