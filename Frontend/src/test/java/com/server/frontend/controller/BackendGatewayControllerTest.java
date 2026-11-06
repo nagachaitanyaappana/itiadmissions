@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BackendGatewayControllerTest {
     private static final String SECRET = "01234567890123456789012345678901";
+    private static final String ACCESS_TOKEN = "header.payload.signature";
 
     @Test void requiresCsrfForStateChangingMethodsOnly() {
         assertTrue(BackendGatewayController.requiresCsrf("POST"));
@@ -20,18 +21,26 @@ class BackendGatewayControllerTest {
         assertFalse(BackendGatewayController.requiresCsrf("OPTIONS"));
     }
 
-    @Test void validatesSignedDoubleSubmitTokensWithoutSessionState() throws Exception {
+    @Test void validatesSignedDoubleSubmitTokensBoundToCurrentAccessToken() throws Exception {
         String nonce = "test-random-nonce";
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+        byte[] access = ACCESS_TOKEN.getBytes(StandardCharsets.UTF_8);
+        byte[] random = nonce.getBytes(StandardCharsets.UTF_8);
+        mac.update((byte)(access.length >>> 24)); mac.update((byte)(access.length >>> 16));
+        mac.update((byte)(access.length >>> 8)); mac.update((byte)access.length); mac.update(access);
+        mac.update((byte)(random.length >>> 24)); mac.update((byte)(random.length >>> 16));
+        mac.update((byte)(random.length >>> 8)); mac.update((byte)random.length); mac.update(random);
         String token = nonce + "." + Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(mac.doFinal(nonce.getBytes(StandardCharsets.UTF_8)));
-        assertTrue(BackendGatewayController.validCsrfToken(token, token, SECRET));
-        assertFalse(BackendGatewayController.validCsrfToken(token, "attacker", SECRET));
-        assertFalse(BackendGatewayController.validCsrfToken(token, token, "short"));
-        assertFalse(BackendGatewayController.validCsrfToken(nonce + ".bad", nonce + ".bad", SECRET));
-        assertFalse(BackendGatewayController.validCsrfToken(token, null, SECRET));
-        assertFalse(BackendGatewayController.validCsrfToken(null, token, SECRET));
+                .encodeToString(mac.doFinal());
+
+        assertTrue(BackendGatewayController.validCsrfToken(ACCESS_TOKEN, token, token, SECRET));
+        assertFalse(BackendGatewayController.validCsrfToken("different-access-token", token, token, SECRET));
+        assertFalse(BackendGatewayController.validCsrfToken(ACCESS_TOKEN, token, "attacker", SECRET));
+        assertFalse(BackendGatewayController.validCsrfToken(ACCESS_TOKEN, token, token, "short"));
+        assertFalse(BackendGatewayController.validCsrfToken(ACCESS_TOKEN, nonce + ".bad", nonce + ".bad", SECRET));
+        assertFalse(BackendGatewayController.validCsrfToken(ACCESS_TOKEN, token, null, SECRET));
+        assertFalse(BackendGatewayController.validCsrfToken(null, token, token, SECRET));
     }
 
     @Test void acceptsNormalBackendApiPaths() {
