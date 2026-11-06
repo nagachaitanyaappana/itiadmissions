@@ -36,7 +36,7 @@
 </head>
 <body onload="getReady();">
 	<div id="404Msg" align="center">
-		<img src="./images/gen.jpg" class="img-fluid" />
+		
 	</div>
 	<div id="navbar">
 		<jsp:include page="/WEB-INF/reports/header.jsp" />
