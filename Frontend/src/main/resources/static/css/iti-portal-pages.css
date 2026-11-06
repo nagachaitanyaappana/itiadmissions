@@ -248,3 +248,77 @@ body {
     max-width: 100%;
   }
 }
+
+
+/* Phase-one admission workflow screens: retain all original form fields and
+   table structure while presenting them as responsive portal cards. */
+body.legacy-admission-page {
+  padding: 0 0 2rem;
+}
+body.legacy-admission-page > center {
+  width: min(100% - 2rem, 1100px);
+  margin: 1.25rem auto .75rem;
+  color: var(--portal-navy);
+}
+body.legacy-admission-page > table,
+body.legacy-admission-page > form > table,
+body.legacy-admission-page .admission-form-table {
+  width: min(100% - 2rem, 1100px) !important;
+  margin: 1rem auto !important;
+  border-collapse: separate !important;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .06);
+}
+body.legacy-admission-page th {
+  background: #eaf2f9;
+  color: var(--portal-navy);
+  font-weight: 700;
+}
+body.legacy-admission-page td,
+body.legacy-admission-page th {
+  padding: .65rem .8rem;
+  border-color: #e2e8f0;
+}
+body.legacy-admission-page input,
+body.legacy-admission-page select,
+body.legacy-admission-page textarea {
+  max-width: 100%;
+  min-height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: .45rem .65rem;
+}
+body.legacy-admission-page input[type="submit"],
+body.legacy-admission-page input[type="button"],
+body.legacy-admission-page button {
+  background: var(--portal-primary);
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  padding: .6rem 1.1rem;
+  font-weight: 650;
+}
+body.legacy-success-page main,
+body.legacy-success-page .success-panel {
+  width: min(100% - 2rem, 760px);
+  margin: 2rem auto;
+  padding: 2rem;
+  border: 1px solid var(--portal-border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
+  text-align: center;
+}
+@media (max-width: 767.98px) {
+  body.legacy-admission-page > table,
+  body.legacy-admission-page > form > table,
+  body.legacy-admission-page .admission-form-table {
+    width: calc(100% - 1rem) !important;
+    display: block;
+    overflow-x: auto;
+  }
+}
