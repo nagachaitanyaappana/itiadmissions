@@ -129,7 +129,7 @@ public class AddTradeService {
                         + " (iti_code, trade_code, trade_short, strength, strength_fill, strength_vacant,"
                         + " available_for_year, trade_freeze, conv_approval)"
                         + " VALUES (:itiCode, :tradeCode, :tradeShort, :strength, 0, :strength,"
-                        + " :available, 1, 0)",
+                        + " :available, 0, 0)",
                 new MapSqlParameterSource()
                         .addValue("itiCode", itiCode)
                         .addValue("tradeCode", tradeCode)
