@@ -58,7 +58,8 @@
                 return true;
             }
         </script>
-    </head>
+        <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
+</head>
     <body class="legacy-admission-page">
         <jsp:include page="/WEB-INF/reports/header.jsp" />
 
