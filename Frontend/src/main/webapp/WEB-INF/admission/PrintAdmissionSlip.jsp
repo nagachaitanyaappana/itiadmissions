@@ -47,6 +47,7 @@
     #screen2 { display:block !important; }
   }
 </style>
+    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
 <br/>
