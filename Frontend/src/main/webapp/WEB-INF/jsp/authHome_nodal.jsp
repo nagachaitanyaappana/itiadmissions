@@ -146,10 +146,7 @@
     </style>
 </head>
 <body>
-    <%@ include file="bannernew.jsp" %>
-
-<!-- Nodal Navbar -->
-    <%@ include file="../navbars/nodal_navbar.jsp" %>
+    <jsp:include page="/WEB-INF/reports/header.jsp" />
 
     <div class="main-dashboard-content">
         <div class="container py-4">
