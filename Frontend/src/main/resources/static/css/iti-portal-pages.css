@@ -575,3 +575,42 @@ body.legacy-success-page .success-panel {
 .dsc-box td.label { background: #f1f5f9 !important; color: #334155 !important; font-weight: 650; }
 .dsc-box select { box-sizing: border-box; max-width: 100%; min-height: 40px; padding: .55rem .7rem !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; }
 @media (max-width: 767.98px) { .dsc-box { width: calc(100% - 1.25rem) !important; } }
+
+
+/* Shared Bootstrap content components use the same portal blue as the header. */
+.details-card-header,
+.card-header-primary {
+  background: var(--portal-navy) !important;
+  color: #fff !important;
+}
+.search-area {
+  background: #f1f5f9 !important;
+  border: 1px solid var(--portal-border) !important;
+  border-radius: 12px !important;
+}
+body .table {
+  --bs-table-border-color: #e2e8f0;
+}
+body .table thead th {
+  background: var(--portal-navy) !important;
+  color: #fff !important;
+  border-color: #244d78 !important;
+  font-weight: 650;
+}
+body .btn-primary {
+  background-color: var(--portal-primary) !important;
+  border-color: var(--portal-primary) !important;
+}
+body .btn-primary:hover,
+body .btn-primary:focus {
+  background-color: var(--portal-primary-dark) !important;
+  border-color: var(--portal-primary-dark) !important;
+}
+body .btn-outline-primary {
+  color: var(--portal-primary) !important;
+  border-color: var(--portal-primary) !important;
+}
+body .btn-outline-primary:hover {
+  background: var(--portal-primary) !important;
+  color: #fff !important;
+}
