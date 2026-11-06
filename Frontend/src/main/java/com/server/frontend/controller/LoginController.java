@@ -6,7 +6,6 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.Cookie;
-import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -168,6 +167,9 @@ public class LoginController {
         private Object distName;
         private Object loginCount;
         private Object lastLogins;
+        private String accessToken;
+        private String expiresAt;
+        private String tokenType;
 
         public Boolean getSuccess() {
             return success;
@@ -245,6 +247,14 @@ public class LoginController {
             return lastLogins;
         }
 
+        public String getAccessToken() { return accessToken; }
+        public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
+        public String getExpiresAt() { return expiresAt; }
+        public void setExpiresAt(String expiresAt) { this.expiresAt = expiresAt; }
+        public String getTokenType() { return tokenType; }
+        public void setTokenType(String tokenType) { this.tokenType = tokenType; }
+
+
         public void setLastLogins(Object lastLogins) {
             this.lastLogins = lastLogins;
         }
@@ -261,6 +271,9 @@ public class LoginController {
             map.put("distName", distName);
             map.put("loginCount", loginCount);
             map.put("lastLogins", lastLogins);
+            map.put("accessToken", accessToken);
+            map.put("expiresAt", expiresAt);
+            map.put("tokenType", tokenType);
             return map;
         }
     }
