@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.Set;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -58,10 +59,11 @@ public class BackendGatewayController {
 
     @RequestMapping("/backend/**")
     public ResponseEntity<byte[]> proxy(HttpServletRequest request) throws IOException {
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("sessionUser") == null) {
+        String accessToken = accessToken(request);
+        if (accessToken == null) {
             return ResponseEntity.status(401).build();
         }
+        HttpSession session = request.getSession(false);
         String methodName = request.getMethod().toUpperCase();
         if (!METHODS.contains(methodName)) {
             return ResponseEntity.status(405).build();
@@ -70,8 +72,8 @@ public class BackendGatewayController {
             return ResponseEntity.status(503).build();
         }
         if (requiresCsrf(methodName)
-                && !validCsrfToken(session.getAttribute(CSRF_SESSION_ATTRIBUTE),
-                        request.getHeader(CSRF_HEADER))) {
+                && (session == null || !validCsrfToken(session.getAttribute(CSRF_SESSION_ATTRIBUTE),
+                        request.getHeader(CSRF_HEADER)))) {
             return ResponseEntity.status(403).build();
         }
 
@@ -89,6 +91,7 @@ public class BackendGatewayController {
                 .path(path).query(request.getQueryString()).build(true).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Internal-Service-Key", internalApiSecret);
+        headers.setBearerAuth(accessToken);
         for (String name : REQUEST_HEADERS) {
             String value = request.getHeader(name);
             if (value != null) headers.set(name, value);
@@ -114,6 +117,19 @@ public class BackendGatewayController {
             if (RESPONSE_HEADERS.contains(name.toLowerCase())) safe.put(name, values);
         });
         return new ResponseEntity<>(body, safe, status);
+    }
+
+    private static String accessToken(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return null;
+        for (Cookie cookie : cookies) {
+            if ("ITIAP_ACCESS_TOKEN".equals(cookie.getName())
+                    && cookie.getValue() != null && !cookie.getValue().isBlank()
+                    && cookie.getValue().length() <= 8192) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 
     static boolean requiresCsrf(String method) {
