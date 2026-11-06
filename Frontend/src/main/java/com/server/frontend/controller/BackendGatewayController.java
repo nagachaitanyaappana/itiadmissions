@@ -1,6 +1,8 @@
 package com.server.frontend.controller;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.Set;
 
@@ -29,6 +31,8 @@ public class BackendGatewayController {
             Set.of("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS");
     private static final Set<String> REQUEST_HEADERS =
             Set.of("accept", "content-type", "if-match", "if-none-match", "range");
+    private static final String CSRF_SESSION_ATTRIBUTE = "ITIAP_CSRF_TOKEN";
+    private static final String CSRF_HEADER = "X-CSRF-TOKEN";
     private static final Set<String> RESPONSE_HEADERS =
             Set.of("content-type", "content-disposition", "cache-control", "etag",
                     "last-modified", "accept-ranges", "content-range");
@@ -64,6 +68,11 @@ public class BackendGatewayController {
         }
         if (internalApiSecret == null || internalApiSecret.length() < 32) {
             return ResponseEntity.status(503).build();
+        }
+        if (requiresCsrf(methodName)
+                && !validCsrfToken(session.getAttribute(CSRF_SESSION_ATTRIBUTE),
+                        request.getHeader(CSRF_HEADER))) {
+            return ResponseEntity.status(403).build();
         }
 
         String requestPath = request.getRequestURI().substring(request.getContextPath().length());
@@ -105,6 +114,21 @@ public class BackendGatewayController {
             if (RESPONSE_HEADERS.contains(name.toLowerCase())) safe.put(name, values);
         });
         return new ResponseEntity<>(body, safe, status);
+    }
+
+    static boolean requiresCsrf(String method) {
+        return !("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method)
+                || "OPTIONS".equalsIgnoreCase(method));
+    }
+
+    static boolean validCsrfToken(Object expected, String supplied) {
+        if (!(expected instanceof String expectedToken) || supplied == null
+                || expectedToken.isBlank() || supplied.isBlank()) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                expectedToken.getBytes(StandardCharsets.UTF_8),
+                supplied.getBytes(StandardCharsets.UTF_8));
     }
 
     static boolean safePath(String path) {
