@@ -1,0 +1,250 @@
+/* Shared content layer for every AP ITI portal page.
+   Header, banner and navigation remain owned by jsp/header.jsp or reports/header.jsp.
+   These rules modernise legacy form screens without changing their controls or data flow. */
+
+:root {
+  --portal-primary: #2f6fa5;
+  --portal-primary-dark: #1e4f7a;
+  --portal-navy: #003366;
+  --portal-teal: #007ba7;
+  --portal-page: #f8fafc;
+  --portal-border: #dbe4ee;
+  --portal-text: #1e293b;
+}
+
+body {
+  background: var(--portal-page);
+  color: var(--portal-text);
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.page-title,
+.page-title-custom,
+.report-section-title {
+  color: var(--portal-navy) !important;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+  letter-spacing: .01em;
+}
+
+.sub-line,
+.req-note,
+.info-text-custom {
+  color: #64748b;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.counsel-box,
+.rank-box,
+.seat-box,
+.call-box,
+.verify-box,
+.details-card,
+.form-card,
+.memo {
+  max-width: calc(100% - 2rem);
+  border: 1px solid var(--portal-border) !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
+  overflow: hidden;
+}
+
+.counsel-box,
+.rank-box,
+.call-box,
+.verify-box {
+  width: min(100% - 2rem, 720px) !important;
+  min-width: 0 !important;
+  margin: 1.25rem auto 2rem !important;
+}
+
+.seat-box {
+  width: min(100% - 2rem, 980px) !important;
+  min-width: 0 !important;
+  margin: 1.25rem auto 2rem !important;
+}
+
+.counsel-box table,
+.rank-box table,
+.call-box table,
+.verify-box table,
+.seat-box table,
+.memo {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif !important;
+  font-size: .92rem;
+}
+
+.counsel-box td,
+.rank-box td,
+.call-box td,
+.verify-box td,
+.seat-box td,
+.memo td {
+  padding: .75rem .9rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid #e8eef5 !important;
+  color: var(--portal-text);
+  vertical-align: middle;
+}
+
+.counsel-box td.label,
+.rank-box td.label,
+.call-box td.label,
+.seat-box td.label {
+  width: 38%;
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  font-weight: 650;
+}
+
+.cand-head,
+.counsel-box .cand-head,
+.rank-box .cand-head,
+.seat-box .cand-head,
+.verify-box .head {
+  background: var(--portal-navy) !important;
+  color: #fff !important;
+  font-weight: 700;
+  text-align: center;
+  padding: .85rem 1rem !important;
+}
+
+.counsel-box select,
+.counsel-box input[type="text"],
+.rank-box input[type="text"],
+.call-box input[type="text"],
+.verify-box select,
+.seat-box select,
+.seat-box input,
+.inline-input {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 40px;
+  padding: .55rem .7rem !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  background: #fff;
+  color: #1e293b;
+  font: inherit !important;
+}
+
+.submit-btn,
+.prn-btn,
+.btn-go,
+.btn-reset,
+.btn-success-custom,
+.btn-danger-custom {
+  border: 0 !important;
+  border-radius: 8px !important;
+  padding: .65rem 1.2rem !important;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif !important;
+  font-weight: 650 !important;
+  cursor: pointer;
+  transition: background-color .18s ease, transform .18s ease;
+}
+
+.submit-btn,
+.prn-btn,
+.btn-go {
+  background: var(--portal-primary) !important;
+  color: #fff !important;
+}
+
+.submit-btn:hover,
+.prn-btn:hover,
+.btn-go:hover {
+  background: var(--portal-primary-dark) !important;
+}
+
+.btn-reset,
+.btn-danger-custom {
+  background: #64748b !important;
+  color: #fff !important;
+}
+
+.notice {
+  max-width: min(100% - 2rem, 980px);
+  margin: 1rem auto !important;
+  border: 1px solid #f0d58a !important;
+  border-radius: 10px !important;
+  background: #fffbeb !important;
+  color: #854d0e !important;
+  padding: .85rem 1rem !important;
+}
+
+.matrix-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 10px;
+}
+
+.matrix-wrap table,
+.rec-table {
+  min-width: 720px;
+}
+
+.matrix-wrap th,
+.rec-table th {
+  background: #eaf2f9;
+  color: var(--portal-navy);
+  font-weight: 700;
+}
+
+.matrix-wrap th,
+.matrix-wrap td,
+.rec-table th,
+.rec-table td {
+  padding: .55rem .65rem;
+}
+
+#footer {
+  position: static !important;
+  left: auto !important;
+  bottom: auto !important;
+  width: 100%;
+  margin-top: 2rem;
+  padding: .8rem 1rem !important;
+  background: var(--portal-navy) !important;
+  color: #fff !important;
+  border: 0 !important;
+  text-align: center;
+  font: .8rem "Segoe UI", Roboto, Arial, sans-serif !important;
+}
+
+#footer a { color: #fff !important; }
+
+@media (max-width: 767.98px) {
+  .counsel-box,
+  .rank-box,
+  .call-box,
+  .verify-box,
+  .seat-box {
+    width: calc(100% - 1.25rem) !important;
+    max-width: none;
+    margin: .75rem auto 1.25rem !important;
+  }
+  .counsel-box td,
+  .rank-box td,
+  .call-box td,
+  .verify-box td,
+  .seat-box td,
+  .memo td {
+    padding: .6rem !important;
+  }
+  .counsel-box td.label,
+  .rank-box td.label,
+  .call-box td.label,
+  .seat-box td.label {
+    width: 34%;
+  }
+  .submit-btn,
+  .prn-btn,
+  .btn-go,
+  .btn-reset {
+    max-width: 100%;
+  }
+}
