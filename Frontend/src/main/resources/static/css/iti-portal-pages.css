@@ -397,3 +397,107 @@ body.legacy-success-page .success-panel {
   border-radius: 14px !important;
   box-shadow: 0 8px 24px rgba(15, 23, 42, .06) !important;
 }
+
+
+/* Additional legacy admission and report modules. */
+.sched-box {
+  width: min(100% - 2rem, 720px) !important;
+  min-width: 0 !important;
+  margin: 1.25rem auto 2rem !important;
+  border: 1px solid var(--portal-border) !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
+  overflow: hidden;
+}
+.sched-box table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif !important;
+}
+.sched-box td {
+  padding: .75rem .9rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid #e8eef5 !important;
+}
+.sched-box td.label {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  font-weight: 650;
+}
+.box {
+  border: 1px solid var(--portal-border) !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, .05);
+  overflow: hidden;
+}
+.box table { background: #fff; }
+.box th,
+.box td {
+  border-color: #e2e8f0 !important;
+  padding: .55rem .7rem;
+}
+.trade-table,
+.res-table,
+.slip-table {
+  border-color: #dbe4ee !important;
+  background: #fff !important;
+}
+.trade-table th,
+.res-table th,
+.slip-table th,
+.verify-box .head {
+  background: var(--portal-navy) !important;
+  color: #fff !important;
+}
+.trade-table td,
+.res-table td,
+.slip-table td,
+.trade-table th,
+.res-table th,
+.slip-table th {
+  border-color: #e2e8f0 !important;
+}
+.reset-btn {
+  background: #64748b !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  color: #fff !important;
+  padding: .65rem 1.2rem !important;
+  font-weight: 650 !important;
+}
+.print-btn {
+  background: var(--portal-primary) !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  color: #fff !important;
+  padding: .65rem 1.2rem !important;
+  font-weight: 650 !important;
+}
+.page-header {
+  background: linear-gradient(90deg, var(--portal-navy), var(--portal-primary)) !important;
+  color: #fff !important;
+  border-radius: 12px;
+  margin: 1.25rem auto;
+  max-width: 1100px;
+}
+.page-header h1,
+.page-header p { color: #fff !important; }
+.disclaimer-card {
+  max-width: min(100% - 2rem, 900px) !important;
+  margin: 1.5rem auto !important;
+  padding: clamp(1.25rem, 3vw, 2rem) !important;
+  border: 1px solid var(--portal-border) !important;
+  border-top: 5px solid var(--portal-primary) !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
+}
+.disclaimer-card h2 {
+  color: var(--portal-navy) !important;
+  border-bottom-color: var(--portal-primary) !important;
+}
+@media (max-width: 767.98px) {
+  .sched-box { width: calc(100% - 1.25rem) !important; }
+}
