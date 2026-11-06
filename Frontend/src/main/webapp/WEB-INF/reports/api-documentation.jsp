@@ -37,6 +37,7 @@
     </style>
     <script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery.min.js"></script>
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal-theme.css?v=2">
+    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
     <%@ include file="header.jsp" %>
