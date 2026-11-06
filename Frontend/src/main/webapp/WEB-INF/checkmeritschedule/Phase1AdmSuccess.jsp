@@ -12,7 +12,7 @@
         <c:set var="admNo" value="${empty adm_num ? sessionScope.adm_num : adm_num}" />
         <main class="success-panel">
             <div class="text-success mb-3" style="font-size:2.5rem;" aria-hidden="true">
-                <i class="fas fa-check-circle"></i>
+                ✓
             </div>
             <h1 class="h3 fw-bold" style="color:#003366;">Admission completed successfully</h1>
             <p class="text-muted mb-2">The candidate has been admitted successfully.</p>
