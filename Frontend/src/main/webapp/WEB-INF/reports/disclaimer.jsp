@@ -30,9 +30,7 @@
             line-height: 1.6;
             color: #333;
         }
-    </style>
-    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
-</head>
+    </style></head>
 <body>
     <%@ include file="header.jsp" %>
     <div class="disclaimer-card">
