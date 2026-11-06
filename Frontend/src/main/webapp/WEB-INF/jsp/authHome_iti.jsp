@@ -146,10 +146,7 @@
     </style>
 </head>
 <body>
-    <%@ include file="bannernew.jsp" %>
-
-<!-- ITI Navbar -->
-    <%@ include file="../navbars/iti_navbar.jsp" %>
+    <jsp:include page="/WEB-INF/reports/header.jsp" />
 
     <div class="main-dashboard-content">
         <div class="container py-4">
