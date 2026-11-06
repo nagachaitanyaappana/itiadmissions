@@ -579,7 +579,7 @@ body .api-badge {
 :root {
     --portal-navbar-blue: #2f6fa5;
     --portal-navbar-hover: #1e4f7a;
-    --portal-navbar-height: 44px;
+    --portal-navbar-height: 38px;
 }
 
 body .custom-navbar,
@@ -610,7 +610,7 @@ body .authenticated-navbar .nav-menu > li > .nav-link,
 body #menu-bar > li > a {
     display: block !important;
     min-height: var(--portal-navbar-height);
-    padding: 8px 14px !important;
+    padding: 5px 14px !important;
     color: #ffffff !important;
     background: var(--portal-navbar-blue) !important;
     font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
@@ -853,7 +853,7 @@ body #menu-bar .welcome-highlight {
 /* ---- Shared Bootstrap navbar structure for role dashboards ---- */
 body .role-dashboard-navbar {
     width: 100%;
-    min-height: 44px;
+    min-height: 38px;
     padding: 0;
 }
 
@@ -878,7 +878,7 @@ body .role-dashboard-navbar .nav-menu > .nav-item {
 body .role-dashboard-navbar .nav-menu > .nav-item > .nav-link {
     display: flex;
     align-items: center;
-    min-height: 44px;
+    min-height: 38px;
 }
 
 /* Role identity is a separate announcement row, like the public homepage. */
