@@ -610,9 +610,10 @@ body #menu-bar > li.welcome-tag {
 body .custom-navbar .nav-menu > li > .nav-link,
 body .authenticated-navbar .nav-menu > li > .nav-link,
 body #menu-bar > li > a {
-    display: block !important;
+    display: flex !important;
+    align-items: center !important;
     min-height: var(--portal-navbar-height);
-    padding: 3px 14px !important;
+    padding: 0 14px !important;
     color: #ffffff !important;
     background: var(--portal-navbar-blue) !important;
     font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
