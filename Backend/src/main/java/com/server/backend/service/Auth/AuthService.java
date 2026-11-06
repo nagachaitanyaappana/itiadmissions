@@ -18,10 +18,12 @@ public class AuthService {
 
     private final LoginUserRepository repo;
     private final JdbcTemplate jdbc;
+    private final JwtTokenService jwtTokens;
 
-    public AuthService(LoginUserRepository repo, JdbcTemplate jdbc) {
+    public AuthService(LoginUserRepository repo, JdbcTemplate jdbc, JwtTokenService jwtTokens) {
         this.repo = repo;
         this.jdbc = jdbc;
+        this.jwtTokens = jwtTokens;
     }
 
     public Map<String, Object> login(String username, String rawPassword, String ip, String sessionId) {
@@ -109,6 +111,11 @@ public class AuthService {
                 res.put("distName", "");
             }
         }
+        JwtTokenService.IssuedToken issued = jwtTokens.issue(
+                user.getUserName(), user.getRoleId(), user.getDistCode());
+        res.put("accessToken", issued.value());
+        res.put("expiresAt", issued.expiresAt().toString());
+        res.put("tokenType", "Bearer");
         return res;
     }
 
