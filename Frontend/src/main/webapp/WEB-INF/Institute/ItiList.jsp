@@ -41,9 +41,7 @@
             border: 1px solid #dee2e6;
         }
     </style>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
-    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
-</head>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css"></head>
 
 <body>
     <!-- Global Header -->
