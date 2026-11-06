@@ -6,6 +6,9 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,6 +27,9 @@ public class LoginController {
     private final RestTemplate rest = new RestTemplate();
     @Value("${backend.api.base-url}/api/auth/login")
     private String AUTH_URL;
+
+    @Value("${app.internal-auth.secret:}")
+    private String internalApiSecret;
 
     // Developer shortcut is disabled by default; enable only in trusted local development.
     @Value("${app.auth.dev-login-enabled:false}")
@@ -110,8 +116,16 @@ public class LoginController {
             payload.put("password", pwd == null ? "" : pwd);
             payload.put("ip", request.getRemoteAddr() == null ? "" : request.getRemoteAddr());
             payload.put("sessionId", request.getSession().getId());
+            if (internalApiSecret == null || internalApiSecret.length() < 32) {
+                org.slf4j.LoggerFactory.getLogger(LoginController.class)
+                        .error("Internal API authentication is not configured; refusing Backend login call.");
+                return null;
+            }
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("X-Internal-Service-Key", internalApiSecret);
             ResponseEntity<AuthResponse> response =
-                    rest.postForEntity(AUTH_URL, payload, AuthResponse.class);
+                    rest.postForEntity(AUTH_URL, new HttpEntity<>(payload, headers), AuthResponse.class);
             AuthResponse body = response.getBody();
             return body == null ? null : body.toMap();
         } catch (Exception e) {
