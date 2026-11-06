@@ -44,6 +44,7 @@ body{font-family:Verdana,Arial,sans-serif;background:#fff;padding-bottom:120px;}
 #footer a{color:#fff;}
 @media print{#footer,.no-print{display:none;}}
 </style>
+    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
 <br/>
