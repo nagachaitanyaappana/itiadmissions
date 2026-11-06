@@ -20,11 +20,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * localhost development origins. Deployments must set {@code CORS_ALLOWED_ORIGINS} to a
  * comma-separated allowlist of exact trusted UI origins.
  *
- * <p>{@code allowCredentials(true)} must stay: the JSPs fetch with {@code credentials: 'include'},
- * and the browser rejects such a response unless it carries
- * {@code Access-Control-Allow-Credentials: true}, which {@code @CrossOrigin} alone never emitted.
- * A literal {@code *} cannot be combined with credentials, so the wildcard is applied through
- * {@code allowedOriginPatterns} — Spring then echoes the concrete origin instead of {@code *}.
+ * <p>Credentialed CORS must use exact origins. A wildcard is rejected at startup rather than
+ * silently turning every website into a trusted origin.
  */
 @Configuration
 public class CorsConfig {
@@ -61,16 +58,15 @@ public class CorsConfig {
 
         if (origins.isEmpty()) {
             logger.warn("app.cors.allowed-origins is empty — denying every cross-origin request. "
-                    + "Set it to '*' for development or to a comma-separated list of origins.");
+                    + "Set an explicit comma-separated list of trusted origins.");
             registration.allowedOrigins(new String[0]);
             return;
         }
 
         if (origins.contains("*")) {
-            logger.error("app.cors.allowed-origins is '*' — every website may send credentialed "
-                    + "cross-origin requests. Configure an explicit origin allowlist.");
-            registration.allowedOriginPatterns("*");
-            return;
+            throw new IllegalStateException(
+                    "Wildcard CORS origins are forbidden when credentials are enabled. "
+                    + "Configure CORS_ALLOWED_ORIGINS with exact trusted origins.");
         }
 
         logger.info("CORS allowed origins: {}", origins);
