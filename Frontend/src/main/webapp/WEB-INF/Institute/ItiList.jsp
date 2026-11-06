@@ -47,7 +47,7 @@
 <body>
     <!-- Global Header -->
     <header>
-        <%@ include file="../bannernew.jsp" %>
+        <%@ include file="../reports/header.jsp" %>
     </header>
 
     <div class="container-fluid px-5 mt-4 mb-5" style="min-height: 50vh;">
