@@ -61,7 +61,8 @@ public class BackendGatewayController {
         if (internalApiSecret == null || internalApiSecret.length() < 32)
             return ResponseEntity.status(503).build();
         if (requiresCsrf(methodName) && !validCsrfToken(
-                cookie(request, "ITIAP_CSRF_TOKEN"), request.getHeader("X-CSRF-TOKEN"), internalApiSecret))
+                accessToken, cookie(request, "ITIAP_CSRF_TOKEN"),
+                request.getHeader("X-CSRF-TOKEN"), internalApiSecret))
             return ResponseEntity.status(403).build();
 
         String requestPath = request.getRequestURI().substring(request.getContextPath().length());
@@ -113,23 +114,12 @@ public class BackendGatewayController {
                 || "OPTIONS".equalsIgnoreCase(method));
     }
 
-    static boolean validCsrfToken(String cookieToken, String supplied, String secret) {
-        if (cookieToken == null || supplied == null || secret == null || secret.length() < 32
-                || cookieToken.isBlank() || !MessageDigest.isEqual(
-                    cookieToken.getBytes(StandardCharsets.UTF_8),
-                    supplied.getBytes(StandardCharsets.UTF_8))) return false;
-        int separator = cookieToken.lastIndexOf('.');
-        if (separator <= 0 || separator == cookieToken.length() - 1) return false;
-        String nonce = cookieToken.substring(0, separator);
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            byte[] expected = mac.doFinal(nonce.getBytes(StandardCharsets.UTF_8));
-            byte[] actual = Base64.getUrlDecoder().decode(cookieToken.substring(separator + 1));
-            return MessageDigest.isEqual(expected, actual);
-        } catch (Exception ex) {
-            return false;
-        }
+    static boolean validCsrfToken(String accessToken, String cookieToken,
+                                  String supplied, String secret) {
+        if (cookieToken == null || supplied == null || !MessageDigest.isEqual(
+                cookieToken.getBytes(StandardCharsets.UTF_8),
+                supplied.getBytes(StandardCharsets.UTF_8))) return false;
+        return CsrfTokenController.valid(accessToken, cookieToken, secret);
     }
 
     static boolean safePath(String path) {
