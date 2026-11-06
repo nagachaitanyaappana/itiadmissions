@@ -1,14 +1,12 @@
 <%@ page contentType="text/html; charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<!DOCTYPE html>
-<%@include file='/WEB-INF/legacy/header.jsp' %>
-<jsp:include page="/WEB-INF/reports/header.jsp" />
-<html>
+<!DOCTYPE html><html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>JSP Page</title>
     </head>
     <body>
+        <jsp:include page="/WEB-INF/reports/header.jsp" />
         <center>
             <c:set var="admNo" value="${empty adm_num ? sessionScope.adm_num : adm_num}" />
             Candiate Admitted with Admission Number:${admNo}<br><br>
