@@ -39,6 +39,7 @@
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal-theme.css?v=2">
 </head>
 <body>
+    <%@ include file="header.jsp" %>
     <div class="page-header">
         <h1>ITI Admission API Documentation</h1>
         <p>Interactive Swagger UI embedded as an application page</p>
