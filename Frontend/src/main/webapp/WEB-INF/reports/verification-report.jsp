@@ -29,7 +29,7 @@
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal-theme.css?v=2">
 </head>
 <body class="nodal-body">
-    <c:set var="hideNavbar" value="true" scope="request" />
+    <%-- Use the shared portal navbar on this report, matching the ITI Profile page. --%>
     <%@ include file="header.jsp" %>
     <c:set var="activeTab" value="district_app_count" />
     <div class="nodal-page-title-dashboard"><h2>Verification Report</h2></div>
