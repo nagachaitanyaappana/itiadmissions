@@ -58,7 +58,7 @@
             }
         </script>
     </head>
-    <body>
+    <body class="legacy-admission-page">
         <jsp:include page="/WEB-INF/reports/header.jsp" />
 
     <center><h3>ITI Admissions For AUGUST, ${student.year_of_admission}</h3></center><br/>
