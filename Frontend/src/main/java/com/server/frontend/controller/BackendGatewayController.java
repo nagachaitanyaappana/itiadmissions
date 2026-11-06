@@ -9,15 +9,16 @@ import java.util.Set;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
@@ -45,15 +46,14 @@ public class BackendGatewayController {
     private String internalApiSecret;
 
     public BackendGatewayController(
-            RestTemplateBuilder restTemplateBuilder,
             @Value("${backend.api.base-url}") String backendBaseUrl,
             @Value("${backend.gateway.connect-timeout:3s}") Duration connectTimeout,
             @Value("${backend.gateway.read-timeout:30s}") Duration readTimeout) {
         this.backendBaseUrl = backendBaseUrl;
-        this.rest = restTemplateBuilder
-                .connectTimeout(connectTimeout)
-                .readTimeout(readTimeout)
-                .build();
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(connectTimeout);
+        requestFactory.setReadTimeout(readTimeout);
+        this.rest = new RestTemplate(requestFactory);
     }
 
     @RequestMapping("/backend/**")
