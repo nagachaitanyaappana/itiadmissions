@@ -1,10 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<!DOCTYPE html>
-<%@include file='/WEB-INF/legacy/header.jsp' %>
-<jsp:include page="/WEB-INF/reports/header.jsp" />
-
-<html>
+<!DOCTYPE html><html>
     <head>
         <jsp:include page="/WEB-INF/jsp/_api_base_url.jsp"/>
         <script language="javascript" type="text/javascript">
@@ -33,6 +29,7 @@
         </script>
     </head>
     <body>
+        <jsp:include page="/WEB-INF/reports/header.jsp" />
         <center><h1>Admission Counseling</h1><font color="red">${errorMsg}</font></center>
         <table width="400" border="0" align="center" >
             <tr>
