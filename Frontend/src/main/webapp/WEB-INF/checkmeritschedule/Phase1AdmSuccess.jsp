@@ -4,7 +4,8 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>JSP Page</title>
-    </head>
+        <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
+</head>
     <body class="legacy-success-page">
         <jsp:include page="/WEB-INF/reports/header.jsp" />
         <center>
