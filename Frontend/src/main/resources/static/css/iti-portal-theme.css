@@ -788,3 +788,63 @@ body #menu-bar .welcome-highlight {
         max-height: 60vh;
     }
 }
+
+
+/* ---- 8. Role welcome strip: match the public homepage announcement row ---- */
+body #menu-bar {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+body #menu-bar > li.welcome-tag {
+    display: flex !important;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    margin: 0 !important;
+    padding: 0 20px !important;
+    background: #145a67 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.7) !important;
+    border-right: 0 !important;
+}
+
+body #menu-bar .welcome-badge {
+    display: inline-flex !important;
+    max-width: min(100%, 520px);
+    padding: 6px 0 !important;
+    color: #ffffff !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+}
+
+body #menu-bar .welcome-highlight {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.55);
+    text-underline-offset: 3px;
+}
+
+@media (max-width: 1199.98px) {
+    body #menu-bar > li.welcome-tag {
+        flex: 0 0 100% !important;
+        justify-content: flex-end !important;
+        margin: 0 !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    body #menu-bar > li.welcome-tag {
+        justify-content: center !important;
+        padding: 0 12px !important;
+    }
+
+    body #menu-bar .welcome-badge {
+        white-space: normal;
+        text-align: center;
+    }
+}
