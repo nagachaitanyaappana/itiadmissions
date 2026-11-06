@@ -1,11 +1,13 @@
 package com.server.frontend.controller;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Set;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -32,13 +34,24 @@ public class BackendGatewayController {
             Set.of("content-type", "content-disposition", "cache-control", "etag",
                     "last-modified", "accept-ranges", "content-range");
 
-    private final RestTemplate rest = new RestTemplate();
+    private final RestTemplate rest;
 
-    @Value("${backend.api.base-url}")
-    private String backendBaseUrl;
+    private final String backendBaseUrl;
 
     @Value("${app.internal-auth.secret:}")
     private String internalApiSecret;
+
+    public BackendGatewayController(
+            RestTemplateBuilder restTemplateBuilder,
+            @Value("${backend.api.base-url}") String backendBaseUrl,
+            @Value("${backend.gateway.connect-timeout:3s}") Duration connectTimeout,
+            @Value("${backend.gateway.read-timeout:30s}") Duration readTimeout) {
+        this.backendBaseUrl = backendBaseUrl;
+        this.rest = restTemplateBuilder
+                .connectTimeout(connectTimeout)
+                .readTimeout(readTimeout)
+                .build();
+    }
 
     @RequestMapping("/backend/**")
     public ResponseEntity<byte[]> proxy(HttpServletRequest request) throws IOException {
@@ -54,7 +67,11 @@ public class BackendGatewayController {
             return ResponseEntity.status(503).build();
         }
 
-        String path = request.getRequestURI().substring("/backend".length());
+        String requestPath = request.getRequestURI().substring(request.getContextPath().length());
+        if (!requestPath.startsWith("/backend/")) {
+            return ResponseEntity.badRequest().build();
+        }
+        String path = requestPath.substring("/backend".length());
         if (!safePath(path)) {
             return ResponseEntity.badRequest().build();
         }
@@ -91,9 +108,11 @@ public class BackendGatewayController {
         return new ResponseEntity<>(body, safe, status);
     }
 
-    private static boolean safePath(String path) {
+    static boolean safePath(String path) {
         if (path == null || !path.startsWith("/") || path.startsWith("//")
-                || path.contains("\\") || path.contains("..") || path.indexOf(0) >= 0) {
+                || path.contains("\\") || path.contains("..") || path.indexOf(0) >= 0
+                || path.indexOf('\r') >= 0 || path.indexOf('\n') >= 0
+                || path.matches("(?i).*%(2f|5c|2e|25).*")) {
             return false;
         }
         String lower = path.toLowerCase();
