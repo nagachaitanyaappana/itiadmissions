@@ -7,6 +7,26 @@ import static org.junit.jupiter.api.Assertions.*;
 class BackendGatewayControllerTest {
 
     @Test
+    void requiresCsrfForStateChangingMethodsOnly() {
+        assertTrue(BackendGatewayController.requiresCsrf("POST"));
+        assertTrue(BackendGatewayController.requiresCsrf("PUT"));
+        assertTrue(BackendGatewayController.requiresCsrf("PATCH"));
+        assertTrue(BackendGatewayController.requiresCsrf("DELETE"));
+        assertFalse(BackendGatewayController.requiresCsrf("GET"));
+        assertFalse(BackendGatewayController.requiresCsrf("HEAD"));
+        assertFalse(BackendGatewayController.requiresCsrf("OPTIONS"));
+    }
+
+    @Test
+    void validatesCsrfTokensWithoutAcceptingMissingOrMismatchedValues() {
+        assertTrue(BackendGatewayController.validCsrfToken("session-token", "session-token"));
+        assertFalse(BackendGatewayController.validCsrfToken("session-token", "attacker-token"));
+        assertFalse(BackendGatewayController.validCsrfToken("session-token", null));
+        assertFalse(BackendGatewayController.validCsrfToken(null, "session-token"));
+        assertFalse(BackendGatewayController.validCsrfToken("", ""));
+    }
+
+    @Test
     void acceptsNormalBackendApiPaths() {
         assertTrue(BackendGatewayController.safePath("/api/districts"));
         assertTrue(BackendGatewayController.safePath("/api/student/12345"));
