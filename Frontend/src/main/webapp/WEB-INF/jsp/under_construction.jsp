@@ -12,31 +12,9 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
 </head>
 <body class="portal-page">
-    <center>
-        <img src="${pageContext.request.contextPath}/images/gen.jpg" id="banner-id" width="100%" alt="ITI Banner" />
-    </center>
+    <jsp:include page="/WEB-INF/reports/header.jsp" />
 
-    <c:choose>
-        <c:when test="${not empty sessionScope.roleId}">
-            <c:choose>
-                <c:when test="${sessionScope.roleId eq 4 or sessionScope.roleId eq '4'}">
-                    <%@ include file="../navbars/iti_navbar.jsp" %>
-                </c:when>
-                <c:when test="${sessionScope.roleId eq 3 or sessionScope.roleId eq '3'}">
-                    <%@ include file="../navbars/district_navbar.jsp" %>
-                </c:when>
-                <c:when test="${sessionScope.roleId eq 10 or sessionScope.roleId eq '10'}">
-                    <%@ include file="../navbars/nodal_navbar.jsp" %>
-                </c:when>
-                <c:otherwise>
-                    <%@ include file="../navbars/state_navbar.jsp" %>
-                </c:otherwise>
-            </c:choose>
-        </c:when>
-        <c:otherwise>
-            <%@ include file="../navbars/index_navbar.jsp" %>
-        </c:otherwise>
-    </c:choose>
+
 
     <div class="container my-5">
         <div class="card shadow-sm border-0 text-center mx-auto" style="max-width: 580px; padding: 35px 25px; border-radius: 12px; background: #ffffff;">
