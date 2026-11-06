@@ -21,6 +21,15 @@
                     <%@ include file="../navbars/state_navbar.jsp" %>
                 </c:otherwise>
             </c:choose>
+            <div class="news-marquee">
+                <div class="marquee-content">
+                    <img src="${pageContext.request.contextPath}/images/new.gif" alt="new" style="height: 20px;">
+                    <span class="text-white">Welcome to AP ITI Admission Portal</span>
+                    <span class="mx-3 text-white">|</span>
+                    <img src="${pageContext.request.contextPath}/images/new.gif" alt="new" style="height: 20px;">
+                    <span class="text-white">AP ITI అడ్మిషన్ పోర్టల్ కు స్వాగతం..</span>
+                </div>
+            </div>
         </c:when>
         <%-- anonymous visitors receive the same public navbar and welcome marquee as the homepage. --%>
         <c:otherwise>
