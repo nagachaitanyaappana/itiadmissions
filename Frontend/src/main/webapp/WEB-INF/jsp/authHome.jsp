@@ -65,13 +65,7 @@
     </style>
 </head>
 <body>
-
-    <!-- Header Banner -->
-    <center>
-        <img src="${pageContext.request.contextPath}/images/gen.jpg" width="100%" alt="ITI Portal Banner" />
-    </center>
-
-    <!-- Header with dynamic navbar inclusion based on role -->
+<!-- Header with dynamic navbar inclusion based on role -->
     <%@ include file="../reports/header.jsp" %>
 
     <div class="main-dashboard-content">
