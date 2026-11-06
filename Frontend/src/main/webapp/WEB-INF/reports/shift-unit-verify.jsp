@@ -120,9 +120,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', loadItis);
-    </script>
-    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
-</head>
+    </script></head>
 <body>
     <%@ include file="header.jsp" %>
     <div class="container mt-4">
