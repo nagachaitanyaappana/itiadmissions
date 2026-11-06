@@ -1,10 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<%@include file='/WEB-INF/legacy/header.jsp' %>
-<jsp:include page="/WEB-INF/reports/header.jsp" />
-
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN"><html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>JSP Page</title>
@@ -63,6 +59,7 @@
         </script>
     </head>
     <body>
+        <jsp:include page="/WEB-INF/reports/header.jsp" />
 
     <center><h3>ITI Admissions For AUGUST, ${student.year_of_admission}</h3></center><br/>
 
