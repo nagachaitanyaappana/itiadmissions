@@ -848,3 +848,121 @@ body #menu-bar .welcome-highlight {
         text-align: center;
     }
 }
+
+
+/* ---- Shared Bootstrap navbar structure for role dashboards ---- */
+body .role-dashboard-navbar {
+    width: 100%;
+    min-height: 44px;
+    padding: 0;
+}
+
+body .role-dashboard-navbar .container-fluid {
+    justify-content: center;
+}
+
+body .role-dashboard-navbar .navbar-collapse {
+    justify-content: center;
+}
+
+body .role-dashboard-navbar .nav-menu {
+    justify-content: center;
+    align-items: stretch;
+}
+
+body .role-dashboard-navbar .nav-menu > .nav-item {
+    display: flex;
+    align-items: stretch;
+}
+
+body .role-dashboard-navbar .nav-menu > .nav-item > .nav-link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+}
+
+/* Role identity is a separate announcement row, like the public homepage. */
+body .role-welcome-strip {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    min-height: 38px;
+    padding: 4px 20px;
+    color: #ffffff;
+    background: #145a67;
+    border-top: 1px solid rgba(255, 255, 255, 0.75);
+    box-sizing: border-box;
+}
+
+body .role-welcome-content {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    max-width: 100%;
+}
+
+body .role-welcome-strip .welcome-badge {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 7px;
+    max-width: min(100%, 700px);
+    padding: 0 !important;
+    overflow-wrap: anywhere;
+    color: #ffffff !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+    white-space: normal;
+}
+
+body .role-welcome-strip .welcome-badge i,
+body .role-welcome-strip .welcome-badge strong {
+    color: #ffffff !important;
+}
+
+body .role-welcome-strip .welcome-highlight {
+    display: inline-block;
+    padding: 3px 10px;
+    color: #002b49 !important;
+    background: #ffeb3b !important;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: none !important;
+}
+
+@media (max-width: 991.98px) {
+    body .role-dashboard-navbar .navbar-collapse {
+        padding: 4px 0 8px;
+    }
+
+    body .role-dashboard-navbar .nav-menu {
+        width: 100%;
+        align-items: stretch;
+    }
+
+    body .role-dashboard-navbar .nav-menu > .nav-item {
+        justify-content: center;
+        border-right: 0 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+
+    body .role-dashboard-navbar .nav-menu > .nav-item > .nav-link {
+        justify-content: center;
+        min-height: 40px;
+    }
+
+    body .role-welcome-strip {
+        justify-content: center;
+        text-align: center;
+        padding: 6px 12px;
+    }
+
+    body .role-welcome-content {
+        justify-content: center;
+    }
+}
