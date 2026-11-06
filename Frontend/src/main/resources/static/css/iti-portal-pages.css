@@ -501,3 +501,60 @@ body.legacy-success-page .success-panel {
 @media (max-width: 767.98px) {
   .sched-box { width: calc(100% - 1.25rem) !important; }
 }
+
+
+/* Old report modules still render the legacy #menu-bar markup. Match it to
+   the same blue navigation used by the homepage and role dashboards. */
+#menu-bar {
+  width: 100% !important;
+  min-height: 42px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  background: var(--portal-primary) !important;
+  border: 0 !important;
+  border-top: 2px solid #fff !important;
+  border-bottom: 2px solid var(--portal-primary-dark) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .08) !important;
+}
+#menu-bar li {
+  float: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-right: 1px solid rgba(255,255,255,.22);
+}
+#menu-bar a {
+  display: block;
+  margin: 0 !important;
+  padding: 10px 16px !important;
+  border-radius: 0 !important;
+  background: var(--portal-primary) !important;
+  color: #fff !important;
+  font: 500 14px "Segoe UI", Roboto, Arial, sans-serif !important;
+  text-decoration: none;
+}
+#menu-bar li:hover > a,
+#menu-bar .active a,
+#menu-bar ul a:hover {
+  background: var(--portal-primary-dark) !important;
+  color: #fff !important;
+}
+#menu-bar ul {
+  background: #fff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,.15) !important;
+}
+#menu-bar ul a {
+  background: #fff !important;
+  color: #334155 !important;
+}
+#menu-bar ul a:hover {
+  background: var(--portal-primary) !important;
+  color: #fff !important;
+}
