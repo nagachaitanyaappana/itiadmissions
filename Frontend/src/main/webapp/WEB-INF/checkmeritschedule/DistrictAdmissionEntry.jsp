@@ -28,7 +28,7 @@
             }
         </script>
     </head>
-    <body>
+    <body class="legacy-admission-page">
         <jsp:include page="/WEB-INF/reports/header.jsp" />
         <center><h1>Admission Counseling</h1><font color="red">${errorMsg}</font></center>
         <table width="400" border="0" align="center" >
