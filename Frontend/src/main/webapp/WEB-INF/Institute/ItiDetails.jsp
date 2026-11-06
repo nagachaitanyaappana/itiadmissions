@@ -84,6 +84,7 @@
         }
     </style>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
+    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>
 
 <body>
