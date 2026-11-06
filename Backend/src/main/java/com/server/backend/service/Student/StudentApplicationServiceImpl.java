@@ -513,13 +513,17 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
 
     /** img_cand_photos insert/replace, matching open_Application_InterfaceAction_Student lines 328-353. */
     private void writePhoto(Integer regid, byte[] photo, String contentType) {
-        if (regid == null || photo == null || photo.length == 0) {
-            return;
+        if (regid == null || photo == null || photo.length == 0) return;
+        if (photo.length > 5 * 1024 * 1024) {
+            throw new IllegalArgumentException("Photograph must not exceed 5 MB");
         }
-        boolean isPng = "image/png".equalsIgnoreCase(contentType);
-        boolean isJpeg = "image/jpeg".equalsIgnoreCase(contentType);
-        if (!isPng && !isJpeg) {
-            throw new IllegalArgumentException("Photograph must be a PNG or JPEG image");
+        boolean png = photo.length >= 8 && (photo[0] & 255) == 137
+                && photo[1] == 80 && photo[2] == 78 && photo[3] == 71
+                && photo[4] == 13 && photo[5] == 10 && photo[6] == 26 && photo[7] == 10;
+        boolean jpeg = photo.length >= 3 && (photo[0] & 255) == 255
+                && (photo[1] & 255) == 216 && (photo[2] & 255) == 255;
+        if (!png && !jpeg) {
+            throw new IllegalArgumentException("Photograph must be a valid PNG or JPEG image");
         }
         Integer existing = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM public.img_cand_photos WHERE regid = ?", Integer.class, regid);
