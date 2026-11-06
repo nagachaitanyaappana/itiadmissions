@@ -106,9 +106,7 @@
             color: #000000 !important;
         }
     </style>
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/iti-portal.css">
-    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
-</head>
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/css/iti-portal.css"></head>
 <body>
 
     <jsp:include page="/WEB-INF/reports/header.jsp" />
