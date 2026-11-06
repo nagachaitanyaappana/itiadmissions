@@ -50,6 +50,7 @@
     .cl-letter:last-child { page-break-after:auto; }
   }
 </style>
+    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
 <br/>
