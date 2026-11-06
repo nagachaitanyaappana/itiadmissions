@@ -5,7 +5,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>JSP Page</title>
     </head>
-    <body>
+    <body class="legacy-success-page">
         <jsp:include page="/WEB-INF/reports/header.jsp" />
         <center>
             <c:set var="admNo" value="${empty adm_num ? sessionScope.adm_num : adm_num}" />
