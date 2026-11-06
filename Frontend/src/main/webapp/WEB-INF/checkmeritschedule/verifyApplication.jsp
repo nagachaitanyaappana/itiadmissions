@@ -134,9 +134,7 @@
         .radio-group { display: inline-flex; gap: 16px; align-items: center; }
         .radio-group label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-weight: normal; }
         .readonly { background: #f5f5f5; }
-    </style>
-    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
-</head>
+    </style></head>
 <body onload="initPage()">
     <jsp:include page="/WEB-INF/reports/header.jsp" />
 
