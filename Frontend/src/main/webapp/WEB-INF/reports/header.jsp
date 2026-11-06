@@ -22,10 +22,7 @@
                 </c:otherwise>
             </c:choose>
         </c:when>
-        <%-- anonymous: banner + welcome marquee only (NO navbar yet).
-            openNavbar.jsp belongs to the admission / checkmeritschedule
-            modules and must keep its own design - reports must not depend
-            on it. A reports-specific navbar will be designed separately. --%>
+        <%-- anonymous visitors receive the same public navbar and welcome marquee as the homepage. --%>
         <c:otherwise>
             <c:if test="${empty hideNavbar or hideNavbar.toString() == 'false' or hideNavbar.toString() == '0'}">
                 <%@ include file="../navbars/openNavbar.jsp" %>
