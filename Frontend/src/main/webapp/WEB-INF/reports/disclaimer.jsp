@@ -31,6 +31,7 @@
             color: #333;
         }
     </style>
+    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
     <%@ include file="header.jsp" %>
