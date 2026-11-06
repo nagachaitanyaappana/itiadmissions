@@ -90,7 +90,7 @@
 
     <!-- Header -->
     <header>
-        <%@ include file="../bannernew.jsp" %>
+        <%@ include file="../reports/header.jsp" %>
     </header>
 
 
