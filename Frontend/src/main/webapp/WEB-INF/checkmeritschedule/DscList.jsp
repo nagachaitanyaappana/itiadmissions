@@ -75,9 +75,7 @@
             margin-bottom: 15px;
         }
     </style>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css">
-    <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
-</head>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/iti-portal.css"></head>
 <body class="bg-light">
     <!-- Header Content -->
     <jsp:include page="/WEB-INF/reports/header.jsp" />
