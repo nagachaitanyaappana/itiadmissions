@@ -5,6 +5,8 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.Cookie;
+import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -46,7 +48,7 @@ public class LoginController {
                         @RequestParam(value = "captcha", required = false) String captcha,
                         @RequestParam(value = "redirect", required = false) String redirectTo,
                         @RequestParam(value = "dev", required = false, defaultValue = "false") boolean devLogin,
-                        HttpServletRequest request) {
+                        HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) {
 
         // 1. captcha must match the one generated for this session.
         //    The dev index (/dev) posts here without a captcha, so that single
@@ -75,6 +77,18 @@ public class LoginController {
         // successful authentication before storing any authenticated identity.
         HttpSession session = request.getSession(true);
         request.changeSessionId();
+        Object accessToken = result.get("accessToken");
+        if (!(accessToken instanceof String token) || token.isBlank()) {
+            session.invalidate();
+            return devLogin ? "redirect:/dev/login?error=server" : "redirect:/?error=server";
+        }
+        Cookie accessCookie = new Cookie("ITIAP_ACCESS_TOKEN", token);
+        accessCookie.setHttpOnly(true);
+        accessCookie.setSecure(Boolean.parseBoolean(System.getenv().getOrDefault("SESSION_COOKIE_SECURE", "false")));
+        accessCookie.setPath("/");
+        accessCookie.setMaxAge(15 * 60);
+        accessCookie.setAttribute("SameSite", "Lax");
+        response.addCookie(accessCookie);
         session.setAttribute("sessionUser", result);
         session.setAttribute("username", result.get("username"));
         session.setAttribute("roleId", result.get("roleId"));
@@ -101,11 +115,18 @@ public class LoginController {
     }
 
     @GetMapping("/logout")
-    public String logout(HttpServletRequest request) {
+    public String logout(HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) {
         HttpSession activeSession = request.getSession(false);
         if (activeSession != null) {
             activeSession.invalidate();
         }
+        Cookie expired = new Cookie("ITIAP_ACCESS_TOKEN", "");
+        expired.setHttpOnly(true);
+        expired.setSecure(Boolean.parseBoolean(System.getenv().getOrDefault("SESSION_COOKIE_SECURE", "false")));
+        expired.setPath("/");
+        expired.setMaxAge(0);
+        expired.setAttribute("SameSite", "Lax");
+        response.addCookie(expired);
         return "redirect:/";
     }
 
