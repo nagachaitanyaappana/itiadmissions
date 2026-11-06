@@ -16,10 +16,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * The single place CORS is configured. The former per-controller {@code @CrossOrigin} annotations
  * were inert duplicates of this class and were removed — see WRONG_IMPLEMENTATIONS.md §6.
  *
- * <p>Origins come from {@code app.cors.allowed-origins}. The default {@code *} keeps the local
- * wildcard that the sibling UI copies (ports 8080 / 8081) rely on. For a deployment, set the
- * property — or the {@code CORS_ALLOWED_ORIGINS} environment variable, mirroring the way the
- * Frontend reads {@code BACKEND_URL} — to a comma-separated list of real origins.
+ * <p>Origins come from {@code app.cors.allowed-origins}. The fallback is restricted to known
+ * localhost development origins. Deployments must set {@code CORS_ALLOWED_ORIGINS} to a
+ * comma-separated allowlist of exact trusted UI origins.
  *
  * <p>{@code allowCredentials(true)} must stay: the JSPs fetch with {@code credentials: 'include'},
  * and the browser rejects such a response unless it carries
@@ -33,10 +32,9 @@ public class CorsConfig {
     private static final Logger logger = LoggerFactory.getLogger(CorsConfig.class);
 
     /**
-     * Comma-separated list of allowed origins, or {@code *} for the development wildcard. An empty
-     * value denies every cross-origin request instead of quietly allowing all of them.
+     * Comma-separated list of allowed origins. An empty value denies every cross-origin request.
      */
-    @Value("${app.cors.allowed-origins:*}")
+    @Value("${app.cors.allowed-origins:http://localhost:5051,http://127.0.0.1:5051,http://localhost:6051,http://127.0.0.1:6051,http://localhost:8080,http://localhost:8081}")
     private String allowedOrigins;
 
     @Bean
@@ -69,8 +67,8 @@ public class CorsConfig {
         }
 
         if (origins.contains("*")) {
-            logger.warn("app.cors.allowed-origins is '*' — every origin is allowed and may send "
-                    + "credentials. Fine for local development; set it for a deployment.");
+            logger.error("app.cors.allowed-origins is '*' — every website may send credentialed "
+                    + "cross-origin requests. Configure an explicit origin allowlist.");
             registration.allowedOriginPatterns("*");
             return;
         }
