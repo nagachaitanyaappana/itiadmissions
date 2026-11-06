@@ -25,6 +25,10 @@ public class LoginController {
     @Value("${backend.api.base-url}/api/auth/login")
     private String AUTH_URL;
 
+    // Developer shortcut is disabled by default; enable only in trusted local development.
+    @Value("${app.auth.dev-login-enabled:false}")
+    private boolean devLoginEnabled;
+
     @GetMapping("/Login")
     public String loginPage() {
         return "jsp/Login";
@@ -41,7 +45,7 @@ public class LoginController {
         // 1. captcha must match the one generated for this session.
         //    The dev index (/dev) posts here without a captcha, so that single
         //    developer flow skips the check instead of dead-ending on error=captcha.
-        if (!devLogin && !CaptchaController.matches(request, captcha)) {
+        if (!(devLogin && devLoginEnabled) && !CaptchaController.matches(request, captcha)) {
             HttpSession stale = request.getSession(false);
             if (stale != null) {
                 stale.removeAttribute("sessionUser");
