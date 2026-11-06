@@ -27,7 +27,8 @@
                 return true;
             }
         </script>
-    </head>
+        <script src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
+</head>
     <body class="legacy-admission-page">
         <jsp:include page="/WEB-INF/reports/header.jsp" />
         <center><h1>Admission Counseling</h1><font color="red">${errorMsg}</font></center>
