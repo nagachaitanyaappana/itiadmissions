@@ -113,7 +113,7 @@
 </head>
 <body class="bg-light">
 
-    <jsp:include page="/WEB-INF/bannernew.jsp" />
+    <jsp:include page="/WEB-INF/jsp/bannernew.jsp" />
     <jsp:include page="/WEB-INF/authNavbar.jsp" />
     <%-- Defines window.API_BASE_URL. This page is isELIgnored="true", so '${backendBaseUrl}'
          would be emitted literally; the routed /ScheduleEntry page includes this same fragment. --%>
