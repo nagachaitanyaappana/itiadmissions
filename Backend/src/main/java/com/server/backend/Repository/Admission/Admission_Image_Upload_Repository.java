@@ -16,10 +16,12 @@ public interface Admission_Image_Upload_Repository
         FROM admissions.iti_admissions
         WHERE adm_num = :admissionNumber
           AND ssc_regno = :sscHallticketNumber
+          AND iti_code = :itiCode
         LIMIT 1
         """, nativeQuery = true)
     Optional<iti_admissions> findAdmissionForImageUpload(
             @Param("admissionNumber") String admissionNumber,
-            @Param("sscHallticketNumber") String sscHallticketNumber);
+            @Param("sscHallticketNumber") String sscHallticketNumber,
+            @Param("itiCode") String itiCode);
 
 }
