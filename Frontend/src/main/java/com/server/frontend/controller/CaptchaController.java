@@ -99,6 +99,30 @@ public class CaptchaController {
     }
 
     /**
+     * Login captcha is single-use. Count failed guesses against the current
+     * image so a caller cannot retry the same answer indefinitely.
+     */
+    static boolean consumeForLogin(HttpServletRequest request, String submitted) {
+        HttpSession session = request.getSession(false);
+        if (session == null) return false;
+        Object attemptsValue = session.getAttribute(ATTEMPTS_KEY);
+        int attempts = attemptsValue instanceof Number number ? number.intValue() : 0;
+        if (attempts >= MAX_ATTEMPTS) {
+            session.removeAttribute(SESSION_KEY);
+            return false;
+        }
+        if (!matches(request, submitted)) {
+            attempts++;
+            session.setAttribute(ATTEMPTS_KEY, attempts);
+            if (attempts >= MAX_ATTEMPTS) session.removeAttribute(SESSION_KEY);
+            return false;
+        }
+        session.removeAttribute(SESSION_KEY);
+        session.removeAttribute(ATTEMPTS_KEY);
+        return true;
+    }
+
+    /**
      * Validates and consumes the session captcha server-side. The expected
      * captcha text is never exposed to browser JavaScript.
      */
