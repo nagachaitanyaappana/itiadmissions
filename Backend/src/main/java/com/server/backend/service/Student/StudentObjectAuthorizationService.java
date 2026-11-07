@@ -51,6 +51,19 @@ public class StudentObjectAuthorizationService {
         }
     }
 
+    public boolean isItiInDistrict(String itiCode, String distCode) {
+        if (itiCode == null || itiCode.isBlank() || distCode == null || distCode.isBlank()) return false;
+        try {
+            return Boolean.TRUE.equals(jdbc.queryForObject(
+                    "SELECT EXISTS (SELECT 1 FROM public.iti "
+                            + "WHERE CAST(iti_code AS text) = ? AND CAST(dist_code AS text) = ?)",
+                    Boolean.class, itiCode.trim(), distCode.trim()));
+        } catch (org.springframework.dao.DataAccessException ex) {
+            log.warn("ITI district ownership could not be verified");
+            return false;
+        }
+    }
+
     private static String claim(Claims claims, String name) {
         Object value = claims.get(name);
         return value == null ? null : String.valueOf(value);
