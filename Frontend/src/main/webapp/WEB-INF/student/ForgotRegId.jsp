@@ -349,11 +349,13 @@
 
             // The captcha is checked and consumed on the server; its answer is never
             // exposed to JavaScript or a public text endpoint.
-            $.post('\${pageContext.request.contextPath}/captcha/verify', { captcha: entered })
+            $.post('${pageContext.request.contextPath}/captcha/verify', { captcha: entered })
                 .done(function () {
-                    $.get('\${pageContext.request.contextPath}/backend/api/student/lookup-regid', {
-                        ssc_regno: hallticket,
-                        dob: dob
+                    $.ajax({
+                        url: '${pageContext.request.contextPath}/backend/api/student/lookup-regid',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ ssc_regno: hallticket, dob: dob })
                     }).done(function (result) {
                         submitBtn.prop("disabled", false).html('<i class="fas fa-search"></i> Submit');
                         const regid = String(result && result.regid != null ? result.regid : "");
@@ -370,13 +372,13 @@
                             + '<p class="text-muted mb-1">Your Registration ID is:</p>'
                             + '<div class="regid-badge"><span style="font-size:1rem;color:#475569;display:block;font-weight:600;">Registration ID</span>' + regid + '</div>'
                             + '<div class="d-flex flex-wrap gap-2 justify-content-center">'
-                            + '  <a href="\${pageContext.request.contextPath}/student-apply" class="btn btn-primary-custom">'
+                            + '  <a href="${pageContext.request.contextPath}/student-apply" class="btn btn-primary-custom">'
                             + '    <i class="fas fa-paper-plane"></i> Apply for ITI'
                             + '  </a>'
-                            + '  <a href="\${pageContext.request.contextPath}/student-edit-details" class="btn btn-secondary-custom">'
+                            + '  <a href="${pageContext.request.contextPath}/student-edit-details" class="btn btn-secondary-custom">'
                             + '    <i class="fas fa-edit"></i> Edit Registration'
                             + '  </a>'
-                            + '  <a href="\${pageContext.request.contextPath}/" class="btn btn-secondary-custom">'
+                            + '  <a href="${pageContext.request.contextPath}/" class="btn btn-secondary-custom">'
                             + '    <i class="fas fa-home"></i> Home'
                             + '  </a>'
                             + '</div>'
