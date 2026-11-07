@@ -1,16 +1,20 @@
 package com.server.frontend.controller;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
-import java.util.Base64;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -24,9 +28,17 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-/** Same-origin gateway: browser -> Frontend -> Backend. */
+/**
+ * Same-origin gateway: browser -> Frontend -> Backend.
+ *
+ * <p>The Backend URL and service credential remain server-side. Public candidate
+ * registration/reference routes are explicitly allowlisted. Existing-candidate
+ * reads and edits require a successful DOB + SSC identity check bound to the
+ * Frontend HTTP session. All other routes require the official-user access token.
+ */
 @RestController
 public class BackendGatewayController {
+    private static final String CANDIDATE_SESSION_ATTRIBUTE = "verifiedCandidateRegid";
     private static final Set<String> METHODS =
             Set.of("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS");
     private static final Set<String> REQUEST_HEADERS =
@@ -34,17 +46,27 @@ public class BackendGatewayController {
     private static final Set<String> RESPONSE_HEADERS =
             Set.of("content-type", "content-disposition", "cache-control", "etag",
                     "last-modified", "accept-ranges", "content-range");
+    private static final Pattern CANDIDATE_REGID = Pattern.compile("^/api/student/(\\d+)$");
+    private static final Pattern CANDIDATE_PHOTO = Pattern.compile("^/api/student/photo/(\\d+)$");
+    private static final Pattern CANDIDATE_MARKS = Pattern.compile("^/api/student/marks/(\\d+)$");
+    private static final Pattern CANDIDATE_UPDATE = Pattern.compile("^/api/student/update/(\\d+)$");
+    private static final Pattern CANDIDATE_TRADE_SELECTION =
+            Pattern.compile("^/admission/student-trade-selection/(\\d+)$");
 
     private final RestTemplate rest;
     private final String backendBaseUrl;
-    @Value("${app.internal-auth.secret:}")
-    private String internalApiSecret;
+    private final String internalApiSecret;
+    private final ObjectMapper objectMapper;
 
     public BackendGatewayController(
             @Value("${backend.api.base-url}") String backendBaseUrl,
             @Value("${backend.gateway.connect-timeout:3s}") Duration connectTimeout,
-            @Value("${backend.gateway.read-timeout:30s}") Duration readTimeout) {
+            @Value("${backend.gateway.read-timeout:30s}") Duration readTimeout,
+            @Value("${app.internal-auth.secret:}") String internalApiSecret,
+            ObjectMapper objectMapper) {
         this.backendBaseUrl = backendBaseUrl;
+        this.internalApiSecret = internalApiSecret == null ? "" : internalApiSecret;
+        this.objectMapper = objectMapper;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(connectTimeout);
         factory.setReadTimeout(readTimeout);
@@ -53,44 +75,110 @@ public class BackendGatewayController {
 
     @RequestMapping("/backend/**")
     public ResponseEntity<byte[]> proxy(HttpServletRequest request) throws IOException {
-        String accessToken = cookie(request, "ITIAP_ACCESS_TOKEN");
-        if (accessToken == null || accessToken.isBlank() || accessToken.length() > 8192)
-            return ResponseEntity.status(401).build();
-        String methodName = request.getMethod().toUpperCase();
-        if (!METHODS.contains(methodName)) return ResponseEntity.status(405).build();
-        if (internalApiSecret == null || internalApiSecret.length() < 32)
-            return ResponseEntity.status(503).build();
-        if (requiresCsrf(methodName) && !validCsrfToken(
-                accessToken, cookie(request, "ITIAP_CSRF_TOKEN"),
-                request.getHeader("X-CSRF-TOKEN"), internalApiSecret))
-            return ResponseEntity.status(403).build();
-
         String requestPath = request.getRequestURI().substring(request.getContextPath().length());
         if (!requestPath.startsWith("/backend/")) return ResponseEntity.badRequest().build();
+
         String path = requestPath.substring("/backend".length());
         if (!safePath(path)) return ResponseEntity.badRequest().build();
 
-        HttpMethod method = HttpMethod.valueOf(methodName);
-        String target = UriComponentsBuilder.fromUriString(backendBaseUrl)
-                .path(path).query(request.getQueryString()).build(true).toUriString();
+        String methodName = request.getMethod().toUpperCase();
+        if (!METHODS.contains(methodName)) return ResponseEntity.status(405).build();
+        if (internalApiSecret.length() < 32) return ResponseEntity.status(503).build();
+
+        boolean publicCandidateRequest = isPublicCandidateRequest(methodName, path);
+        String pathRegid = candidateRegid(methodName, path);
+        String accessToken = cookie(request, "ITIAP_ACCESS_TOKEN");
+        String candidateRegid = verifiedCandidateRegid(request.getSession(false));
+
+        boolean candidateSessionMatches = pathRegid != null && pathRegid.equals(candidateRegid);
+        boolean officialRequest = accessToken != null && !accessToken.isBlank()
+                && accessToken.length() <= 8192;
+
+        if (!publicCandidateRequest && !candidateSessionMatches && !officialRequest) {
+            return ResponseEntity.status(401).build();
+        }
+        // Browser-origin writes must be same-origin. This protects both the
+        // public candidate forms and the session-authenticated official APIs.
+        if (requiresCsrf(methodName) && !sameOrigin(request)) {
+            return ResponseEntity.status(403).build();
+        }
+
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Internal-Service-Key", internalApiSecret);
-        headers.setBearerAuth(accessToken);
+        if (officialRequest) {
+            headers.setBearerAuth(accessToken);
+        } else if (candidateSessionMatches) {
+            // This value is derived from the server-side session, never copied
+            // from a browser-supplied header or query parameter.
+            headers.set("X-Candidate-Regid", candidateRegid);
+        }
         for (String name : REQUEST_HEADERS) {
             String value = request.getHeader(name);
             if (value != null) headers.set(name, value);
         }
+
+        String target = UriComponentsBuilder.fromUriString(backendBaseUrl)
+                .path(path).query(request.getQueryString()).build(true).toUriString();
+        HttpMethod method = HttpMethod.valueOf(methodName);
         byte[] body = method == HttpMethod.GET || method == HttpMethod.HEAD
                 ? new byte[0] : StreamUtils.copyToByteArray(request.getInputStream());
+
+        // A fresh identity check replaces any previous candidate binding. A
+        // failed check must never leave the old candidate authorized.
+        boolean identityCheck = "GET".equals(methodName)
+                && ("/api/student/apply-gate".equals(path)
+                    || "/api/student/verify-identity".equals(path));
+        if (identityCheck) {
+            HttpSession existing = request.getSession(false);
+            if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+        }
+
         try {
             ResponseEntity<byte[]> upstream = rest.exchange(
                     target, method, new HttpEntity<>(body, headers), byte[].class);
+            if (identityCheck) bindCandidateSession(request, path, upstream);
             return response(upstream.getStatusCode(), upstream.getHeaders(), upstream.getBody());
         } catch (org.springframework.web.client.HttpStatusCodeException ex) {
+            if (identityCheck) {
+                HttpSession existing = request.getSession(false);
+                if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+            }
             return response(ex.getStatusCode(), ex.getResponseHeaders(), ex.getResponseBodyAsByteArray());
         } catch (RestClientException ex) {
             return ResponseEntity.status(502).build();
         }
+    }
+
+    private void bindCandidateSession(HttpServletRequest request, String path,
+                                      ResponseEntity<byte[]> upstream) {
+        if (!upstream.getStatusCode().is2xxSuccessful() || upstream.getBody() == null) return;
+        try {
+            Map<String, Object> body = objectMapper.readValue(
+                    upstream.getBody(), new TypeReference<Map<String, Object>>() {});
+            Object regid = null;
+            if ("/api/student/apply-gate".equals(path)) {
+                if ("ok".equals(String.valueOf(body.get("status")))
+                        && body.get("record") instanceof Map<?, ?> record) {
+                    regid = record.get("regid");
+                }
+            } else {
+                regid = body.get("regid");
+            }
+            if (regid != null && String.valueOf(regid).matches("\\d+")) {
+                request.getSession(true).setAttribute(CANDIDATE_SESSION_ATTRIBUTE,
+                        String.valueOf(regid));
+            }
+        } catch (Exception ignored) {
+            HttpSession existing = request.getSession(false);
+            if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+        }
+    }
+
+    private static String verifiedCandidateRegid(HttpSession session) {
+        if (session == null) return null;
+        Object value = session.getAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+        String regid = value == null ? null : String.valueOf(value);
+        return regid != null && regid.matches("\\d+") ? regid : null;
     }
 
     private static ResponseEntity<byte[]> response(
@@ -114,18 +202,68 @@ public class BackendGatewayController {
                 || "OPTIONS".equalsIgnoreCase(method));
     }
 
-    static boolean validCsrfToken(String accessToken, String cookieToken,
-                                  String supplied, String secret) {
-        if (cookieToken == null || supplied == null || !MessageDigest.isEqual(
-                cookieToken.getBytes(StandardCharsets.UTF_8),
-                supplied.getBytes(StandardCharsets.UTF_8))) return false;
-        return CsrfTokenController.valid(accessToken, cookieToken, secret);
+    static boolean sameOrigin(HttpServletRequest request) {
+        String origin = request.getHeader("Origin");
+        if (origin == null || origin.isBlank()) {
+            return "same-origin".equalsIgnoreCase(request.getHeader("Sec-Fetch-Site"));
+        }
+        try {
+            URI uri = URI.create(origin);
+            int originPort = uri.getPort() < 0
+                    ? ("https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80) : uri.getPort();
+            int requestPort = request.getServerPort();
+            return uri.getScheme() != null
+                    && uri.getScheme().equalsIgnoreCase(request.getScheme())
+                    && uri.getHost() != null
+                    && uri.getHost().equalsIgnoreCase(request.getServerName())
+                    && originPort == requestPort;
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
+    }
+
+    static boolean isPublicCandidateRequest(String method, String path) {
+        if ("GET".equalsIgnoreCase(method)) {
+            return "/api/student/apply-gate".equals(path)
+                    || "/api/student/verify-identity".equals(path)
+                    || "/api/student/castes".equals(path)
+                    || "/api/districts".equals(path)
+                    || "/api/reports/current-admission-phase".equals(path)
+                    || path.matches("^/api/student/subcastes/[A-Za-z0-9_-]+$")
+                    || path.matches("^/admission/eligible-itis/[A-Za-z0-9_-]+$")
+                    || path.matches("^/admission/iti/[A-Za-z0-9_-]+/(info|trades)$");
+        }
+        return "POST".equalsIgnoreCase(method)
+                && ("/api/student/save".equals(path) || "/api/student/register".equals(path));
+    }
+
+    static String candidateRegid(String method, String path) {
+        Matcher matcher;
+        if ("GET".equalsIgnoreCase(method)) {
+            matcher = CANDIDATE_REGID.matcher(path);
+            if (matcher.matches()) return matcher.group(1);
+            matcher = CANDIDATE_MARKS.matcher(path);
+            if (matcher.matches()) return matcher.group(1);
+        }
+        if ("GET".equalsIgnoreCase(method) || "POST".equalsIgnoreCase(method)) {
+            matcher = CANDIDATE_PHOTO.matcher(path);
+            if (matcher.matches()) return matcher.group(1);
+        }
+        if ("PUT".equalsIgnoreCase(method)) {
+            matcher = CANDIDATE_UPDATE.matcher(path);
+            if (matcher.matches()) return matcher.group(1);
+        }
+        if (Set.of("GET", "POST", "PUT", "DELETE").contains(method.toUpperCase())) {
+            matcher = CANDIDATE_TRADE_SELECTION.matcher(path);
+            if (matcher.matches()) return matcher.group(1);
+        }
+        return null;
     }
 
     static boolean safePath(String path) {
         if (path == null || !path.startsWith("/") || path.startsWith("//")
                 || path.contains("\\") || path.contains("..") || path.indexOf(0) >= 0
-                || path.indexOf('\r') >= 0 || path.indexOf('\n') >= 0
+                || path.indexOf('\\r') >= 0 || path.indexOf('\\n') >= 0
                 || path.matches("(?i).*%(2f|5c|2e|25).*")) return false;
         String lower = path.toLowerCase();
         return !lower.startsWith("/actuator") && !lower.startsWith("/swagger")
