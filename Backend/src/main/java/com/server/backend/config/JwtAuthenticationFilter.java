@@ -110,7 +110,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if ("GET".equalsIgnoreCase(method)) {
             return "/api/student/apply-gate".equals(path)
                     || "/api/student/verify-identity".equals(path)
-                    || "/api/student/lookup-regid".equals(path)
                     || "/api/student/castes".equals(path)
                     || "/api/dsc/caste-list".equals(path)
                     || "/api/districts".equals(path)
@@ -122,7 +121,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     || path.matches("^/admission/iti/[A-Za-z0-9_-]+/(info|trades)$");
         }
         return "POST".equalsIgnoreCase(method)
-                && ("/api/student/save".equals(path) || "/api/student/register".equals(path));
+                && ("/api/student/save".equals(path) || "/api/student/register".equals(path)
+                    || "/api/student/lookup-regid".equals(path));
     }
 
     private static String candidateRegid(String method, String path) {
