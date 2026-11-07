@@ -6,25 +6,31 @@ import org.springframework.stereotype.Service;
 import com.server.backend.DTO.Application_Reprint_DTO;
 import com.server.backend.Repository.Admission.Application_Reprint_Repository;
 import com.server.backend.entity.StudentApplication;
+import com.server.backend.service.Student.StudentObjectAuthorizationService;
 
 @Service
 public class Application_Reprint_ServiceImpl
         implements Application_Reprint_Service {
 
     private final Application_Reprint_Repository repository;
+    private final StudentObjectAuthorizationService objectAuthorization;
 
     public Application_Reprint_ServiceImpl(
-            Application_Reprint_Repository repository) {
+            Application_Reprint_Repository repository,
+            StudentObjectAuthorizationService objectAuthorization) {
 
         this.repository = repository;
+        this.objectAuthorization = objectAuthorization;
     }
 
     @Override
     public Application_Reprint_DTO getApplication(
-            Long registrationId) {
+            Long registrationId, String districtCode) {
 
         StudentApplication application = repository
                 .findByRegid(registrationId.intValue())
+                .filter(row -> objectAuthorization.canReadInDistrict(
+                        row.getRegid(), districtCode))
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Application not found for the given Registration Id"));
 
