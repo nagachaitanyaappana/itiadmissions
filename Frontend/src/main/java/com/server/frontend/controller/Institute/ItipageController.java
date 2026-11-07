@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestTemplate;
+import com.server.frontend.security.BackendApiRequestSupport;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -19,6 +20,11 @@ public class ItipageController {
     private String backendBaseUrl;
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public ItipageController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     private static final String ITIS_PATH = "/api/itis";
     private static final String DISTRICTS_PATH = "/api/districts";
@@ -57,10 +63,14 @@ public class ItipageController {
         boolean districtScoped = "3".equals(String.valueOf(roleId))
                 && insCode != null && !String.valueOf(insCode).isBlank();
         String base = gatewayBase(request);
+        boolean itiScoped = "4".equals(String.valueOf(roleId))
+                && insCode != null && !String.valueOf(insCode).isBlank();
         String itiApiUrl = districtScoped
                 ? base + "/admission/district/" + String.valueOf(insCode).trim() + "/itis"
+                : itiScoped ? base + ITIS_PATH + "/" + String.valueOf(insCode).trim()
                 : base + ITIS_PATH;
         model.addAttribute("itiApiUrl", itiApiUrl);
+        model.addAttribute("itiLocked", itiScoped);
         model.addAttribute("backendApiBaseUrl", base);
         model.addAttribute("itiTradesApiUrl", base + "/api/trades");
         return "Institute/ItiTradeSelection";
@@ -84,9 +94,9 @@ public class ItipageController {
             return ResponseEntity.status(403).build();
         }
         try {
-            ResponseEntity<Object> resp = rest.getForEntity(
+            ResponseEntity<Object> resp = rest.exchange(
                     backendBaseUrl + "/admission/reservation-entry/trades?itiCode=" + itiCode.trim(),
-                    Object.class);
+                    org.springframework.http.HttpMethod.GET, proxySupport.entity(request), Object.class);
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             return ResponseEntity.status(502).build();
