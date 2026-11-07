@@ -139,7 +139,14 @@ public class BackendGatewayController {
                     || "/api/student/verify-identity".equals(path));
         if (identityCheck) {
             HttpSession existing = request.getSession(false);
-            if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+            Object verifiedAt = existing == null ? null : existing.getAttribute(CaptchaController.VERIFIED_AT_KEY);
+            long verifiedMillis = verifiedAt instanceof Number number ? number.longValue() : 0L;
+            if (verifiedMillis <= 0L || System.currentTimeMillis() - verifiedMillis > 2 * 60 * 1000L) {
+                if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+                return ResponseEntity.status(403).build();
+            }
+            existing.removeAttribute(CaptchaController.VERIFIED_AT_KEY);
+            existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
         }
 
         try {
