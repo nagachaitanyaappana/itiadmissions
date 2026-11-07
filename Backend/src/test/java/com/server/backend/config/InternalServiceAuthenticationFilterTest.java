@@ -66,16 +66,39 @@ class InternalServiceAuthenticationFilterTest {
     }
 
     @Test
-    void preservesLegacyServerToServerCallsWithoutBrowserOrigin() throws Exception {
+    void rejectsLegacyServerToServerCallsWithoutServiceCredential() throws Exception {
         var filter = new InternalServiceAuthenticationFilter(SECRET);
-        var request = new MockHttpServletRequest("GET", "/api/reports/current-admission-phase");
+        var request = new MockHttpServletRequest("GET", "/admission-timings/entry");
+        request.setRequestURI("/admission-timings/entry");
+        var response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response,
+                (req, res) -> fail("Every application endpoint must require the service credential"));
+
+        assertEquals(401, response.getStatus());
+    }
+
+    @Test
+    void acceptsCredentialOnLegacyBackendPathAndExemptsOnlyDocsAndHealth() throws Exception {
+        var filter = new InternalServiceAuthenticationFilter(SECRET);
+        var request = new MockHttpServletRequest("GET", "/admission-timings/entry");
+        request.setRequestURI("/admission-timings/entry");
+        request.addHeader(InternalServiceAuthenticationFilter.HEADER_NAME, SECRET);
         var response = new MockHttpServletResponse();
         boolean[] reached = {false};
 
         filter.doFilter(request, response, (req, res) -> reached[0] = true);
 
         assertTrue(reached[0]);
-        assertNull(request.getAttribute(InternalServiceAuthenticationFilter.AUTHENTICATED_ATTRIBUTE));
+        assertEquals(Boolean.TRUE, request.getAttribute(
+                InternalServiceAuthenticationFilter.AUTHENTICATED_ATTRIBUTE));
+
+        var swagger = new MockHttpServletRequest("GET", "/swagger");
+        swagger.setRequestURI("/swagger");
+        var health = new MockHttpServletRequest("GET", "/actuator/health");
+        health.setRequestURI("/actuator/health");
+        assertTrue(filter.shouldNotFilter(swagger));
+        assertTrue(filter.shouldNotFilter(health));
     }
 
     @Test
