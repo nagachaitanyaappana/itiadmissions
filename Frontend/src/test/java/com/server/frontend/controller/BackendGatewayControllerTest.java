@@ -69,6 +69,8 @@ class BackendGatewayControllerTest {
         assertEquals("12345", BackendGatewayController.candidateRegid("GET", "/api/student/marks/12345"));
         assertEquals("12345", BackendGatewayController.candidateRegid("PUT", "/api/student/update/12345"));
         assertEquals("12345", BackendGatewayController.candidateRegid("POST", "/admission/student-trade-selection/12345"));
+        assertEquals("12345", BackendGatewayController.candidateRegid("DELETE", "/admission/student-trade-selection/12345/ITI-001"));
+        assertEquals("12345", BackendGatewayController.candidateRegid("DELETE", "/admission/student-trade-selection/12345/dist/07"));
         assertNull(BackendGatewayController.candidateRegid("GET", "/api/student/all"));
     }
 
