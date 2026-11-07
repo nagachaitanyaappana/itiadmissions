@@ -115,11 +115,12 @@ public class StudentApplicationController {
 
     // Public forgot-registration-ID lookup: DOB + SSC hall ticket, captcha enforced by gateway.
     // Return only the registration ID; never return the full application record from this route.
-    @GetMapping("/lookup-regid")
+    @PostMapping(value = "/lookup-regid", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<java.util.Map<String, Object>> lookupRegid(
-            @RequestParam(name = "ssc_regno") String sscRegNo,
-            @RequestParam String dob) {
-        Integer regid = service.lookupRegidByIdentity(sscRegNo, dob);
+            @RequestBody java.util.Map<String, String> identity) {
+        Integer regid = service.lookupRegidByIdentity(
+                identity == null ? null : identity.get("ssc_regno"),
+                identity == null ? null : identity.get("dob"));
         if (regid == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(java.util.Map.of("regid", regid));
     }
