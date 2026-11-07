@@ -235,4 +235,5 @@ public class AdmissionProcessController {
         return "3".equals(role)
                 ? new UserPrincipal(role, null, ins)
                 : new UserPrincipal(role, ins, null);
-    }}
+    }
+}
