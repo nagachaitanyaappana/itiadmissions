@@ -195,7 +195,7 @@
     %>
     <script>
         // Ensure we point to the Node backend correctly
-        const NODE_API_BASE = "${backendBaseUrl}";
+        const NODE_API_BASE = "${pageContext.request.contextPath}/backend";
         const SESSION_ENTITY_NAME = '<%= jsEntityName %>';
         let DEFAULT_YEAR = '2026';
 
