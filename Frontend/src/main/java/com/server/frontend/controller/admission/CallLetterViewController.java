@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import com.server.frontend.security.BackendApiRequestSupport;
 
 /**
  * Call Letter (DISTLOGIN -&gt; Admissions -&gt; Call Letter) two-screen flow.
@@ -41,6 +42,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class CallLetterViewController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public CallLetterViewController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     /** Safety cap so a huge range cannot hammer the backend. */
     private static final int MAX_RANGE = 100;
@@ -73,7 +79,8 @@ public class CallLetterViewController {
     @ResponseBody
     public ResponseEntity<Object> callLetter(@RequestParam("fromRank") String fromRank,
             @RequestParam("toRank") String toRank,
-            @RequestParam("caste") String caste) {
+            @RequestParam("caste") String caste,
+            HttpServletRequest request) {
         int from;
         int to;
         try {
@@ -97,16 +104,28 @@ public class CallLetterViewController {
             return ResponseEntity.badRequest().body(Map.of("error", "Caste is required."));
         }
 
+        String role = BackendApiRequestSupport.role(request);
+        String scope = BackendApiRequestSupport.scope(request);
+        if (scope.isBlank() || (!"3".equals(role) && !"4".equals(role))) {
+            return ResponseEntity.status(403).body(Map.of("error", "District or ITI scope is required."));
+        }
+
         List<Object> merged = new ArrayList<>();
         int okCalls = 0;
         int failCalls = 0;
         for (int rank = from; rank <= to; rank++) {
-            String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/admission/call-letter")
+            UriComponentsBuilder urlBuilder = UriComponentsBuilder
+                    .fromUriString(backendBaseUrl + "/admission/call-letter")
                     .queryParam("rank", rank)
-                    .queryParam("caste", casteValue)
-                    .toUriString();
+                    .queryParam("caste", casteValue);
+            if ("3".equals(role)) {
+                urlBuilder.queryParam("distCode", scope);
+            } else {
+                urlBuilder.queryParam("itiCode", scope);
+            }
+            String url = urlBuilder.toUriString();
             try {
-                ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, null,
+                ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request),
                         new ParameterizedTypeReference<Object>() {
                         });
                 okCalls++;
@@ -216,7 +235,7 @@ public class CallLetterViewController {
     }
 
     private HttpHeaders scopeHeaders(HttpServletRequest request) {
-        HttpHeaders headers = new HttpHeaders();
+        HttpHeaders headers = proxySupport.headers(request);
         headers.setContentType(MediaType.APPLICATION_JSON);
         var session = request.getSession(false);
         if (session == null) {
