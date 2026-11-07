@@ -307,7 +307,8 @@ public class BackendGatewayController {
                     || path.matches("^/admission/iti/[A-Za-z0-9_-]+/(info|trades)$");
         }
         return "POST".equalsIgnoreCase(method)
-                && ("/api/student/save".equals(path) || "/api/student/register".equals(path));
+                && ("/api/student/save".equals(path) || "/api/student/register".equals(path)
+                    || "/api/student/lookup-regid".equals(path));
     }
 
     static String candidateRegid(String method, String path) {
