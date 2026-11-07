@@ -4,9 +4,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -78,29 +83,29 @@ public class CaptchaController {
             return false;
         }
         Object expected = session.getAttribute(SESSION_KEY);
-        return expected != null && submitted != null
-                && expected.toString().equalsIgnoreCase(submitted.trim());
+        if (expected == null || submitted == null) return false;
+        byte[] expectedBytes = expected.toString().trim().toUpperCase().getBytes(StandardCharsets.US_ASCII);
+        byte[] submittedBytes = submitted.trim().toUpperCase().getBytes(StandardCharsets.US_ASCII);
+        return java.security.MessageDigest.isEqual(expectedBytes, submittedBytes);
     }
 
-    /** Returns the current captcha text for this session, generating a fresh one if absent. */
-    static String current(HttpServletRequest request) {
-        Object expected = request.getSession().getAttribute(SESSION_KEY);
-        if (expected == null) {
-            expected = randomText(4);
-            request.getSession().setAttribute(SESSION_KEY, expected);
+    /**
+     * Validates and consumes the session captcha server-side. The expected
+     * captcha text is never exposed to browser JavaScript.
+     */
+    @PostMapping(value = "/verify")
+    @ResponseBody
+    public ResponseEntity<Void> verify(@RequestParam("captcha") String submitted,
+                                       HttpServletRequest request) {
+        if (!BackendGatewayController.sameOrigin(request)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        return String.valueOf(expected);
-    }
-
-    @GetMapping(value = "/text", produces = MediaType.TEXT_PLAIN_VALUE)
-    public void captchaText(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        byte[] body = current(request).getBytes(StandardCharsets.UTF_8);
-        response.setContentType(MediaType.TEXT_PLAIN_VALUE);
-        response.setContentLength(body.length);
-        try (OutputStream out = response.getOutputStream()) {
-            out.write(body);
-            out.flush();
+        if (!matches(request, submitted)) {
+            return ResponseEntity.badRequest().build();
         }
+        HttpSession session = request.getSession(false);
+        if (session != null) session.removeAttribute(SESSION_KEY);
+        return ResponseEntity.noContent().build();
     }
 
     private static String randomText(int len) {
