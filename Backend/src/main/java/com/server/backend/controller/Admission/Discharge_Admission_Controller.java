@@ -25,11 +25,12 @@ public class Discharge_Admission_Controller {
     @GetMapping("/discharge-admission")
     public ResponseEntity<Discharge_Admission_DTO> getAdmission(
             @RequestParam String admissionNumber,
-            @RequestParam String year) {
+            @RequestParam String year,
+            @RequestParam String distCode) {
 
         try {
             return ResponseEntity.ok(
-                    service.getAdmission(admissionNumber, year));
+                    service.getAdmission(admissionNumber, year, distCode));
 
         } catch (IllegalArgumentException ex) {
 
