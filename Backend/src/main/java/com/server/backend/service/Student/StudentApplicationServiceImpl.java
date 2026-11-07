@@ -286,7 +286,14 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
         if (!phaseWindows.isOpen(Window.APPLICATION)) {
             throw new ResponseStatusException(HttpStatus.GONE, "Date has Expired");
         }
-        boolean isUpdate = dto.getRegid() != null;
+        if (dto == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Registration details are required");
+        }
+        if (dto.getRegid() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Existing registrations must use the verified-candidate update endpoint");
+        }
+        boolean isUpdate = false;
 
         // Reference to the submitting client, equivalent to the legacy logTrace + request.getRemoteAddr().
         String ip = null;
@@ -604,6 +611,17 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
             "Given Email is already available for another candidate.");
     assertUnique("adarno", entity.getAdarno(), regid,
             "Given Aadhaar Number is already available for another candidate.");
+
+    if (entity.getSscRegNo() != null && !entity.getSscRegNo().isBlank()) {
+        Integer duplicateHallTickets = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM student_application "
+                        + "WHERE upper(trim(ssc_regno)) = upper(?) AND regid <> ?",
+                Integer.class, entity.getSscRegNo().trim(), regid);
+        if (duplicateHallTickets != null && duplicateHallTickets > 0) {
+            throw new IllegalArgumentException(
+                    "SSC hall ticket number is already registered to another candidate.");
+        }
+    }
 
     StudentApplication updated = repository.save(entity);
 
