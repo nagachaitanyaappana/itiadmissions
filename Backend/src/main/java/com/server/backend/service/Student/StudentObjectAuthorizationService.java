@@ -77,6 +77,22 @@ public class StudentObjectAuthorizationService {
         }
     }
 
+    public boolean canReadAdmissionInDistrict(String admissionNumber, String year, String distCode) {
+        if (admissionNumber == null || admissionNumber.isBlank()
+                || year == null || year.isBlank() || distCode == null || distCode.isBlank()) return false;
+        try {
+            return Boolean.TRUE.equals(jdbc.queryForObject(
+                    "SELECT EXISTS (SELECT 1 FROM admissions.iti_admissions "
+                            + "WHERE TRIM(BOTH FROM adm_num) = TRIM(BOTH FROM ?) "
+                            + "AND TRIM(BOTH FROM CAST(year_of_admission AS TEXT)) = TRIM(BOTH FROM ?) "
+                            + "AND CAST(dist_code AS text) = ?)",
+                    Boolean.class, admissionNumber.trim(), year.trim(), distCode.trim()));
+        } catch (org.springframework.dao.DataAccessException ex) {
+            log.warn("Admission district authorization could not be verified");
+            return false;
+        }
+    }
+
     public boolean isItiInDistrict(String itiCode, String distCode) {
         if (itiCode == null || itiCode.isBlank() || distCode == null || distCode.isBlank()) return false;
         try {
