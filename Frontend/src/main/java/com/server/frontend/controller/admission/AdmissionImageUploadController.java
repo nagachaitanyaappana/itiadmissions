@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import jakarta.servlet.http.HttpServletRequest;
+import com.server.frontend.security.BackendApiRequestSupport;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -33,6 +34,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class AdmissionImageUploadController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public AdmissionImageUploadController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
@@ -78,7 +84,7 @@ public class AdmissionImageUploadController {
                 .queryParam("itiCode", itiCode)
                 .toUriString();
         try {
-            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, null,
+            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request),
                     new ParameterizedTypeReference<Object>() {
                     });
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
