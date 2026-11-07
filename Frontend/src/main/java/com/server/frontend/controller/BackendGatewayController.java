@@ -2,8 +2,6 @@ package com.server.frontend.controller;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
