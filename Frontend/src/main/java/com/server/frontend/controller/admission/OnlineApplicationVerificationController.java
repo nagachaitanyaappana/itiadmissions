@@ -23,12 +23,18 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import com.server.frontend.security.BackendApiRequestSupport;
 
 @Controller
 @RequestMapping("/VerifyApplication")
 public class OnlineApplicationVerificationController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public OnlineApplicationVerificationController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
@@ -47,7 +53,7 @@ public class OnlineApplicationVerificationController {
             return "redirect:/?error=session";
         }
 
-        Map<String, Object> window = backendGet(backendBaseUrl + "/api/dv/window-status");
+        Map<String, Object> window = backendGet(backendBaseUrl + "/api/dv/window-status", request);
         int phase = parsePhase(window.get("phase"));
         if (phase <= 1) {
             model.addAttribute("phase2RoleMessage",
@@ -72,7 +78,7 @@ public class OnlineApplicationVerificationController {
         } else {
             url.queryParam("distCode", scope.code());
         }
-        return backendExchange(url.toUriString(), HttpMethod.GET, null);
+        return backendExchange(url.toUriString(), HttpMethod.GET, null, request);
     }
 
     @PostMapping("/api/approve")
@@ -85,7 +91,7 @@ public class OnlineApplicationVerificationController {
         }
         Map<String, Object> body = trustedPayload(payload, request, scope);
         String path = scope.iti() ? "/api/dv/approve-iti" : "/api/dv/approve";
-        return backendExchange(backendBaseUrl + path, HttpMethod.POST, body);
+        return backendExchange(backendBaseUrl + path, HttpMethod.POST, body, request);
     }
 
     @PostMapping("/api/reject")
@@ -142,8 +148,8 @@ public class OnlineApplicationVerificationController {
         return body;
     }
 
-    private Map<String, Object> backendGet(String url) {
-        ResponseEntity<Map<String, Object>> response = rest.exchange(url, HttpMethod.GET, null,
+    private Map<String, Object> backendGet(String url, HttpServletRequest request) {
+        ResponseEntity<Map<String, Object>> response = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request),
                 new ParameterizedTypeReference<Map<String, Object>>() {});
         Map<String, Object> body = response.getBody();
         if (body == null) {
@@ -152,8 +158,8 @@ public class OnlineApplicationVerificationController {
         return body;
     }
 
-    private ResponseEntity<Object> backendExchange(String url, HttpMethod method, Object body) {
-        HttpHeaders headers = new HttpHeaders();
+    private ResponseEntity<Object> backendExchange(String url, HttpMethod method, Object body, HttpServletRequest request) {
+        HttpHeaders headers = proxySupport.headers(request);
         headers.setContentType(MediaType.APPLICATION_JSON);
         try {
             ResponseEntity<Object> response = rest.exchange(url, method,
