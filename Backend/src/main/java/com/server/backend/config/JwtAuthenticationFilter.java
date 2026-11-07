@@ -234,6 +234,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Master data is read-only for district/ITI users. All writes and broad
         // ITI-list queries remain reserved for state/nodal roles.
+        if ("/api/admission-phase/all".equals(path)) {
+            return "GET".equals(method) && ("3".equals(role) || "4".equals(role));
+        }
+
         if (path.equals("/api/designations") || path.startsWith("/api/designations/")) {
             return "GET".equals(method) && ("3".equals(role) || "4".equals(role));
         }
