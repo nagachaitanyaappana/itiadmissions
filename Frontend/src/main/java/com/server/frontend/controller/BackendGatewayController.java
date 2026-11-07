@@ -137,16 +137,36 @@ public class BackendGatewayController {
         boolean identityCheck = "GET".equals(methodName)
                 && ("/api/student/apply-gate".equals(path)
                     || "/api/student/verify-identity".equals(path));
-        if (identityCheck) {
+        boolean publicRegistrationWrite = "POST".equals(methodName)
+                && ("/api/student/save".equals(path) || "/api/student/register".equals(path));
+        if (identityCheck || publicRegistrationWrite) {
             HttpSession existing = request.getSession(false);
             Object verifiedAt = existing == null ? null : existing.getAttribute(CaptchaController.VERIFIED_AT_KEY);
+            Object usesValue = existing == null ? null : existing.getAttribute(CaptchaController.VERIFIED_USES_KEY);
             long verifiedMillis = verifiedAt instanceof Number number ? number.longValue() : 0L;
-            if (verifiedMillis <= 0L || System.currentTimeMillis() - verifiedMillis > 2 * 60 * 1000L) {
-                if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+            int uses = usesValue instanceof Number number ? number.intValue() : 0;
+            if (verifiedMillis <= 0L || System.currentTimeMillis() - verifiedMillis > 5 * 60 * 1000L
+                    || uses <= 0) {
+                if (existing != null) {
+                    existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+                    existing.removeAttribute(CaptchaController.VERIFIED_AT_KEY);
+                    existing.removeAttribute(CaptchaController.VERIFIED_USES_KEY);
+                }
                 return ResponseEntity.status(403).build();
             }
-            existing.removeAttribute(CaptchaController.VERIFIED_AT_KEY);
-            existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+            if (identityCheck) {
+                existing.removeAttribute(CaptchaController.VERIFIED_AT_KEY);
+                existing.removeAttribute(CaptchaController.VERIFIED_USES_KEY);
+                existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+            } else {
+                int remainingUses = uses - 1;
+                if (remainingUses == 0) {
+                    existing.removeAttribute(CaptchaController.VERIFIED_AT_KEY);
+                    existing.removeAttribute(CaptchaController.VERIFIED_USES_KEY);
+                } else {
+                    existing.setAttribute(CaptchaController.VERIFIED_USES_KEY, remainingUses);
+                }
+            }
         }
 
         try {
