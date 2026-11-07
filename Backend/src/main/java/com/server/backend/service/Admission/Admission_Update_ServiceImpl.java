@@ -18,10 +18,15 @@ public class Admission_Update_ServiceImpl
     }
 
     @Override
-    public Admission_Update_DTO getAdmission(String admissionNumber) {
+    public Admission_Update_DTO getAdmission(String admissionNumber, String itiCode) {
 
+        String requestedIti = itiCode == null ? "" : itiCode.trim();
+        if (requestedIti.isEmpty()) {
+            throw new IllegalArgumentException("Admission number not found");
+        }
         iti_admissions admission = repository
                 .findByAdmissionNumber(admissionNumber)
+                .filter(row -> requestedIti.equalsIgnoreCase(row.getIti_code()))
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Admission number not found"));
 
