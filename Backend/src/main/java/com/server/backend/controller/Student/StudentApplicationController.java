@@ -29,6 +29,11 @@ public class StudentApplicationController {
     public ResponseEntity<StudentApplicationDto> saveStudent(
             @RequestBody StudentApplicationDto dto) {
 
+        // Public registration may create a new record only. Existing records
+        // must use the verified candidate session or an authenticated official.
+        if (dto.getRegid() != null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         StudentApplicationDto saved = service.saveStudent(dto);
 
         // 200 when the hall ticket already had an application and the details matched (the
@@ -48,6 +53,12 @@ public class StudentApplicationController {
             @RequestPart(value = "marks", required = false) StudentCandMarksDto marks,
             @RequestPart(value = "photo", required = false) MultipartFile photo) throws Exception {
 
+        // The public registration route creates new candidates only. Editing
+        // an existing registration is handled by the candidate-session-protected
+        // PUT /api/student/update/{regid} endpoint.
+        if (dto.getRegid() != null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         dto.setMarks(marks);
         byte[] bytes = (photo != null && !photo.isEmpty()) ? photo.getBytes() : null;
         String contentType = photo == null ? null : photo.getContentType();
@@ -63,6 +74,35 @@ public class StudentApplicationController {
             @RequestParam(name = "ssc_regno", required = false) String sscRegNo) {
 
         return ResponseEntity.ok(service.applyGate(regid, dob, sscRegNo));
+    }
+
+    /**
+     * Verify a candidate's identity before returning any personal application
+     * data. The Frontend gateway binds the successful regid to the HTTP session,
+     * after which only that candidate's record/photo/marks can be read or edited.
+     */
+    @GetMapping("/verify-identity")
+    public ResponseEntity<StudentApplicationDto> verifyIdentity(
+            @RequestParam Integer regid,
+            @RequestParam String dob,
+            @RequestParam(name = "ssc_regno") String sscRegNo) {
+        if (regid == null || regid <= 0 || dob == null || dob.isBlank()
+                || sscRegNo == null || sscRegNo.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            StudentApplicationDto student = service.getStudentById(regid);
+            String storedDob = student.getDob() == null ? "" : String.valueOf(student.getDob());
+            if (storedDob.length() > 10) storedDob = storedDob.substring(0, 10);
+            if (!storedDob.equals(dob.trim())
+                    || student.getSscRegNo() == null
+                    || !student.getSscRegNo().trim().equalsIgnoreCase(sscRegNo.trim())) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(student);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     // Get Student By RegId
