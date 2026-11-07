@@ -28,6 +28,10 @@ public class OfficialApiSessionInterceptor implements HandlerInterceptor {
             Map.entry("/admissions/admission-update", Set.of("4", "2", "10")),
             Map.entry("/admissions/application-reprint", Set.of("3", "2", "10")),
             Map.entry("/admissions/discharge-admission", Set.of("3", "2", "10")),
+            Map.entry("/admissions/print-admission-slip", Set.of("3", "2", "10")),
+            Map.entry("/admissions/reprint-verified-application", Set.of("2", "10")),
+            Map.entry("/admissions/dsc-list", Set.of("4", "2", "10")),
+            Map.entry("/VerifyApplication", Set.of("3", "4", "2", "10")),
             Map.entry("/CallLetterView", Set.of("3", "4", "2", "10")),
             Map.entry("/AdmissionPhase", Set.of("3", "4", "2", "10")),
             Map.entry("/AddTrade", Set.of("4", "2", "10"))
