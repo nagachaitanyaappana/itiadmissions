@@ -649,7 +649,7 @@
 
                 // Verify DOB + SSC hall ticket on the server before any personal
                 // application fields or photograph are returned to this browser.
-                $.get('${backendBaseUrl}/api/student/verify-identity', {
+                $.get('${pageContext.request.contextPath}/backend/api/student/verify-identity', {
                     regid: regid,
                     dob: dob,
                     ssc_regno: hallticket
@@ -724,7 +724,7 @@
             setRadio("ews", s.economicWeakerSection === true ? 'yes' : (s.economicWeakerSection === false ? 'no' : ''));
 
             // Load existing photo
-            $.get('${backendBaseUrl}/api/student/photo/' + s.regid, function (r) {
+            $.get('${pageContext.request.contextPath}/backend/api/student/photo/' + s.regid, function (r) {
                 var img = document.getElementById("existingPhoto");
                 var noPhotoText = document.getElementById("noPhotoText");
                 if (r && r.photo) {
@@ -776,7 +776,7 @@
         }
 
         function loadCastes() {
-            $.get('${backendBaseUrl}/api/student/castes', function (list) {
+            $.get('${pageContext.request.contextPath}/backend/api/student/castes', function (list) {
                 $.each(list, function (i, c) {
                     $('#casteSelect').append('<option value="' + c.casteCode + '">' + c.casteName + '</option>');
                 });
@@ -788,7 +788,7 @@
             var sel = document.getElementById("subCasteSelect");
             sel.innerHTML = '<option value="">--Select Sub Category--</option>';
             if (!code) { return; }
-            $.get('${backendBaseUrl}/api/student/subcastes/' + encodeURIComponent(code))
+            $.get('${pageContext.request.contextPath}/backend/api/student/subcastes/' + encodeURIComponent(code))
                 .done(function (list) {
                     (list || []).forEach(function (r) {
                         var label = (r.subCasteName && r.subCasteName !== '') ? r.subCasteName : ('Sub-caste ' + r.subCasteId);
@@ -859,7 +859,7 @@
                 var fd = new FormData();
                 fd.append("photo", fileInput.files[0]);
                 $.ajax({
-                    url: '${backendBaseUrl}/api/student/photo/' + CURRENT_REGID,
+                    url: '${pageContext.request.contextPath}/backend/api/student/photo/' + CURRENT_REGID,
                     type: 'POST',
                     data: fd,
                     processData: false,
@@ -905,7 +905,7 @@
             };
 
             $.ajax({
-                url: '${backendBaseUrl}/api/student/update/' + CURRENT_REGID,
+                url: '${pageContext.request.contextPath}/backend/api/student/update/' + CURRENT_REGID,
                 type: 'PUT',
                 contentType: 'application/json',
                 data: JSON.stringify(payload),
@@ -941,7 +941,7 @@
 
         $(document).ready(function () {
             loadCastes();
-            $.get('${backendBaseUrl}/api/reports/current-admission-phase', function (data) {
+            $.get('${pageContext.request.contextPath}/backend/api/reports/current-admission-phase', function (data) {
                 if (data && data.year) {
                     $('.sessionYearPhase').text(String(data.year) + ' (Phase-' + data.phase + ')');
                 }
