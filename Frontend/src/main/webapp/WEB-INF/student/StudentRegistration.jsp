@@ -1055,7 +1055,7 @@
     <!-- JAVASCRIPT LOGIC                           -->
     <!-- ========================================== -->
     <script type="text/javascript">
-        var BACKEND_URL = "${backendBaseUrl}";
+        var BACKEND_URL = "${pageContext.request.contextPath}/backend";
         var SESSION_YEAR = "2026";
         var CURRENT_REGID = null;
         var CURRENT_SSC_TYPE = "sscm"; // "sscm" or "sscg"
