@@ -625,7 +625,7 @@
         }
 
         function gateError(message) {
-            $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-triangle me-2"></i>' + message + '</div>');
+            $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-triangle me-2"></i>' + aplEsc(message) + '</div>');
             refreshCaptcha();
         }
 
