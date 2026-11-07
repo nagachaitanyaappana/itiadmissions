@@ -335,6 +335,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private boolean authorizeAdmissionLookup(Claims claims, HttpServletRequest request,
             String path, String role, String insCode) {
         if (!"GET".equalsIgnoreCase(request.getMethod())) return false;
+        if ("/admission/admission-update".equals(path)) {
+            String requestedIti = request.getParameter("itiCode");
+            return "4".equals(role) && hasScope(insCode) && requestedIti != null
+                    && insCode.equalsIgnoreCase(requestedIti.trim());
+        }
+        if ("/admission/application-reprint".equals(path)) {
+            String regid = request.getParameter("registrationId");
+            if (regid == null || !regid.matches("\\d{1,10}")) return false;
+            try {
+                Integer id = Integer.valueOf(regid);
+                String district = request.getParameter("distCode");
+                String itiCode = request.getParameter("itiCode");
+                if ("3".equals(role)) {
+                    return hasScope(insCode) && district != null
+                            && insCode.equalsIgnoreCase(district.trim())
+                            && studentObjects.canReadInDistrict(id, insCode);
+                }
+                if ("4".equals(role)) {
+                    return hasScope(insCode) && itiCode != null
+                            && insCode.equalsIgnoreCase(itiCode.trim())
+                            && studentObjects.canReadInIti(id, insCode);
+                }
+                return false;
+            } catch (NumberFormatException ex) {
+                return false;
+            }
+        }
         Matcher candidate = Pattern.compile("^/admission/candidate/(\\d+)$").matcher(path);
         if (candidate.matches()) return canReadRegid(candidate.group(1), claims);
         Matcher selected = Pattern.compile("^/admission/candidate-selected-trade/(\\d+)$").matcher(path);
