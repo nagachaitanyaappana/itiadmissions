@@ -88,6 +88,7 @@ public class LoginController {
         accessCookie.setMaxAge(15 * 60);
         accessCookie.setAttribute("SameSite", "Lax");
         response.addCookie(accessCookie);
+        session.removeAttribute("verifiedCandidateRegid");
         session.setAttribute("sessionUser", result);
         session.setAttribute("username", result.get("username"));
         session.setAttribute("roleId", result.get("roleId"));
