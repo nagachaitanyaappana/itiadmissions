@@ -54,6 +54,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         boolean gatewayRequest = Boolean.TRUE.equals(
                 request.getAttribute(InternalServiceAuthenticationFilter.AUTHENTICATED_ATTRIBUTE));
+
+        // Credentials are checked by AuthService on this one server-to-server route.
+        // InternalServiceAuthenticationFilter has already required the Frontend secret.
+        if ("/api/auth/login".equals(path)) {
+            if (gatewayRequest) {
+                chain.doFilter(request, response);
+            } else {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                        "A trusted Frontend service credential is required");
+            }
+            return;
+        }
+
         String header = request.getHeader("Authorization");
 
         if (header == null || !header.startsWith("Bearer ")) {
