@@ -56,7 +56,7 @@ public class Call_Letter_ServiceImpl
             String regid =
                     row[2] != null ? row[2].toString() : null;
 
-            String itiCode =
+            String rowItiCode =
                     row[3] != null ? row[3].toString() : null;
 
             String qualification =
@@ -84,7 +84,7 @@ public class Call_Letter_ServiceImpl
                             rankValue,
                             casteValue,
                             regid,
-                            itiCode,
+                            rowItiCode,
                             qualification,
                             tempPk,
                             phase,
