@@ -61,6 +61,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Java 22
+        if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "22"
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
@@ -68,9 +75,6 @@ jobs:
           build-mode: ${{ matrix.build-mode }}
           queries: security-extended,security-and-quality
 
-      - name: Build Java projects for CodeQL
-        if: matrix.language == 'java-kotlin'
-        uses: github/codeql-action/autobuild@v3
 
       - name: Analyze source
         uses: github/codeql-action/analyze@v3
