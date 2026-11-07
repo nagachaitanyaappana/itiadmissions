@@ -52,10 +52,14 @@ public class LoginController {
                         @RequestParam(value = "dev", required = false, defaultValue = "false") boolean devLogin,
                         HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) {
 
-        // 1. captcha must match the one generated for this session.
-        //    The dev index (/dev) posts here without a captcha, so that single
-        //    developer flow skips the check instead of dead-ending on error=captcha.
-        if (!(devLogin && devLoginEnabled) && !CaptchaController.matches(request, captcha)) {
+        // Login is a state-changing browser operation; reject cross-origin form posts.
+        if (!BackendGatewayController.sameOrigin(request)) {
+            return devLogin ? "redirect:/dev/login?error=origin" : "redirect:/?error=origin";
+        }
+
+        // Consume the session captcha after one attempt. The developer shortcut is
+        // available only when explicitly enabled in trusted local development.
+        if (!(devLogin && devLoginEnabled) && !CaptchaController.consumeForLogin(request, captcha)) {
             HttpSession stale = request.getSession(false);
             if (stale != null) {
                 stale.removeAttribute("sessionUser");
