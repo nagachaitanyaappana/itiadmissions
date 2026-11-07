@@ -134,18 +134,22 @@ public class BackendGatewayController {
 
         // A fresh identity check replaces any previous candidate binding. A
         // failed check must never leave the old candidate authorized.
-        boolean identityCheck = "GET".equals(methodName)
+        boolean candidateIdentityCheck = "GET".equals(methodName)
                 && ("/api/student/apply-gate".equals(path)
                     || "/api/student/verify-identity".equals(path));
+        boolean registrationIdLookup = "GET".equals(methodName)
+                && "/api/student/lookup-regid".equals(path);
+        boolean captchaProtectedCheck = candidateIdentityCheck || registrationIdLookup;
         boolean publicRegistrationWrite = "POST".equals(methodName)
                 && ("/api/student/save".equals(path) || "/api/student/register".equals(path));
-        if (identityCheck || publicRegistrationWrite) {
+        if (captchaProtectedCheck || publicRegistrationWrite) {
             HttpSession existing = request.getSession(false);
-            if (!consumeCaptchaProof(existing, identityCheck)) {
+            if (!consumeCaptchaProof(existing, captchaProtectedCheck)) {
                 if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
                 return ResponseEntity.status(403).build();
             }
-            if (identityCheck && existing != null) {
+            // A new identity attempt must not inherit a previously verified candidate session.
+            if (captchaProtectedCheck && existing != null) {
                 existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
             }
         }
@@ -153,10 +157,10 @@ public class BackendGatewayController {
         try {
             ResponseEntity<byte[]> upstream = rest.exchange(
                     target, method, new HttpEntity<>(body, headers), byte[].class);
-            if (identityCheck) bindCandidateSession(request, path, upstream);
+            if (candidateIdentityCheck) bindCandidateSession(request, path, upstream);
             return response(upstream.getStatusCode(), upstream.getHeaders(), upstream.getBody());
         } catch (org.springframework.web.client.HttpStatusCodeException ex) {
-            if (identityCheck) {
+            if (captchaProtectedCheck) {
                 HttpSession existing = request.getSession(false);
                 if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
             }
@@ -288,6 +292,7 @@ public class BackendGatewayController {
         if ("GET".equalsIgnoreCase(method)) {
             return "/api/student/apply-gate".equals(path)
                     || "/api/student/verify-identity".equals(path)
+                    || "/api/student/lookup-regid".equals(path)
                     || "/api/student/castes".equals(path)
                     || "/api/dsc/caste-list".equals(path)
                     || "/api/districts".equals(path)
