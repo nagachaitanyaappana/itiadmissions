@@ -88,11 +88,14 @@ public class BackendGatewayController {
         boolean publicCandidateRequest = isPublicCandidateRequest(methodName, path);
         String pathRegid = candidateRegid(methodName, path);
         String accessToken = cookie(request, "ITIAP_ACCESS_TOKEN");
-        String candidateRegid = verifiedCandidateRegid(request.getSession(false));
+        HttpSession frontendSession = request.getSession(false);
+        String candidateRegid = verifiedCandidateRegid(frontendSession);
 
         boolean candidateSessionMatches = pathRegid != null && pathRegid.equals(candidateRegid);
-        boolean officialRequest = accessToken != null && !accessToken.isBlank()
-                && accessToken.length() <= 8192;
+        boolean hasOfficialSession = frontendSession != null
+                && frontendSession.getAttribute("sessionUser") != null;
+        boolean officialRequest = hasOfficialSession && accessToken != null
+                && !accessToken.isBlank() && accessToken.length() <= 8192;
 
         if (!publicCandidateRequest && !candidateSessionMatches && !officialRequest) {
             return ResponseEntity.status(401).build();
