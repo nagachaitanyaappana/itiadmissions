@@ -20,13 +20,19 @@ public class Discharge_Admission_ServiceImpl
     @Override
     public Discharge_Admission_DTO getAdmission(
             String admissionNumber,
-            String year) {
+            String year,
+            String districtCode) {
 
         String adm = admissionNumber == null ? "" : admissionNumber.trim();
         String yr = year == null ? "" : year.trim();
 
+        String requestedDistrict = districtCode == null ? "" : districtCode.trim();
+        if (requestedDistrict.isEmpty()) {
+            throw new IllegalArgumentException("Admission number not found for the given year");
+        }
         iti_admissions admission = repository
                 .findByAdmissionNumberAndYear(adm, yr)
+                .filter(row -> requestedDistrict.equalsIgnoreCase(row.getDist_code()))
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Admission number not found for the given year"));
 
