@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -37,7 +39,8 @@ public class AdmissionImageUploadController {
 
     /** Screen 1 - Admission Number + SSC Hallticket Number form. */
     @GetMapping({ "", "/" })
-    public String admissionImageUploadView() {
+    public String admissionImageUploadView(HttpServletRequest request) {
+        if (authenticatedItiCode(request) == null) return "redirect:/?error=session";
         return "admission/admissionImageUpload";
     }
 
@@ -50,7 +53,11 @@ public class AdmissionImageUploadController {
     @ResponseBody
     public ResponseEntity<Object> admissionImageUpload(
             @RequestParam(value = "admissionNumber", required = false) String admissionNumber,
-            @RequestParam(value = "sscHallticketNumber", required = false) String sscHallticketNumber) {
+            @RequestParam(value = "sscHallticketNumber", required = false) String sscHallticketNumber,
+            HttpServletRequest request) {
+        String itiCode = authenticatedItiCode(request);
+        if (itiCode == null) return ResponseEntity.status(401)
+                .body(java.util.Map.of("error", "Please sign in as an ITI official."));
         String adm = admissionNumber == null ? "" : admissionNumber.trim();
         String ssc = sscHallticketNumber == null ? "" : sscHallticketNumber.trim();
         if (adm.isEmpty() && ssc.isEmpty()) {
@@ -68,6 +75,7 @@ public class AdmissionImageUploadController {
         String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/admission/admission-image-upload")
                 .queryParam("admissionNumber", adm)
                 .queryParam("sscHallticketNumber", ssc)
+                .queryParam("itiCode", itiCode)
                 .toUriString();
         try {
             ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, null,
@@ -96,4 +104,15 @@ public class AdmissionImageUploadController {
                             "Unable to connect to the server. Please make sure the backend is running."));
         }
     }
+    private static String authenticatedItiCode(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("sessionUser") == null
+                || !"4".equals(String.valueOf(session.getAttribute("roleId")))) {
+            return null;
+        }
+        Object code = session.getAttribute("insCode");
+        String itiCode = code == null ? null : String.valueOf(code).trim();
+        return itiCode == null || itiCode.isBlank() ? null : itiCode;
+    }
+
 }
