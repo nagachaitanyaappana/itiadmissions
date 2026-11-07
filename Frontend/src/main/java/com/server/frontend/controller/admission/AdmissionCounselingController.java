@@ -1,6 +1,7 @@
 package com.server.frontend.controller.admission;
 
 import com.server.frontend.controller.BackendGatewayController;
+import com.server.frontend.security.BackendApiRequestSupport;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -437,6 +438,10 @@ public class AdmissionCounselingController {
         HttpHeaders headers = new HttpHeaders();
         if (internalApiSecret != null && internalApiSecret.length() >= 32) {
             headers.set("X-Internal-Service-Key", internalApiSecret);
+        String accessToken = BackendApiRequestSupport.accessToken(request);
+        if (accessToken != null) {
+            headers.setBearerAuth(accessToken);
+        }
         }
         String accessToken = cookie(request, "ITIAP_ACCESS_TOKEN");
         if (accessToken != null && !accessToken.isBlank()) headers.setBearerAuth(accessToken);
