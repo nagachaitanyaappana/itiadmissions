@@ -149,6 +149,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return "2".equals(role) || "3".equals(role) || "4".equals(role) || "10".equals(role);
         }
 
+        if ("/admission/admission-image-upload".equals(path)) {
+            return "2".equals(role) || "4".equals(role) || "10".equals(role);
+        }
+
         if (path.startsWith("/admission/add-trade/")) {
             String[] parts = path.split("/");
             return "4".equals(role) && hasScope(insCode)
