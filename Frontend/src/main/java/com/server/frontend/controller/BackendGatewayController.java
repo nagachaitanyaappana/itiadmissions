@@ -51,7 +51,7 @@ public class BackendGatewayController {
     private static final Pattern CANDIDATE_MARKS = Pattern.compile("^/api/student/marks/(\\d+)$");
     private static final Pattern CANDIDATE_UPDATE = Pattern.compile("^/api/student/update/(\\d+)$");
     private static final Pattern CANDIDATE_TRADE_SELECTION =
-            Pattern.compile("^/admission/student-trade-selection/(\\d+)$");
+            Pattern.compile("^/admission/student-trade-selection/(\\d+)(?:/[A-Za-z0-9_-]+|/dist/[A-Za-z0-9_-]+)?$");
 
     private final RestTemplate rest;
     private final String backendBaseUrl;
@@ -289,9 +289,12 @@ public class BackendGatewayController {
             return "/api/student/apply-gate".equals(path)
                     || "/api/student/verify-identity".equals(path)
                     || "/api/student/castes".equals(path)
+                    || "/api/dsc/caste-list".equals(path)
                     || "/api/districts".equals(path)
                     || "/api/reports/current-admission-phase".equals(path)
                     || path.matches("^/api/student/subcastes/[A-Za-z0-9_-]+$")
+                    || path.matches("^/api/iti/by-govt-pvt/[A-Za-z0-9_-]+$")
+                    || path.matches("^/admission/trade/[A-Za-z0-9_-]+/details$")
                     || path.matches("^/admission/eligible-itis/[A-Za-z0-9_-]+$")
                     || path.matches("^/admission/iti/[A-Za-z0-9_-]+/(info|trades)$");
         }
