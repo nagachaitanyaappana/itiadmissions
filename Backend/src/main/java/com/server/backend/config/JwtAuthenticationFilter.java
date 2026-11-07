@@ -361,6 +361,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
             return false;
         }
+        if ("/admission/search".equals(path)) {
+            String requestedIti = request.getParameter("itiCode");
+            return "4".equals(role) && hasScope(insCode) && requestedIti != null
+                    && insCode.equalsIgnoreCase(requestedIti.trim());
+        }
         if ("/admission/admission-update".equals(path)) {
             String requestedIti = request.getParameter("itiCode");
             return "4".equals(role) && hasScope(insCode) && requestedIti != null
