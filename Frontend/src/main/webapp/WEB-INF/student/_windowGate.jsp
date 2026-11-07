@@ -14,7 +14,7 @@
         }
         function checkWindow() {
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', '${backendBaseUrl}/api/reports/current-admission-phase', true);
+            xhr.open('GET', '${pageContext.request.contextPath}/backend/api/reports/current-admission-phase', true);
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === 4) {
                     var data = null;
