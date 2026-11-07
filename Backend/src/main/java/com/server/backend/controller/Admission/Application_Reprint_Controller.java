@@ -30,7 +30,7 @@ public class Application_Reprint_Controller {
         try {
 
             return ResponseEntity.ok(
-                    service.getApplication(registrationId));
+                    service.getApplication(registrationId, distCode));
 
         } catch (IllegalArgumentException ex) {
 
