@@ -1492,6 +1492,18 @@ public class AdmissionProcessService {
     }
 
     /** Shift/unit options the admission page may offer for an ITI/trade ({@code getShiftUnit.jsp}). */
+    /** Verifies that a district-scoped official may access the requested ITI. */
+    public boolean isItiInDistrict(String itiCode, String distCode) {
+        if (itiCode == null || itiCode.isBlank() || distCode == null || distCode.isBlank()) return false;
+        Integer count = jdbc.queryForObject(
+                "SELECT count(*) FROM public.iti WHERE CAST(iti_code AS text) = :itiCode "
+                        + "AND CAST(dist_code AS text) = :distCode",
+                new MapSqlParameterSource("itiCode", itiCode.trim())
+                        .addValue("distCode", distCode.trim()),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
     public List<Map<String, Object>> getShiftUnits(String itiCode, String tradeCode) {
         return jdbc.queryForList(
                 "SELECT shift_allowed, unit_allowed, strength, strength_vacant "
