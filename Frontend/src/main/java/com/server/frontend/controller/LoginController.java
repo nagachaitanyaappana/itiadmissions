@@ -92,7 +92,13 @@ public class LoginController {
         accessCookie.setAttribute("SameSite", "Lax");
         response.addCookie(accessCookie);
         session.removeAttribute("verifiedCandidateRegid");
-        session.setAttribute("sessionUser", result);
+        // Never keep the bearer token in the general session map that JSPs may
+        // expose to views. The token lives only in the HttpOnly access cookie.
+        Map<String, Object> safeSessionUser = new HashMap<>(result);
+        safeSessionUser.remove("accessToken");
+        safeSessionUser.remove("expiresAt");
+        safeSessionUser.remove("tokenType");
+        session.setAttribute("sessionUser", safeSessionUser);
         session.setAttribute("username", result.get("username"));
         session.setAttribute("userName", result.get("username"));
         session.setAttribute("roleId", result.get("roleId"));
