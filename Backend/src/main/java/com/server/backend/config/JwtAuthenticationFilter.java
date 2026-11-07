@@ -378,10 +378,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
-    private static boolean hasScope(String value) {
-        return value != null && !value.isBlank();
-    }
-
     private static boolean districtScopedReport(String path) {
         return Set.of(
                 "/api/reports/iti-wise-status",
