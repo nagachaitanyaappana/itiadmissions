@@ -20,7 +20,7 @@ import javax.imageio.stream.ImageOutputStream;
 public final class CandidatePhotoValidator {
     public static final long MAX_BYTES = 5L * 1024L * 1024L;
     private static final int MAX_DIMENSION = 6000;
-    private static final long MAX_PIXELS = 20_000_000L;
+    private static final long MAX_PIXELS = 12_000_000L;
 
     private CandidatePhotoValidator() {
     }
@@ -57,7 +57,7 @@ public final class CandidatePhotoValidator {
                 if (width <= 0 || height <= 0 || width > MAX_DIMENSION || height > MAX_DIMENSION
                         || (long) width * height > MAX_PIXELS) {
                     throw new IllegalArgumentException(
-                            "Photograph dimensions must not exceed 6000 x 6000 pixels or 20 megapixels");
+                            "Photograph dimensions must not exceed 6000 x 6000 pixels or 12 megapixels");
                 }
 
                 BufferedImage decoded = reader.read(0);
