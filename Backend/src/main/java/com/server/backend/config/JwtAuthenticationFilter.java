@@ -37,7 +37,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Pattern STUDENT_PHOTO = Pattern.compile("^/api/student/photo/(\\d+)$");
     private static final Pattern STUDENT_MARKS = Pattern.compile("^/api/student/marks/(\\d+)$");
     private static final Pattern STUDENT_UPDATE = Pattern.compile("^/api/student/update/(\\d+)$");
-    private static final Pattern TRADE_SELECTION = Pattern.compile("^/admission/student-trade-selection/(\\d+)$");
+    private static final Pattern TRADE_SELECTION = Pattern.compile("^/admission/student-trade-selection/(\\d+)(?:/[A-Za-z0-9_-]+|/dist/[A-Za-z0-9_-]+)?$");
 
     private final JwtTokenService tokens;
     private final StudentObjectAuthorizationService studentObjects;
@@ -134,8 +134,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private boolean authorized(Claims claims, HttpServletRequest request, String path) {
         String role = claim(claims, "roleId");
         String insCode = claim(claims, "insCode");
+        String method = request.getMethod().toUpperCase();
         if (role == null || role.isBlank()) return false;
 
+        // District and ITI verification have distinct authorities.
         if (path.startsWith("/api/dv/")) {
             if (path.endsWith("/approve-iti") || path.endsWith("/reject-iti")) {
                 return "4".equals(role) && hasScope(insCode);
@@ -163,6 +165,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return "4".equals(role) && hasScope(insCode);
         }
 
+        // Admission-process operations use a principal derived from signed claims.
         if (path.startsWith("/api/admission/")) {
             return ("3".equals(role) || "4".equals(role)) && hasScope(insCode);
         }
@@ -171,8 +174,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if ("2".equals(role) || "10".equals(role)) return true;
             if ("/api/reports/current-admission-phase".equals(path)) return true;
 
-            if ("3".equals(role) && hasScope(insCode)
-                    && districtScopedReport(path)) {
+            if ("3".equals(role) && hasScope(insCode) && districtScopedReport(path)) {
                 String requestedIti = request.getParameter("itiCode");
                 return requestedIti == null || requestedIti.isBlank()
                         || "All".equalsIgnoreCase(requestedIti)
@@ -200,17 +202,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         Matcher studentId = STUDENT_REGID.matcher(path);
         Matcher studentPhoto = STUDENT_PHOTO.matcher(path);
         Matcher studentMarks = STUDENT_MARKS.matcher(path);
-        if (("GET".equalsIgnoreCase(request.getMethod()) && studentId.matches())
-                || (("GET".equalsIgnoreCase(request.getMethod())
-                     || "POST".equalsIgnoreCase(request.getMethod())) && studentPhoto.matches())
-                || ("GET".equalsIgnoreCase(request.getMethod()) && studentMarks.matches())) {
+        if (("GET".equals(method) && studentId.matches())
+                || (("GET".equals(method) || "POST".equals(method)) && studentPhoto.matches())
+                || ("GET".equals(method) && studentMarks.matches())) {
             String regid = studentId.matches() ? studentId.group(1)
                     : studentPhoto.matches() ? studentPhoto.group(1) : studentMarks.group(1);
-            try {
-                return studentObjects.canRead(Integer.valueOf(regid), claims);
-            } catch (NumberFormatException ex) {
-                return false;
-            }
+            return canReadRegid(regid, claims);
         }
 
         if (path.equals("/api/student/all") || path.startsWith("/api/student/delete/")
@@ -218,12 +215,168 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return "2".equals(role) || "10".equals(role);
         }
 
-        if (path.startsWith("/admin/")) {
-            return "2".equals(role) || "10".equals(role);
+        // Merit/checklist endpoints that previously exposed unscoped list, phase,
+        // status and mutation operations to every signed-in official.
+        if (path.equals("/api/meritlist") || path.startsWith("/api/meritlist/")) {
+            return authorizeMeritList(claims, request, path, role, insCode);
+        }
+        if (path.equals("/api/checklist") || path.startsWith("/api/checklist/")) {
+            return authorizeChecklist(claims, request, path, role, insCode);
         }
 
-        // All other business endpoints require a signed official identity.
-        return true;
+        // Only the scoped schedule workflow is available to district/ITI officials.
+        if (path.equals("/admission-timings") || path.startsWith("/admission-timings/")) {
+            return authorizeAdmissionTimings(request, path, role, insCode);
+        }
+
+        // Master data is read-only for district/ITI users. All writes and broad
+        // ITI-list queries remain reserved for state/nodal roles.
+        if (path.equals("/api/designations") || path.startsWith("/api/designations/")) {
+            return "GET".equals(method) && ("3".equals(role) || "4".equals(role));
+        }
+        if (path.equals("/api/trades") || path.startsWith("/api/trades/")) {
+            return "GET".equals(method) && ("3".equals(role) || "4".equals(role));
+        }
+        if (path.equals("/api/itis") || path.startsWith("/api/itis/")) {
+            return authorizeItiMaster(request, path, role, insCode);
+        }
+
+        if (path.startsWith("/admission/reservation-entry")) {
+            String itiCode = request.getParameter("itiCode");
+            return "GET".equals(method) && "4".equals(role) && hasScope(insCode)
+                    && itiCode != null && insCode.equalsIgnoreCase(itiCode.trim());
+        }
+
+        if (path.startsWith("/admission/")) {
+            return authorizeAdmissionLookup(claims, request, path, role, insCode);
+        }
+
+        if (path.startsWith("/api/status")) {
+            return ("3".equals(role) || "4".equals(role)) && hasScope(insCode);
+        }
+
+        // Default-deny for district/ITI roles. State and nodal administrators retain
+        // access to remaining protected modules until those modules receive their own
+        // narrower policy; unknown roles never inherit access merely by having a JWT.
+        return "2".equals(role) || "10".equals(role);
+    }
+
+    private boolean authorizeMeritList(Claims claims, HttpServletRequest request,
+            String path, String role, String insCode) {
+        String method = request.getMethod().toUpperCase();
+        if ("GET".equals(method) && "/api/meritlist/window-status".equals(path)) {
+            return "3".equals(role) || "4".equals(role);
+        }
+        if ("POST".equals(method) && "/api/meritlist/generate".equals(path)) {
+            return ("3".equals(role) || "4".equals(role)) && hasScope(insCode);
+        }
+        Matcher district = Pattern.compile("^/api/meritlist/district/([A-Za-z0-9_-]+)$").matcher(path);
+        if ("GET".equals(method) && district.matches()) {
+            return "3".equals(role) && hasScope(insCode)
+                    && insCode.equalsIgnoreCase(district.group(1));
+        }
+        Matcher iti = Pattern.compile("^/api/meritlist/iti/([A-Za-z0-9_-]+)$").matcher(path);
+        if ("GET".equals(method) && iti.matches()) {
+            return "4".equals(role) && hasScope(insCode)
+                    && insCode.equalsIgnoreCase(iti.group(1));
+        }
+        Matcher regid = Pattern.compile("^/api/meritlist/(\\d+)$").matcher(path);
+        return "GET".equals(method) && regid.matches() && canReadRegid(regid.group(1), claims);
+    }
+
+    private boolean authorizeChecklist(Claims claims, HttpServletRequest request,
+            String path, String role, String insCode) {
+        if (!"GET".equalsIgnoreCase(request.getMethod())) return false;
+        Matcher district = Pattern.compile("^/api/checklist/district/([A-Za-z0-9_-]+)$").matcher(path);
+        if (district.matches()) {
+            return "3".equals(role) && hasScope(insCode)
+                    && insCode.equalsIgnoreCase(district.group(1));
+        }
+        Matcher iti = Pattern.compile("^/api/checklist/iti/([A-Za-z0-9_-]+)$").matcher(path);
+        if (iti.matches()) {
+            return "4".equals(role) && hasScope(insCode)
+                    && insCode.equalsIgnoreCase(iti.group(1));
+        }
+        Matcher regid = Pattern.compile("^/api/checklist/(\\d+)$").matcher(path);
+        return regid.matches() && canReadRegid(regid.group(1), claims);
+    }
+
+    private boolean authorizeAdmissionTimings(HttpServletRequest request,
+            String path, String role, String insCode) {
+        if (!hasScope(insCode)) return false;
+        if (Set.of("/admission-timings/entry", "/admission-timings/timings",
+                "/admission-timings/today", "/admission-timings/view").contains(path)) {
+            return "3".equals(role) || "4".equals(role);
+        }
+        Matcher schedule = Pattern.compile("^/admission-timings/([A-Za-z0-9_-]+)/([^/]+)$").matcher(path);
+        if (!schedule.matches() || !Set.of("GET", "PUT", "DELETE")
+                .contains(request.getMethod().toUpperCase())) return false;
+        String itiCode = schedule.group(1);
+        if ("4".equals(role)) return insCode.equalsIgnoreCase(itiCode);
+        return "3".equals(role) && studentObjects.isItiInDistrict(itiCode, insCode);
+    }
+
+    private boolean authorizeItiMaster(HttpServletRequest request,
+            String path, String role, String insCode) {
+        if (!"GET".equalsIgnoreCase(request.getMethod()) || !hasScope(insCode)) return false;
+        if ("/api/itis/by-district".equals(path)) {
+            String district = request.getParameter("distCode");
+            return "3".equals(role) && district != null && insCode.equalsIgnoreCase(district.trim());
+        }
+        Matcher iti = Pattern.compile("^/api/itis/([A-Za-z0-9_-]+)$").matcher(path);
+        if (!iti.matches()) return false;
+        if ("4".equals(role)) return insCode.equalsIgnoreCase(iti.group(1));
+        return "3".equals(role) && studentObjects.isItiInDistrict(iti.group(1), insCode);
+    }
+
+    private boolean authorizeAdmissionLookup(Claims claims, HttpServletRequest request,
+            String path, String role, String insCode) {
+        if (!"GET".equalsIgnoreCase(request.getMethod())) return false;
+        Matcher candidate = Pattern.compile("^/admission/candidate/(\\d+)$").matcher(path);
+        if (candidate.matches()) return canReadRegid(candidate.group(1), claims);
+        Matcher selected = Pattern.compile("^/admission/candidate-selected-trade/(\\d+)$").matcher(path);
+        if (selected.matches()) return canReadRegid(selected.group(1), claims);
+
+        Matcher districtItis = Pattern.compile("^/admission/district/([A-Za-z0-9_-]+)/itis$").matcher(path);
+        if (districtItis.matches()) {
+            return "3".equals(role) && hasScope(insCode)
+                    && insCode.equalsIgnoreCase(districtItis.group(1));
+        }
+        Matcher districtNames = Pattern.compile("^/admission/itis/([A-Za-z0-9_-]+)$").matcher(path);
+        if (districtNames.matches()) {
+            return "3".equals(role) && hasScope(insCode)
+                    && insCode.equalsIgnoreCase(districtNames.group(1));
+        }
+        Matcher itiSeats = Pattern.compile("^/admission/iti/([A-Za-z0-9_-]+)/seat-details$").matcher(path);
+        if (itiSeats.matches()) {
+            return "4".equals(role) && hasScope(insCode)
+                    && insCode.equalsIgnoreCase(itiSeats.group(1));
+        }
+        if ("/admission/dsc-list".equals(path)) {
+            String requestedIti = request.getParameter("itiCode");
+            return "4".equals(role) && hasScope(insCode) && requestedIti != null
+                    && insCode.equalsIgnoreCase(requestedIti.trim());
+        }
+        if ("/admission/schedule-entry".equals(path)) {
+            return ("3".equals(role) || "4".equals(role)) && hasScope(insCode);
+        }
+        if ("/admission/trade".equals(path) || path.matches("^/admission/trade/[A-Za-z0-9_-]+/details$")) {
+            return true; // public trade reference data
+        }
+        return false;
+    }
+
+    private boolean canReadRegid(String rawRegid, Claims claims) {
+        try {
+            return rawRegid != null && rawRegid.matches("\\d+")
+                    && studentObjects.canRead(Integer.valueOf(rawRegid), claims);
+        } catch (NumberFormatException ex) {
+            return false;
+        }
+    }
+
+    private static boolean hasScope(String value) {
+        return value != null && !value.isBlank();
     }
 
     private static boolean districtScopedReport(String path) {
