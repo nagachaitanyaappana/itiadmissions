@@ -436,15 +436,15 @@ public class AdmissionCounselingController {
     /** Login-scope headers from the servlet session, matching the page's own apiHeaders(). */
     private HttpHeaders scopeHeaders(HttpServletRequest request) {
         HttpHeaders headers = new HttpHeaders();
-        if (internalApiSecret != null && internalApiSecret.length() >= 32) {
-            headers.set("X-Internal-Service-Key", internalApiSecret);
+        if (internalApiSecret == null || internalApiSecret.trim().length() < 32) {
+            throw new IllegalStateException("Frontend internal API authentication is not configured");
+        }
+        headers.set("X-Internal-Service-Key", internalApiSecret.trim());
         String accessToken = BackendApiRequestSupport.accessToken(request);
-        if (accessToken != null) {
-            headers.setBearerAuth(accessToken);
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new IllegalStateException("An authenticated official access token is required");
         }
-        }
-        String accessToken = cookie(request, "ITIAP_ACCESS_TOKEN");
-        if (accessToken != null && !accessToken.isBlank()) headers.setBearerAuth(accessToken);
+        headers.setBearerAuth(accessToken);
         String role = sessionValue(request, "roleId");
         String ins = sessionValue(request, "insCode");
         if (role != null) headers.set("X-Role-Id", role);
