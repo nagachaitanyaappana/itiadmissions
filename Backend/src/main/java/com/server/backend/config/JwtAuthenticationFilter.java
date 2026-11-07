@@ -335,6 +335,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private boolean authorizeAdmissionLookup(Claims claims, HttpServletRequest request,
             String path, String role, String insCode) {
         if (!"GET".equalsIgnoreCase(request.getMethod())) return false;
+        if ("/admission/call-letter".equals(path)) {
+            String requestedDistrict = request.getParameter("distCode");
+            String requestedIti = request.getParameter("itiCode");
+            if ("3".equals(role)) {
+                return hasScope(insCode) && requestedDistrict != null
+                        && insCode.equalsIgnoreCase(requestedDistrict.trim());
+            }
+            if ("4".equals(role)) {
+                return hasScope(insCode) && requestedIti != null
+                        && insCode.equalsIgnoreCase(requestedIti.trim());
+            }
+            return false;
+        }
+        if ("/admission/call-letter/print".equals(path)) {
+            if ("3".equals(role)) {
+                String requestedDistrict = request.getParameter("distCode");
+                return hasScope(insCode) && requestedDistrict != null
+                        && insCode.equalsIgnoreCase(requestedDistrict.trim());
+            }
+            if ("4".equals(role)) {
+                String requestedIti = request.getHeader("X-Iti-Code");
+                return hasScope(insCode) && requestedIti != null
+                        && insCode.equalsIgnoreCase(requestedIti.trim());
+            }
+            return false;
+        }
         if ("/admission/admission-update".equals(path)) {
             String requestedIti = request.getParameter("itiCode");
             return "4".equals(role) && hasScope(insCode) && requestedIti != null
