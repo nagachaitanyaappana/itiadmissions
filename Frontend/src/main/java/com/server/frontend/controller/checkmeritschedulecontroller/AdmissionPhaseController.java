@@ -431,7 +431,9 @@ public class AdmissionPhaseController {
     @SuppressWarnings("unchecked")
     private List<Map<String, String>> fetchCasteOptions() {
         try {
-            Map<String, Object> resp = rest.getForObject(backendBase + "/api/dsc/caste-list", Map.class);
+            Map<String, Object> resp = rest.exchange(
+                    backendBase + "/api/dsc/caste-list", HttpMethod.GET,
+                    new HttpEntity<>(headers(request)), Map.class).getBody();
             Object data = resp == null ? null : resp.get("data");
             return data == null ? List.of() : (List<Map<String, String>>) data;
         } catch (Exception e) {
