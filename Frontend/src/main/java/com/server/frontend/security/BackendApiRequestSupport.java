@@ -20,9 +20,10 @@ public class BackendApiRequestSupport {
 
     public HttpHeaders headers(HttpServletRequest request) {
         HttpHeaders headers = new HttpHeaders();
-        if (internalSecret != null && !internalSecret.isBlank()) {
-            headers.set("X-Internal-Service-Key", internalSecret.trim());
+        if (internalSecret == null || internalSecret.trim().length() < 32) {
+            throw new IllegalStateException("Frontend internal API authentication is not configured");
         }
+        headers.set("X-Internal-Service-Key", internalSecret.trim());
         String token = accessToken(request);
         if (token != null) {
             headers.setBearerAuth(token);
