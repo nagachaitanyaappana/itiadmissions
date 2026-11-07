@@ -88,6 +88,7 @@
     <!-- Header Content -->
     <jsp:include page="/WEB-INF/jsp/bannernew.jsp" />
     <jsp:include page="/WEB-INF/navbars/iti_navbar.jsp" />
+    <jsp:include page="/WEB-INF/jsp/_api_base_url.jsp" />
 
     <div class="container form-container">
         <div class="outer-border shadow-lg">
@@ -153,7 +154,7 @@
     </footer>
 
     <script>
-        const NODE_API_BASE = "${backendBaseUrl}";
+        const NODE_API_BASE = window.API_BASE_URL;
 
         document.addEventListener('DOMContentLoaded', async () => {
             // Load Caste/Category List
