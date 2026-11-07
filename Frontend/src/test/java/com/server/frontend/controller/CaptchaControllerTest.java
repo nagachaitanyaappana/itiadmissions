@@ -3,6 +3,7 @@ package com.server.frontend.controller;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpSession;
 
 import static org.junit.jupiter.api.Assertions.*;
 
