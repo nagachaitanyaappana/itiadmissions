@@ -340,6 +340,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return "4".equals(role) && hasScope(insCode) && requestedIti != null
                     && insCode.equalsIgnoreCase(requestedIti.trim());
         }
+        if ("/admission/discharge-admission".equals(path)) {
+            String admissionNumber = request.getParameter("admissionNumber");
+            String year = request.getParameter("year");
+            String district = request.getParameter("distCode");
+            return "3".equals(role) && hasScope(insCode) && district != null
+                    && insCode.equalsIgnoreCase(district.trim())
+                    && studentObjects.canReadAdmissionInDistrict(admissionNumber, year, insCode);
+        }
         if ("/admission/application-reprint".equals(path)) {
             String regid = request.getParameter("registrationId");
             if (regid == null || !regid.matches("\\d{1,10}")) return false;
