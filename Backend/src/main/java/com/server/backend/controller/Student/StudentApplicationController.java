@@ -113,7 +113,18 @@ public class StudentApplicationController {
         return ResponseEntity.ok(service.getStudentById(regid));
     }
 
-    // Get Student By Hall Ticket
+    // Public forgot-registration-ID lookup: DOB + SSC hall ticket, captcha enforced by gateway.
+    // Return only the registration ID; never return the full application record from this route.
+    @GetMapping("/lookup-regid")
+    public ResponseEntity<java.util.Map<String, Object>> lookupRegid(
+            @RequestParam(name = "ssc_regno") String sscRegNo,
+            @RequestParam String dob) {
+        Integer regid = service.lookupRegidByIdentity(sscRegNo, dob);
+        if (regid == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(java.util.Map.of("regid", regid));
+    }
+
+    // Get Student By Hall Ticket (official/admin use only)
     @GetMapping("/hallticket/{sscRegNo}")
     public ResponseEntity<StudentApplicationDto> getStudentByHallTicket(
             @PathVariable String sscRegNo) {
