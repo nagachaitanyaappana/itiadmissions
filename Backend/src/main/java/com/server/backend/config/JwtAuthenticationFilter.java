@@ -1,6 +1,7 @@
 package com.server.backend.config;
 
 import com.server.backend.service.Auth.JwtTokenService;
+import com.server.backend.service.Student.StudentObjectAuthorizationService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -37,9 +38,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Pattern TRADE_SELECTION = Pattern.compile("^/admission/student-trade-selection/(\\d+)$");
 
     private final JwtTokenService tokens;
+    private final StudentObjectAuthorizationService studentObjects;
 
-    public JwtAuthenticationFilter(JwtTokenService tokens) {
+    public JwtAuthenticationFilter(JwtTokenService tokens,
+                                   StudentObjectAuthorizationService studentObjects) {
         this.tokens = tokens;
+        this.studentObjects = studentObjects;
     }
 
     @Override
@@ -125,7 +129,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 
-    private static boolean authorized(Claims claims, HttpServletRequest request, String path) {
+    private boolean authorized(Claims claims, HttpServletRequest request, String path) {
         String role = claim(claims, "roleId");
         String insCode = claim(claims, "insCode");
         if (role == null || role.isBlank()) return false;
@@ -155,6 +159,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (path.startsWith("/api/admission/")) {
             return ("3".equals(role) || "4".equals(role)) && hasScope(insCode);
+        }
+
+        if (path.startsWith("/api/student/update/")) {
+            return "2".equals(role) || "10".equals(role);
+        }
+
+        Matcher studentId = STUDENT_REGID.matcher(path);
+        Matcher studentPhoto = STUDENT_PHOTO.matcher(path);
+        Matcher studentMarks = STUDENT_MARKS.matcher(path);
+        if (("GET".equalsIgnoreCase(request.getMethod()) && studentId.matches())
+                || (("GET".equalsIgnoreCase(request.getMethod())
+                     || "POST".equalsIgnoreCase(request.getMethod())) && studentPhoto.matches())
+                || ("GET".equalsIgnoreCase(request.getMethod()) && studentMarks.matches())) {
+            String regid = studentId.matches() ? studentId.group(1)
+                    : studentPhoto.matches() ? studentPhoto.group(1) : studentMarks.group(1);
+            try {
+                return studentObjects.canRead(Integer.valueOf(regid), claims);
+            } catch (NumberFormatException ex) {
+                return false;
+            }
         }
 
         if (path.equals("/api/student/all") || path.startsWith("/api/student/delete/")
