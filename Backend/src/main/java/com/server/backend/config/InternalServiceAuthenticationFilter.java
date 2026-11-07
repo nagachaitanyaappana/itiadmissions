@@ -15,17 +15,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Restricts the credential-checking endpoint to the trusted Frontend process.
- *
- * <p>This is deliberately scoped to /api/auth/login while the browser-to-Frontend
- * gateway migration is in progress. Applying it to all business APIs before that
- * migration would break existing candidate and official browser workflows.
+ * Verifies the Frontend-to-Backend service credential for every browser-origin
+ * API request. Legacy Frontend server-side RestTemplate calls without an Origin
+ * header remain compatible during migration; production must bind Backend to a
+ * private interface/firewall so those calls can only originate from Frontend.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
 public class InternalServiceAuthenticationFilter extends OncePerRequestFilter {
 
     public static final String HEADER_NAME = "X-Internal-Service-Key";
+    public static final String AUTHENTICATED_ATTRIBUTE =
+            InternalServiceAuthenticationFilter.class.getName() + ".authenticated";
 
     private final String configuredSecret;
 
@@ -37,20 +38,31 @@ public class InternalServiceAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        return !("/api/auth/login".equals(path) && "POST".equalsIgnoreCase(request.getMethod()));
+        return !(path.startsWith("/api/") || path.startsWith("/admission/")
+                || path.startsWith("/admin/") || path.startsWith("/meritlist/"));
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        String supplied = request.getHeader(HEADER_NAME);
+        boolean browserOrigin = request.getHeader("Origin") != null;
+        boolean loginEndpoint = "/api/auth/login".equals(
+                request.getRequestURI().substring(request.getContextPath().length()));
+
+        // The login endpoint is always server-to-server. For every other route,
+        // a browser-origin request must pass through the Frontend gateway.
+        if (supplied == null && !browserOrigin && !loginEndpoint) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         if (configuredSecret.length() < 32) {
             response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
                     "Backend internal authentication is not configured");
             return;
         }
-
-        String supplied = request.getHeader(HEADER_NAME);
         if (supplied == null || !MessageDigest.isEqual(
                 configuredSecret.getBytes(StandardCharsets.UTF_8),
                 supplied.getBytes(StandardCharsets.UTF_8))) {
@@ -59,6 +71,7 @@ public class InternalServiceAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        request.setAttribute(AUTHENTICATED_ATTRIBUTE, Boolean.TRUE);
         filterChain.doFilter(request, response);
     }
 }
