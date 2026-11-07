@@ -237,14 +237,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Master data is read-only for district/ITI users. All writes and broad
         // ITI-list queries remain reserved for state/nodal roles.
         if ("/api/admission-phase/all".equals(path)) {
-            return "GET".equals(method) && ("3".equals(role) || "4".equals(role));
+            return ("2".equals(role) || "10".equals(role))
+                    || ("GET".equals(method) && ("3".equals(role) || "4".equals(role)));
         }
 
         if (path.equals("/api/designations") || path.startsWith("/api/designations/")) {
-            return "GET".equals(method) && ("3".equals(role) || "4".equals(role));
+            return ("2".equals(role) || "10".equals(role))
+                    || ("GET".equals(method) && ("3".equals(role) || "4".equals(role)));
         }
         if (path.equals("/api/trades") || path.startsWith("/api/trades/")) {
-            return "GET".equals(method) && ("3".equals(role) || "4".equals(role));
+            return ("2".equals(role) || "10".equals(role))
+                    || ("GET".equals(method) && ("3".equals(role) || "4".equals(role)));
         }
         if (path.equals("/api/itis") || path.startsWith("/api/itis/")) {
             return authorizeItiMaster(request, path, role, insCode);
@@ -271,7 +274,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (path.startsWith("/api/status")) {
-            return ("3".equals(role) || "4".equals(role)) && hasScope(insCode);
+            return ("2".equals(role) || "10".equals(role))
+                    || (("3".equals(role) || "4".equals(role)) && hasScope(insCode));
         }
 
         // Default-deny for district/ITI roles. State and nodal administrators retain
@@ -282,6 +286,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean authorizeMeritList(Claims claims, HttpServletRequest request,
             String path, String role, String insCode) {
+        if ("2".equals(role) || "10".equals(role)) return true;
         String method = request.getMethod().toUpperCase();
         if ("GET".equals(method) && "/api/meritlist/window-status".equals(path)) {
             return "3".equals(role) || "4".equals(role);
@@ -305,6 +310,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean authorizeChecklist(Claims claims, HttpServletRequest request,
             String path, String role, String insCode) {
+        if ("2".equals(role) || "10".equals(role)) return true;
         if (!"GET".equalsIgnoreCase(request.getMethod())) return false;
         Matcher district = Pattern.compile("^/api/checklist/district/([A-Za-z0-9_-]+)$").matcher(path);
         if (district.matches()) {
@@ -322,6 +328,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean authorizeAdmissionTimings(HttpServletRequest request,
             String path, String role, String insCode) {
+        if ("2".equals(role) || "10".equals(role)) return true;
         if (!hasScope(insCode)) return false;
         if (Set.of("/admission-timings/entry", "/admission-timings/timings",
                 "/admission-timings/today", "/admission-timings/view",
@@ -337,6 +344,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean authorizeItiMaster(HttpServletRequest request,
             String path, String role, String insCode) {
+        if ("2".equals(role) || "10".equals(role)) return true;
         if (!"GET".equalsIgnoreCase(request.getMethod()) || !hasScope(insCode)) return false;
         if ("/api/itis/by-district".equals(path)) {
             String district = request.getParameter("distCode");
@@ -350,6 +358,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean authorizeAdmissionLookup(Claims claims, HttpServletRequest request,
             String path, String role, String insCode) {
+        if ("2".equals(role) || "10".equals(role)) return true;
         if (!"GET".equalsIgnoreCase(request.getMethod())) return false;
         if ("/admission/admission-slip".equals(path)) {
             String requestedDistrict = request.getParameter("distCode");
