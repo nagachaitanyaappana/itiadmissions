@@ -29,6 +29,20 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void allowsTrustedBackendLoginWithoutBearerToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
+        request.setRequestURI("/api/auth/login");
+        request.setAttribute(InternalServiceAuthenticationFilter.AUTHENTICATED_ATTRIBUTE, Boolean.TRUE);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        boolean[] reached = {false};
+
+        filter.doFilter(request, response, (req, res) -> reached[0] = true);
+
+        assertTrue(reached[0]);
+        assertEquals(200, response.getStatus());
+    }
+
+    @Test
     void requiresOfficialTokenForProtectedGatewayRoutes() throws Exception {
         MockHttpServletRequest request = gatewayRequest("POST", "/api/dv/approve");
         MockHttpServletResponse response = new MockHttpServletResponse();
