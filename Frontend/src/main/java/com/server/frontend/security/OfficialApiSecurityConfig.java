@@ -31,6 +31,11 @@ public class OfficialApiSecurityConfig implements WebMvcConfigurer {
                         "/VerifyApplication/**",
                         "/CallLetterView/**",
                         "/AdmissionPhase/**",
-                        "/AddTrade/**");
+                        "/AddTrade/**",
+                        "/itiList/**",
+                        "/iti-details/**",
+                        "/iti-create/**",
+                        "/iti-trade-selection/**",
+                        "/shift-unit-permitted/**");
     }
 }
