@@ -25,12 +25,13 @@ public class Application_Reprint_Controller {
 
     @GetMapping("/application-reprint")
     public ResponseEntity<Application_Reprint_DTO> getApplication(
-            @RequestParam Long registrationId) {
+            @RequestParam Long registrationId,
+            @RequestParam String distCode) {
 
         try {
 
             return ResponseEntity.ok(
-                    service.getApplication(registrationId));
+                    service.getApplication(registrationId, distCode));
 
         } catch (IllegalArgumentException ex) {
 

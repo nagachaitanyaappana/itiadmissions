@@ -40,3 +40,7 @@ jobs:
       - name: Build frontend WAR
         run: ./mvnw -B -DskipTests package
         working-directory: Frontend
+
+      - name: Build and test backend WAR
+        working-directory: Backend
+        run: ./mvnw -B verify

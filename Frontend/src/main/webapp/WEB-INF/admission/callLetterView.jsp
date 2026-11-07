@@ -100,7 +100,7 @@
 <div id="footer">2013 @ All Rights Reserved&nbsp;&nbsp;Designed by&nbsp;&nbsp;National Informatics Center</div>
 <script>
 var CTX = "${pageContext.request.contextPath}";
-var API_BASE = "${backendBaseUrl}";
+var API_BASE = "${pageContext.request.contextPath}/backend";
 var ROLE = "${sessionScope.roleId}";
 var DIST = "${sessionScope.insCode}";
 

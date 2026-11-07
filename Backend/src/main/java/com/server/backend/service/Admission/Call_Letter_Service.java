@@ -9,6 +9,8 @@ public interface Call_Letter_Service {
 
     List<Call_Letter_DTO> getCallLetterData(
             String rank,
-            String caste);
+            String caste,
+            String distCode,
+            String itiCode);
 
 }

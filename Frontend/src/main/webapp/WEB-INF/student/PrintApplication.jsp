@@ -493,7 +493,7 @@
     </div>
 
     <script type="text/javascript">
-        var BASE = '${backendBaseUrl}';
+        var BASE = '${pageContext.request.contextPath}/backend';
         var REGID = new URLSearchParams(window.location.search).get('regid');
         var PA = {};
 

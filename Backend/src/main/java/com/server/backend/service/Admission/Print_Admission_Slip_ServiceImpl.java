@@ -29,10 +29,18 @@ public class Print_Admission_Slip_ServiceImpl
 
     @Override
     public Print_Admission_slip_DTO getAdmissionSlip(
-            String admissionNumber) {
+            String admissionNumber, String distCode, String itiCode) {
 
+        String districtScope = distCode == null ? "" : distCode.trim();
+        String itiScope = itiCode == null ? "" : itiCode.trim();
+        if (districtScope.isEmpty() == itiScope.isEmpty()) {
+            throw new IllegalArgumentException("Admission number not found");
+        }
         iti_admissions admission = repository
                 .findByAdmissionNumber(admissionNumber)
+                .filter(row -> !districtScope.isEmpty()
+                        ? districtScope.equalsIgnoreCase(row.getDist_code())
+                        : itiScope.equalsIgnoreCase(row.getIti_code()))
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Admission number not found"));
 

@@ -4,9 +4,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -31,13 +36,22 @@ import javax.imageio.ImageIO;
 public class CaptchaController {
 
     private static final String SESSION_KEY = "CAPTCHA_TEXT";
+    private static final String ATTEMPTS_KEY = "CAPTCHA_ATTEMPTS";
+    static final String VERIFIED_AT_KEY = "CAPTCHA_VERIFIED_AT";
+    static final String VERIFIED_USES_KEY = "CAPTCHA_VERIFIED_USES";
+    private static final int MAX_ATTEMPTS = 5;
     private static final String CHARS = "0123456789";
     private static final SecureRandom RANDOM = new SecureRandom();
 
     @GetMapping(produces = MediaType.IMAGE_PNG_VALUE)
     public void captcha(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String text = randomText(4);
-        request.getSession().setAttribute(SESSION_KEY, text);
+        HttpSession session = request.getSession();
+        session.setAttribute(SESSION_KEY, text);
+        session.setAttribute(ATTEMPTS_KEY, 0);
+        session.removeAttribute(VERIFIED_AT_KEY);
+        session.removeAttribute(VERIFIED_USES_KEY);
+        session.removeAttribute("verifiedCandidateRegid");
         response.setContentType(MediaType.IMAGE_PNG_VALUE);
         response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
         response.setDateHeader("Expires", 0);
@@ -78,29 +92,68 @@ public class CaptchaController {
             return false;
         }
         Object expected = session.getAttribute(SESSION_KEY);
-        return expected != null && submitted != null
-                && expected.toString().equalsIgnoreCase(submitted.trim());
+        if (expected == null || submitted == null) return false;
+        byte[] expectedBytes = expected.toString().trim().toUpperCase().getBytes(StandardCharsets.US_ASCII);
+        byte[] submittedBytes = submitted.trim().toUpperCase().getBytes(StandardCharsets.US_ASCII);
+        return java.security.MessageDigest.isEqual(expectedBytes, submittedBytes);
     }
 
-    /** Returns the current captcha text for this session, generating a fresh one if absent. */
-    static String current(HttpServletRequest request) {
-        Object expected = request.getSession().getAttribute(SESSION_KEY);
-        if (expected == null) {
-            expected = randomText(4);
-            request.getSession().setAttribute(SESSION_KEY, expected);
+    /**
+     * Login captcha is single-use. Count failed guesses against the current
+     * image so a caller cannot retry the same answer indefinitely.
+     */
+    static boolean consumeForLogin(HttpServletRequest request, String submitted) {
+        HttpSession session = request.getSession(false);
+        if (session == null) return false;
+        Object attemptsValue = session.getAttribute(ATTEMPTS_KEY);
+        int attempts = attemptsValue instanceof Number number ? number.intValue() : 0;
+        if (attempts >= MAX_ATTEMPTS) {
+            session.removeAttribute(SESSION_KEY);
+            return false;
         }
-        return String.valueOf(expected);
+        if (!matches(request, submitted)) {
+            attempts++;
+            session.setAttribute(ATTEMPTS_KEY, attempts);
+            if (attempts >= MAX_ATTEMPTS) session.removeAttribute(SESSION_KEY);
+            return false;
+        }
+        session.removeAttribute(SESSION_KEY);
+        session.removeAttribute(ATTEMPTS_KEY);
+        return true;
     }
 
-    @GetMapping(value = "/text", produces = MediaType.TEXT_PLAIN_VALUE)
-    public void captchaText(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        byte[] body = current(request).getBytes(StandardCharsets.UTF_8);
-        response.setContentType(MediaType.TEXT_PLAIN_VALUE);
-        response.setContentLength(body.length);
-        try (OutputStream out = response.getOutputStream()) {
-            out.write(body);
-            out.flush();
+    /**
+     * Validates and consumes the session captcha server-side. The expected
+     * captcha text is never exposed to browser JavaScript.
+     */
+    @PostMapping(value = "/verify")
+    @ResponseBody
+    public ResponseEntity<Void> verify(@RequestParam("captcha") String submitted,
+                                       HttpServletRequest request) {
+        if (!BackendGatewayController.sameOrigin(request)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+        HttpSession session = request.getSession(false);
+        if (session == null) return ResponseEntity.badRequest().build();
+        Object attemptsValue = session.getAttribute(ATTEMPTS_KEY);
+        int attempts = attemptsValue instanceof Number number ? number.intValue() : 0;
+        if (attempts >= MAX_ATTEMPTS) {
+            session.removeAttribute(SESSION_KEY);
+            return ResponseEntity.status(429).build();
+        }
+        if (!matches(request, submitted)) {
+            attempts++;
+            session.setAttribute(ATTEMPTS_KEY, attempts);
+            if (attempts >= MAX_ATTEMPTS) session.removeAttribute(SESSION_KEY);
+            return ResponseEntity.badRequest().build();
+        }
+        session.removeAttribute(SESSION_KEY);
+        session.removeAttribute(ATTEMPTS_KEY);
+        session.setAttribute(VERIFIED_AT_KEY, System.currentTimeMillis());
+        // Step 1 save + final registration are the two writes in the public
+        // registration flow. Other identity gates consume the proof once.
+        session.setAttribute(VERIFIED_USES_KEY, 2);
+        return ResponseEntity.noContent().build();
     }
 
     private static String randomText(int len) {

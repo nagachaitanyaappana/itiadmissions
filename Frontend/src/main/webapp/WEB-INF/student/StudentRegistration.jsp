@@ -1055,7 +1055,7 @@
     <!-- JAVASCRIPT LOGIC                           -->
     <!-- ========================================== -->
     <script type="text/javascript">
-        var BACKEND_URL = "${backendBaseUrl}";
+        var BACKEND_URL = "${pageContext.request.contextPath}/backend";
         var SESSION_YEAR = "2026";
         var CURRENT_REGID = null;
         var CURRENT_SSC_TYPE = "sscm"; // "sscm" or "sscg"
@@ -1163,6 +1163,13 @@
         }
 
         // ================= STEP 1 SUBMISSION =================
+        function escapeRegistrationHtml(value) {
+            if (value === null || value === undefined) return '';
+            return String(value).replace(/[&<>"']/g, function (ch) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+            });
+        }
+
         function submitStep1() {
             $('.error-msg').text('');
             var isValid = true;
@@ -1209,16 +1216,9 @@
             var btn = $('#step1SubmitBtn');
             btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Checking...');
 
-            // Verify entered captcha against session captcha
-            $.get('${pageContext.request.contextPath}/captcha/text?ts=' + new Date().getTime(), function (serverCaptcha) {
-                if (enteredCaptcha.toUpperCase() !== String(serverCaptcha).trim().toUpperCase()) {
-                    btn.prop('disabled', false).html('Proceed <i class="fas fa-arrow-right"></i>');
-                    $('#captchaErr').text("Captcha does not match. Please try again.");
-                    refreshCaptcha();
-                    $('#captchaInput').val('').focus();
-                    return;
-                }
-
+            // The captcha answer is checked and consumed by the server;
+            // JavaScript never receives the expected text.
+            $.post('${pageContext.request.contextPath}/captcha/verify', { captcha: enteredCaptcha }, function () {
                 var payload = {
                     sscBoard: board,
                     sscRegNo: regno,
@@ -1253,15 +1253,16 @@
                             msg = xhr.responseJSON.message;
                         }
                         $('#globalAlert').html('<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
-                            '<strong>Error:</strong> ' + msg +
+                            '<strong>Error:</strong> ' + escapeRegistrationHtml(msg) +
                             '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
                         refreshCaptcha();
                     }
                 });
             }).fail(function () {
                 btn.prop('disabled', false).html('Proceed <i class="fas fa-arrow-right"></i>');
-                $('#captchaErr').text("Unable to verify captcha. Please refresh and try again.");
+                $('#captchaErr').text("Captcha does not match or could not be verified. Please refresh and try again.");
                 refreshCaptcha();
+                $('#captchaInput').val('').focus();
             });
         }
 

@@ -1,5 +1,8 @@
 package com.server.frontend.controller.admission;
 
+import com.server.frontend.security.BackendApiRequestSupport;
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -29,6 +32,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class ScheduleEntryViewController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public ScheduleEntryViewController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
@@ -52,7 +60,8 @@ public class ScheduleEntryViewController {
     public ResponseEntity<Object> scheduleEntry(@RequestParam("qualification") String qualification,
             @RequestParam("caste") String caste,
             @RequestParam("phase") String phase,
-            @RequestParam("year") String year) {
+            @RequestParam("year") String year,
+            HttpServletRequest request) {
         String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/admission/schedule-entry")
                 .queryParam("qualification", qualification)
                 .queryParam("caste", caste)
@@ -60,7 +69,7 @@ public class ScheduleEntryViewController {
                 .queryParam("year", year)
                 .toUriString();
         try {
-            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, null,
+            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request),
                     new ParameterizedTypeReference<Object>() {
                     });
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());

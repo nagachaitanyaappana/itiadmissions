@@ -1,5 +1,8 @@
 package com.server.frontend.controller.admission;
 
+import com.server.frontend.security.BackendApiRequestSupport;
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -32,6 +35,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class SearchController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public SearchController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
@@ -66,7 +74,19 @@ public class SearchController {
             @RequestParam(value = "districtCode", required = false) String districtCode,
             @RequestParam(value = "itiCode", required = false) String itiCode,
             @RequestParam(value = "tradeCode", required = false) String tradeCode,
-            @RequestParam(value = "phase", required = false) String phase) {
+            @RequestParam(value = "phase", required = false) String phase,
+            HttpServletRequest request) {
+
+        String role = BackendApiRequestSupport.role(request);
+        if ("4".equals(role)) {
+            String ownIti = BackendApiRequestSupport.scope(request);
+            if (ownIti.isBlank()) {
+                return ResponseEntity.status(403).body(java.util.Map.of("error", "ITI scope is required."));
+            }
+            // Never trust a caller-supplied ITI filter for an ITI official.
+            itiCode = ownIti;
+            districtCode = null;
+        }
 
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(backendBaseUrl + "/admission/search");
@@ -90,7 +110,7 @@ public class SearchController {
 
         String url = builder.toUriString();
         try {
-            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, null,
+            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request),
                     new ParameterizedTypeReference<Object>() {
                     });
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());

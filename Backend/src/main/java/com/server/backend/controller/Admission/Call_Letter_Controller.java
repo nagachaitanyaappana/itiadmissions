@@ -31,11 +31,15 @@ public class Call_Letter_Controller {
     @GetMapping("/call-letter")
     public List<Call_Letter_DTO> getCallLetterData(
             @RequestParam String rank,
-            @RequestParam String caste) {
+            @RequestParam String caste,
+            @RequestParam(required = false) String distCode,
+            @RequestParam(required = false) String itiCode) {
 
         return service.getCallLetterData(
                 rank,
-                caste);
+                caste,
+                distCode,
+                itiCode);
     }
 
     /**

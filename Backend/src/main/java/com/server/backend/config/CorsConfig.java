@@ -16,16 +16,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * The single place CORS is configured. The former per-controller {@code @CrossOrigin} annotations
  * were inert duplicates of this class and were removed — see WRONG_IMPLEMENTATIONS.md §6.
  *
- * <p>Origins come from {@code app.cors.allowed-origins}. The default {@code *} keeps the local
- * wildcard that the sibling UI copies (ports 8080 / 8081) rely on. For a deployment, set the
- * property — or the {@code CORS_ALLOWED_ORIGINS} environment variable, mirroring the way the
- * Frontend reads {@code BACKEND_URL} — to a comma-separated list of real origins.
+ * <p>Origins come from {@code app.cors.allowed-origins}. The fallback is restricted to known
+ * localhost development origins. Deployments must set {@code CORS_ALLOWED_ORIGINS} to a
+ * comma-separated allowlist of exact trusted UI origins.
  *
- * <p>{@code allowCredentials(true)} must stay: the JSPs fetch with {@code credentials: 'include'},
- * and the browser rejects such a response unless it carries
- * {@code Access-Control-Allow-Credentials: true}, which {@code @CrossOrigin} alone never emitted.
- * A literal {@code *} cannot be combined with credentials, so the wildcard is applied through
- * {@code allowedOriginPatterns} — Spring then echoes the concrete origin instead of {@code *}.
+ * <p>Credentialed CORS must use exact origins. A wildcard is rejected at startup rather than
+ * silently turning every website into a trusted origin.
  */
 @Configuration
 public class CorsConfig {
@@ -33,10 +29,9 @@ public class CorsConfig {
     private static final Logger logger = LoggerFactory.getLogger(CorsConfig.class);
 
     /**
-     * Comma-separated list of allowed origins, or {@code *} for the development wildcard. An empty
-     * value denies every cross-origin request instead of quietly allowing all of them.
+     * Comma-separated list of allowed origins. An empty value denies every cross-origin request.
      */
-    @Value("${app.cors.allowed-origins:*}")
+    @Value("${app.cors.allowed-origins:http://localhost:5051,http://127.0.0.1:5051,http://localhost:6051,http://127.0.0.1:6051,http://localhost:8080,http://localhost:8081}")
     private String allowedOrigins;
 
     @Bean
@@ -63,16 +58,15 @@ public class CorsConfig {
 
         if (origins.isEmpty()) {
             logger.warn("app.cors.allowed-origins is empty — denying every cross-origin request. "
-                    + "Set it to '*' for development or to a comma-separated list of origins.");
+                    + "Set an explicit comma-separated list of trusted origins.");
             registration.allowedOrigins(new String[0]);
             return;
         }
 
         if (origins.contains("*")) {
-            logger.warn("app.cors.allowed-origins is '*' — every origin is allowed and may send "
-                    + "credentials. Fine for local development; set it for a deployment.");
-            registration.allowedOriginPatterns("*");
-            return;
+            throw new IllegalStateException(
+                    "Wildcard CORS origins are forbidden when credentials are enabled. "
+                    + "Configure CORS_ALLOWED_ORIGINS with exact trusted origins.");
         }
 
         logger.info("CORS allowed origins: {}", origins);

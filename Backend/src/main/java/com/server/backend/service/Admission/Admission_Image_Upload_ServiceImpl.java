@@ -21,12 +21,14 @@ public class Admission_Image_Upload_ServiceImpl
     @Override
     public Admission_Image_Upload_DTO verifyAdmission(
             String admissionNumber,
-            String sscHallticketNumber) {
+            String sscHallticketNumber,
+            String itiCode) {
 
         iti_admissions admission = repository
                 .findAdmissionForImageUpload(
                         admissionNumber,
-                        sscHallticketNumber)
+                        sscHallticketNumber,
+                        itiCode)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Admission Number and SSC Hallticket Number do not match"));
 
