@@ -245,9 +245,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (path.startsWith("/admission/reservation-entry")) {
-            String itiCode = request.getParameter("itiCode");
-            return "GET".equals(method) && "4".equals(role) && hasScope(insCode)
-                    && itiCode != null && insCode.equalsIgnoreCase(itiCode.trim());
+            if ("2".equals(role) || "10".equals(role)) return true;
+            if (!hasScope(insCode)) return false;
+            if ("PUT".equals(method)) {
+                // The controller validates the ITI from the JSON body against these claims.
+                return "3".equals(role) || "4".equals(role);
+            }
+            if ("GET".equals(method)) {
+                String itiCode = request.getParameter("itiCode");
+                if (itiCode == null || itiCode.isBlank()) return false;
+                if ("4".equals(role)) return insCode.equalsIgnoreCase(itiCode.trim());
+                return "3".equals(role) && studentObjects.isItiInDistrict(itiCode, insCode);
+            }
+            return false;
         }
 
         if (path.startsWith("/admission/")) {
