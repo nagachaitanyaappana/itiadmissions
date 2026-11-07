@@ -264,7 +264,7 @@ public class BackendGatewayController {
                 || "OPTIONS".equalsIgnoreCase(method));
     }
 
-    static boolean sameOrigin(HttpServletRequest request) {
+    public static boolean sameOrigin(HttpServletRequest request) {
         String origin = request.getHeader("Origin");
         if (origin == null || origin.isBlank()) {
             return "same-origin".equalsIgnoreCase(request.getHeader("Sec-Fetch-Site"));
