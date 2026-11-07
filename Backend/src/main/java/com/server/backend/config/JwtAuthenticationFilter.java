@@ -345,6 +345,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private boolean authorizeAdmissionLookup(Claims claims, HttpServletRequest request,
             String path, String role, String insCode) {
         if (!"GET".equalsIgnoreCase(request.getMethod())) return false;
+        if ("/admission/admission-slip".equals(path)) {
+            String requestedDistrict = request.getParameter("distCode");
+            String requestedIti = request.getParameter("itiCode");
+            if ("3".equals(role)) {
+                return hasScope(insCode) && requestedDistrict != null
+                        && insCode.equalsIgnoreCase(requestedDistrict.trim());
+            }
+            if ("4".equals(role)) {
+                return hasScope(insCode) && requestedIti != null
+                        && insCode.equalsIgnoreCase(requestedIti.trim());
+            }
+            return false;
+        }
+        if ("/admission/master-data".equals(path)) {
+            return "3".equals(role) || "4".equals(role);
+        }
+        if (path.matches("^/admission/iti/[A-Za-z0-9_-]+/trades$")) {
+            return true; // Public trade reference data; no candidate records.
+        }
         if ("/admission/call-letter".equals(path)) {
             String requestedDistrict = request.getParameter("distCode");
             String requestedIti = request.getParameter("itiCode");
