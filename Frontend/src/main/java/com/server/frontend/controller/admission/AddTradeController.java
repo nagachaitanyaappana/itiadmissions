@@ -3,6 +3,7 @@ package com.server.frontend.controller.admission;
 import java.util.Map;
 
 import com.server.frontend.controller.BackendGatewayController;
+import com.server.frontend.security.BackendApiRequestSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,11 +21,13 @@ import org.springframework.web.client.RestTemplate;
 public class AddTradeController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
 
-    public AddTradeController() {
+    public AddTradeController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
         rest.setErrorHandler(response -> false);
     }
 
@@ -37,35 +40,35 @@ public class AddTradeController {
     @ResponseBody
     public ResponseEntity<Object> itis(@PathVariable("distCode") String d, HttpServletRequest request) {
         if (!canReadDistrict(request, d)) return forbidden();
-        return proxyGet(backendBaseUrl + "/admission/district/" + code(d) + "/itis?permitted=true");
+        return proxyGet(backendBaseUrl + "/admission/district/" + code(d) + "/itis?permitted=true", request);
     }
 
     @GetMapping("/api/itis/{distCode}")
     @ResponseBody
     public ResponseEntity<Object> names(@PathVariable("distCode") String d, HttpServletRequest request) {
         if (!canReadDistrict(request, d)) return forbidden();
-        return proxyGet(backendBaseUrl + "/admission/itis/" + code(d));
+        return proxyGet(backendBaseUrl + "/admission/itis/" + code(d), request);
     }
 
     @GetMapping("/api/iti/{itiCode}/available-trades")
     @ResponseBody
     public ResponseEntity<Object> availableTrades(@PathVariable("itiCode") String c, HttpServletRequest request) {
         if (!canReadIti(request, c)) return forbidden();
-        return proxyGet(backendBaseUrl + "/admission/add-trade/" + code(c));
+        return proxyGet(backendBaseUrl + "/admission/add-trade/" + code(c), request);
     }
 
     @GetMapping("/api/trade/{tradeShort}")
     @ResponseBody
     public ResponseEntity<Object> trade(@PathVariable("tradeShort") String t, HttpServletRequest request) {
         if (!hasOfficialSession(request)) return unauthorized();
-        return proxyGet(backendBaseUrl + "/admission/trade/" + code(t));
+        return proxyGet(backendBaseUrl + "/admission/trade/" + code(t), request);
     }
 
     @GetMapping("/api/trades")
     @ResponseBody
     public ResponseEntity<Object> allTrades(HttpServletRequest request) {
         if (!hasOfficialSession(request)) return unauthorized();
-        return proxyGet(backendBaseUrl + "/api/trades");
+        return proxyGet(backendBaseUrl + "/api/trades", request);
     }
 
     @PostMapping("/api/iti/{itiCode}/trades")
@@ -74,7 +77,7 @@ public class AddTradeController {
             @RequestBody(required = false) Map<String, Object> b, HttpServletRequest request) {
         if (!sameOriginWrite(request)) return forbidden();
         if (!isOwnIti(request, c)) return forbidden();
-        return proxyWrite(HttpMethod.POST, backendBaseUrl + "/admission/add-trade/" + code(c) + "/trade", b);
+        return proxyWrite(HttpMethod.POST, backendBaseUrl + "/admission/add-trade/" + code(c) + "/trade", b, request);
     }
 
     @PutMapping("/api/iti/{itiCode}/approve-all")
@@ -82,7 +85,7 @@ public class AddTradeController {
     public ResponseEntity<Object> approve(@PathVariable("itiCode") String c, HttpServletRequest request) {
         if (!sameOriginWrite(request)) return forbidden();
         if (!isOwnIti(request, c)) return forbidden();
-        return proxyWrite(HttpMethod.PUT, backendBaseUrl + "/admission/add-trade/" + code(c) + "/approve-all", null);
+        return proxyWrite(HttpMethod.PUT, backendBaseUrl + "/admission/add-trade/" + code(c) + "/approve-all", null, request);
     }
 
     @GetMapping("/api/iti/{itiCode}/trade/{tradeCode}")
@@ -90,7 +93,7 @@ public class AddTradeController {
     public ResponseEntity<Object> getTrade(@PathVariable("itiCode") String c,
             @PathVariable("tradeCode") String t, HttpServletRequest request) {
         if (!canReadIti(request, c)) return forbidden();
-        return proxyGet(backendBaseUrl + "/admission/add-trade/" + code(c) + "/trade/" + code(t));
+        return proxyGet(backendBaseUrl + "/admission/add-trade/" + code(c) + "/trade/" + code(t), request);
     }
 
     @PutMapping("/api/iti/{itiCode}/trade/{tradeCode}")
@@ -101,7 +104,7 @@ public class AddTradeController {
         if (!sameOriginWrite(request)) return forbidden();
         if (!isOwnIti(request, c)) return forbidden();
         return proxyWrite(HttpMethod.PUT,
-                backendBaseUrl + "/admission/add-trade/" + code(c) + "/trade/" + code(t), b);
+                backendBaseUrl + "/admission/add-trade/" + code(c) + "/trade/" + code(t), b, request);
     }
 
     @PostMapping("/api/iti/{itiCode}/freeze-trades")
@@ -113,24 +116,22 @@ public class AddTradeController {
         if (!isOwnIti(request, c)) return forbidden();
         String url = backendBaseUrl + "/admission/add-trade/" + code(c)
                 + "/freeze-trades?freeze=" + ("false".equalsIgnoreCase(freeze) ? "false" : "true");
-        return proxyWrite(HttpMethod.POST, url, null);
+        return proxyWrite(HttpMethod.POST, url, null, request);
     }
 
-    private ResponseEntity<Object> proxyGet(String url) {
+    private ResponseEntity<Object> proxyGet(String url, HttpServletRequest request) {
         try {
-            ResponseEntity<Object> response = rest.getForEntity(url, Object.class);
+            ResponseEntity<Object> response = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request), Object.class);
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (Exception ex) {
             return ResponseEntity.status(502).body(Map.of("success", false, "message", "Add Trade service unavailable"));
         }
     }
 
-    private ResponseEntity<Object> proxyWrite(HttpMethod method, String url, Object body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+    private ResponseEntity<Object> proxyWrite(HttpMethod method, String url, Object body, HttpServletRequest request) {
         try {
             ResponseEntity<Object> response = rest.exchange(url, method,
-                    new HttpEntity<>(body, headers), Object.class);
+                    proxySupport.entity(request, body), Object.class);
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (Exception ex) {
             return ResponseEntity.status(502).body(Map.of("success", false, "message", "Add Trade service unavailable"));
