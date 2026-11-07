@@ -1,0 +1,88 @@
+name: Security analysis
+
+on:
+  push:
+    branches: [security-hardening, ui-experiment]
+  pull_request:
+    branches: [ui-experiment]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  dependency-scan:
+    name: Dependency and configuration vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Scan dependencies and configuration with Trivy
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: json
+          output: trivy-results.json
+          exit-code: "0"
+
+      - name: Preserve vulnerability report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-security-report
+          path: trivy-results.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  codeql:
+    name: CodeQL static security analysis (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            build-mode: autobuild
+          - language: javascript-typescript
+            build-mode: none
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended,security-and-quality
+
+      - name: Build Java projects for CodeQL
+        if: matrix.language == 'java-kotlin'
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Analyze source
+        uses: github/codeql-action/analyze@v3
+        with:
+          upload: false
+          output: codeql-${{ matrix.language }}.sarif
+
+      - name: Preserve CodeQL SARIF report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-${{ matrix.language }}-report
+          path: codeql-${{ matrix.language }}.sarif
+          if-no-files-found: warn
+          retention-days: 14
