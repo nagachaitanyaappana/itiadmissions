@@ -17,6 +17,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -161,6 +163,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return ("3".equals(role) || "4".equals(role)) && hasScope(insCode);
         }
 
+        if (path.startsWith("/api/reports/")) {
+            if ("2".equals(role) || "10".equals(role)) return true;
+            if ("/api/reports/current-admission-phase".equals(path)) return true;
+
+            if ("3".equals(role) && hasScope(insCode)
+                    && districtScopedReport(path)) {
+                String requestedIti = request.getParameter("itiCode");
+                return requestedIti == null || requestedIti.isBlank()
+                        || "All".equalsIgnoreCase(requestedIti)
+                        || studentObjects.isItiInDistrict(requestedIti, insCode);
+            }
+            if ("4".equals(role) && hasScope(insCode) && itiScopedReport(path)) {
+                return true;
+            }
+            if ("/api/reports/student-details".equals(path)) {
+                String regid = request.getParameter("regid");
+                if (regid == null || !regid.matches("\\d+")) return false;
+                try {
+                    return studentObjects.canRead(Integer.valueOf(regid), claims);
+                } catch (NumberFormatException ex) {
+                    return false;
+                }
+            }
+            return false;
+        }
+
         if (path.startsWith("/api/student/update/")) {
             return "2".equals(role) || "10".equals(role);
         }
@@ -194,6 +222,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return true;
     }
 
+    private static boolean districtScopedReport(String path) {
+        return Set.of(
+                "/api/reports/iti-wise-status",
+                "/api/reports/applicant-report-by-phase",
+                "/api/reports/dsc-full",
+                "/api/reports/dsc-options",
+                "/api/reports/caste-wise-admissions",
+                "/api/reports/applicant-count-district-wise",
+                "/api/reports/applicant-mobile-address",
+                "/api/reports/api-dashboard",
+                "/api/reports/verified-application-count",
+                "/api/reports/trade-wise-report",
+                "/api/reports/applicant-report-state-wise",
+                "/api/reports/district-schedule",
+                "/api/reports/permitted-shift-unit",
+                "/api/reports/iti-admissions",
+                "/api/reports/strength-filled-seats",
+                "/api/reports/trade-vacant-positions",
+                "/api/reports/trade-display/itis").contains(path);
+    }
+
+    private static boolean itiScopedReport(String path) {
+        return Set.of(
+                "/api/reports/iti-wise-status",
+                "/api/reports/applicant-report-by-phase",
+                "/api/reports/dsc-full",
+                "/api/reports/dsc-options",
+                "/api/reports/permitted-shift-unit").contains(path);
+    }
+
     private static HttpServletRequest withTrustedIdentityHeaders(HttpServletRequest request, Claims claims) {
         String role = claim(claims, "roleId");
         String insCode = claim(claims, "insCode");
@@ -203,7 +261,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return new HttpServletRequestWrapper(request) {
             @Override
             public String getHeader(String name) {
-                if (name == null) return super.getHeader(null);
+                if (name == null) return null;
                 return switch (name.toLowerCase()) {
                     case "x-role-id" -> role;
                     case "x-ins-code" -> insCode;
@@ -219,7 +277,47 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return value == null ? Collections.emptyEnumeration()
                         : Collections.enumeration(Collections.singleton(value));
             }
+
+            @Override
+            public String getParameter(String name) {
+                if ("3".equals(role) && isDistrictParameter(name)) return insCode;
+                if ("4".equals(role) && isItiParameter(name)) return insCode;
+                return super.getParameter(name);
+            }
+
+            @Override
+            public String[] getParameterValues(String name) {
+                String scoped = getParameter(name);
+                if (scoped != null && !scoped.equals(super.getParameter(name))) {
+                    return new String[] { scoped };
+                }
+                return super.getParameterValues(name);
+            }
+
+            @Override
+            public Map<String, String[]> getParameterMap() {
+                Map<String, String[]> parameters = new HashMap<>(super.getParameterMap());
+                if ("3".equals(role)) {
+                    for (String name : new String[] { "distCode", "dist_code", "districtCode", "dist" }) {
+                        parameters.put(name, new String[] { insCode });
+                    }
+                } else if ("4".equals(role)) {
+                    for (String name : new String[] { "itiCode", "iti_code" }) {
+                        parameters.put(name, new String[] { insCode });
+                    }
+                }
+                return Collections.unmodifiableMap(parameters);
+            }
         };
+    }
+
+    private static boolean isDistrictParameter(String name) {
+        return "distCode".equals(name) || "dist_code".equals(name)
+                || "districtCode".equals(name) || "dist".equals(name);
+    }
+
+    private static boolean isItiParameter(String name) {
+        return "itiCode".equals(name) || "iti_code".equals(name);
     }
 
     private static boolean hasScope(String value) {
