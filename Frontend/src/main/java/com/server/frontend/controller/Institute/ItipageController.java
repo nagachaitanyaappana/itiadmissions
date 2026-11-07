@@ -20,91 +20,91 @@ public class ItipageController {
 
     private final RestTemplate rest = new RestTemplate();
 
-    // The ITI list/detail/create pages read the ITI master, whose endpoint is
-    // /api/itis. (This used to point at /api/reports, which has no bare route
-    // and returned 404, so every ITI dropdown/table failed to load.)
     private static final String ITIS_PATH = "/api/itis";
     private static final String DISTRICTS_PATH = "/api/districts";
     private static final String DESIGNATIONS_PATH = "/api/designations";
     private static final String SHIFT_UNIT_PATH = "/api/shift-unit-permitted";
 
     @GetMapping("/itiList")
-    public String getItiList(Model model) {
-        model.addAttribute("itiApiUrl", backendBaseUrl + ITIS_PATH);
+    public String getItiList(HttpServletRequest request, Model model) {
+        if (notLoggedIn(request)) return "redirect:/?error=session";
+        model.addAttribute("itiApiUrl", gatewayBase(request) + ITIS_PATH);
         return "Institute/ItiList";
     }
 
     @GetMapping("/iti-details")
-    public String itiDetails(Model model) {
-        model.addAttribute("itiApiUrl", backendBaseUrl + ITIS_PATH);
+    public String itiDetails(HttpServletRequest request, Model model) {
+        if (notLoggedIn(request)) return "redirect:/?error=session";
+        model.addAttribute("itiApiUrl", gatewayBase(request) + ITIS_PATH);
         return "Institute/ItiDetails";
     }
 
     @GetMapping("/iti-create")
-    public String itiCreate(Model model) {
-        model.addAttribute("itiApiUrl", backendBaseUrl + ITIS_PATH);
-        model.addAttribute("districtApiUrl", backendBaseUrl + DISTRICTS_PATH);
-        model.addAttribute("designationApiUrl", backendBaseUrl + DESIGNATIONS_PATH);
-        // Form submission target (POST /api/itis); previously unset, so the
-        // create form posted to "" (the page itself) and always failed.
-        model.addAttribute("itiRegistrationApiUrl", backendBaseUrl + ITIS_PATH);
+    public String itiCreate(HttpServletRequest request, Model model) {
+        if (notLoggedIn(request)) return "redirect:/?error=session";
+        model.addAttribute("itiApiUrl", gatewayBase(request) + ITIS_PATH);
+        model.addAttribute("districtApiUrl", gatewayBase(request) + DISTRICTS_PATH);
+        model.addAttribute("designationApiUrl", gatewayBase(request) + DESIGNATIONS_PATH);
+        model.addAttribute("itiRegistrationApiUrl", gatewayBase(request) + ITIS_PATH);
         return "Institute/ItiCreate";
     }
 
     @GetMapping("/iti-trade-selection")
     public String itiTradeSelection(HttpServletRequest request, Model model) {
-        if (notLoggedIn(request)) {
-            return "redirect:/?error=session";
-        }
-        // District users must only see their own district's ITIs; state/other
-        // roles keep the full list.
+        if (notLoggedIn(request)) return "redirect:/?error=session";
         Object roleId = request.getSession().getAttribute("roleId");
         Object insCode = request.getSession().getAttribute("insCode");
         boolean districtScoped = "3".equals(String.valueOf(roleId))
                 && insCode != null && !String.valueOf(insCode).isBlank();
+        String base = gatewayBase(request);
         String itiApiUrl = districtScoped
-                ? backendBaseUrl + "/admission/district/" + String.valueOf(insCode).trim() + "/itis"
-                : backendBaseUrl + ITIS_PATH;
+                ? base + "/admission/district/" + String.valueOf(insCode).trim() + "/itis"
+                : base + ITIS_PATH;
         model.addAttribute("itiApiUrl", itiApiUrl);
-        model.addAttribute("backendApiBaseUrl", backendBaseUrl);
-        // The JSP loads the trade master list from here; without this attribute
-        // it rendered const itiTradesApiUrl = "" and fetched the page itself.
-        model.addAttribute("itiTradesApiUrl", backendBaseUrl + "/api/trades");
+        model.addAttribute("backendApiBaseUrl", base);
+        model.addAttribute("itiTradesApiUrl", base + "/api/trades");
         return "Institute/ItiTradeSelection";
     }
 
     /**
-     * Same-origin proxy for the per-ITI trade list used by the shift-unit entry
-     * page (the JSP cannot call the backend directly without CORS). Delegates to
-     * the backend Reservation Entry trade lookup, which returns the ITI's own
-     * trades with their sanctioned strength.
+     * Server-side trade lookup is retained for this legacy page, but it is no
+     * longer an unauthenticated proxy or an arbitrary cross-ITI read.
      */
     @GetMapping("/iti-trade-selection/api/iti/{itiCode}/trades")
     @ResponseBody
-    public ResponseEntity<Object> tradesByIti(@PathVariable("itiCode") String itiCode) {
+    public ResponseEntity<Object> tradesByIti(@PathVariable("itiCode") String itiCode,
+                                               HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("sessionUser") == null) {
+            return ResponseEntity.status(401).build();
+        }
+        if (!"4".equals(String.valueOf(session.getAttribute("roleId")))
+                || session.getAttribute("insCode") == null
+                || !itiCode.trim().equalsIgnoreCase(String.valueOf(session.getAttribute("insCode")).trim())) {
+            return ResponseEntity.status(403).build();
+        }
         try {
             ResponseEntity<Object> resp = rest.getForEntity(
                     backendBaseUrl + "/admission/reservation-entry/trades?itiCode=" + itiCode.trim(),
                     Object.class);
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
-            return ResponseEntity.ok(new Object[0]);
+            return ResponseEntity.status(502).build();
         }
     }
 
     @GetMapping("/shift-unit-permitted")
     public String shiftUnitPermitted(HttpServletRequest request, Model model) {
-        if (notLoggedIn(request)) {
-            return "redirect:/?error=session";
-        }
-        model.addAttribute("backendApiBaseUrl", backendBaseUrl);
-        // GET ?itiCode&tradeCode to read, PUT to save; previously unset, so the
-        // page fetched "" (itself) for both operations.
-        model.addAttribute("shiftUnitApiUrl", backendBaseUrl + SHIFT_UNIT_PATH);
+        if (notLoggedIn(request)) return "redirect:/?error=session";
+        model.addAttribute("backendApiBaseUrl", gatewayBase(request));
+        model.addAttribute("shiftUnitApiUrl", gatewayBase(request) + SHIFT_UNIT_PATH);
         return "Institute/ShiftUnitPermitted";
     }
 
-    /** True when the request has no authenticated session; callers redirect to the login page. */
+    private static String gatewayBase(HttpServletRequest request) {
+        return request.getContextPath() + "/backend";
+    }
+
     private static boolean notLoggedIn(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         return session == null || session.getAttribute("sessionUser") == null;
