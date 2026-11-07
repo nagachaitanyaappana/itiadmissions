@@ -36,6 +36,9 @@ public class LoginController {
     @Value("${app.auth.dev-login-enabled:false}")
     private boolean devLoginEnabled;
 
+    @Value("${server.servlet.session.cookie.secure:false}")
+    private boolean secureCookie;
+
     @GetMapping("/Login")
     public String loginPage() {
         return "jsp/Login";
@@ -83,7 +86,7 @@ public class LoginController {
         }
         Cookie accessCookie = new Cookie("ITIAP_ACCESS_TOKEN", token);
         accessCookie.setHttpOnly(true);
-        accessCookie.setSecure(Boolean.parseBoolean(System.getenv().getOrDefault("SESSION_COOKIE_SECURE", "false")));
+        accessCookie.setSecure(secureCookie);
         accessCookie.setPath("/");
         accessCookie.setMaxAge(15 * 60);
         accessCookie.setAttribute("SameSite", "Lax");
@@ -122,7 +125,7 @@ public class LoginController {
         }
         Cookie expired = new Cookie("ITIAP_ACCESS_TOKEN", "");
         expired.setHttpOnly(true);
-        expired.setSecure(Boolean.parseBoolean(System.getenv().getOrDefault("SESSION_COOKIE_SECURE", "false")));
+        expired.setSecure(secureCookie);
         expired.setPath("/");
         expired.setMaxAge(0);
         expired.setAttribute("SameSite", "Lax");
