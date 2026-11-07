@@ -1,5 +1,8 @@
 package com.server.frontend.controller.admission;
 
+import com.server.frontend.security.BackendApiRequestSupport;
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +32,11 @@ import org.springframework.web.client.RestTemplate;
 public class SeatCorrectionController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public SeatCorrectionController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
@@ -40,44 +48,50 @@ public class SeatCorrectionController {
 
     @GetMapping("/api/district/{distCode}/itis")
     @ResponseBody
-    public ResponseEntity<Object> itisByDistrict(@PathVariable("distCode") String distCode) {
-        return proxyGet(backendBaseUrl + "/admission/district/" + distCode.trim() + "/itis");
+    public ResponseEntity<Object> itisByDistrict(@PathVariable("distCode") String distCode,
+            HttpServletRequest request) {
+        if ("3".equals(BackendApiRequestSupport.role(request))
+                && !BackendApiRequestSupport.scope(request).equalsIgnoreCase(distCode.trim())) {
+            return ResponseEntity.status(403).body(Map.of("error", "District scope mismatch"));
+        }
+        return proxyGet(backendBaseUrl + "/admission/district/" + distCode.trim() + "/itis", request);
     }
 
     /** Only approved trades — feeds the trade dropdown once correction is open. */
     @GetMapping("/api/iti/{itiCode}/approved-trades")
     @ResponseBody
-    public ResponseEntity<Object> approvedTradesByIti(@PathVariable("itiCode") String itiCode) {
+    public ResponseEntity<Object> approvedTradesByIti(@PathVariable("itiCode") String itiCode, HttpServletRequest request) {
         return proxyGet(backendBaseUrl + "/admission/reservation-entry/approved-trades?itiCode="
-                + itiCode.trim());
+                + itiCode.trim(), request);
     }
 
     /** Same gate as Reservation Entry: approved trade + shift units must both exist. */
     @GetMapping("/api/iti/{itiCode}/readiness")
     @ResponseBody
-    public ResponseEntity<Object> readiness(@PathVariable("itiCode") String itiCode) {
+    public ResponseEntity<Object> readiness(@PathVariable("itiCode") String itiCode, HttpServletRequest request) {
         return proxyGet(backendBaseUrl + "/admission/reservation-entry/readiness?itiCode="
-                + itiCode.trim());
+                + itiCode.trim(), request);
     }
 
     @GetMapping("/api/seat-correction")
     @ResponseBody
     public ResponseEntity<Object> getSeatCorrection(@RequestParam("itiCode") String itiCode,
-            @RequestParam("tradeCode") Integer tradeCode) {
+            @RequestParam("tradeCode") Integer tradeCode,
+            HttpServletRequest request) {
         String url = backendBaseUrl + "/admission/reservation-entry/seat-correction?itiCode="
                 + itiCode.trim() + "&tradeCode=" + tradeCode;
-        return proxyGet(url);
+        return proxyGet(url, request);
     }
 
     @PutMapping("/api/seat-correction")
     @ResponseBody
-    public ResponseEntity<Object> saveSeatCorrection(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<Object> saveSeatCorrection(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         String url = backendBaseUrl + "/admission/reservation-entry/seat-correction";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         try {
             ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.PUT,
-                    new HttpEntity<>(body, headers), Object.class);
+                    proxySupport.entity(request, body), Object.class);
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("success", false,
@@ -85,9 +99,9 @@ public class SeatCorrectionController {
         }
     }
 
-    private ResponseEntity<Object> proxyGet(String url) {
+    private ResponseEntity<Object> proxyGet(String url, HttpServletRequest request) {
         try {
-            ResponseEntity<Object> resp = rest.getForEntity(url, Object.class);
+            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request), Object.class);
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             return ResponseEntity.ok(new Object[0]);
