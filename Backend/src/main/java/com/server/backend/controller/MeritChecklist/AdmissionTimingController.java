@@ -21,6 +21,11 @@ import com.server.backend.DTO.UpdateTimingsRequest;
 import com.server.backend.DTO.ViewScheduleRequest;
 import com.server.backend.entity.AdmissionTiming;
 import com.server.backend.service.MeritChecklist.AdmissionTimingService;
+import com.server.backend.config.JwtAuthenticationFilter;
+import com.server.backend.service.Student.StudentObjectAuthorizationService;
+import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.server.ResponseStatusException;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -29,33 +34,45 @@ import jakarta.validation.Valid;
 @RequestMapping("/admission-timings")
 public class AdmissionTimingController {
     private final AdmissionTimingService admissionTimingService;
-    public AdmissionTimingController(AdmissionTimingService admissionTimingService) {
+    private final StudentObjectAuthorizationService objectAuthorization;
+    public AdmissionTimingController(AdmissionTimingService admissionTimingService,
+            StudentObjectAuthorizationService objectAuthorization) {
         this.admissionTimingService = admissionTimingService;
+        this.objectAuthorization = objectAuthorization;
     }
    @Operation(summary = "Create a new admission timing schedule entry")
     @PostMapping
-public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admissionTiming) {
+public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admissionTiming,
+            HttpServletRequest request) {
+    requireAdmin(request);
     return admissionTimingService.createAdmissionTiming(admissionTiming);
     }
    @Operation(summary = "Retrieve all admission timing schedules")
     @GetMapping
-    public List<AdmissionTiming> getAllAdmissionTimings() {
+    public List<AdmissionTiming> getAllAdmissionTimings(HttpServletRequest request) {
+        requireAdmin(request);
         return admissionTimingService.getAllAdmissionTimings();
     }
     @Operation(summary = "Retrieve a specific admission timing schedule by ITI code and phase")
     @GetMapping("/{itiCode}/{phase}")
-    public AdmissionTiming getById(@PathVariable String itiCode, @PathVariable String phase) {
+    public AdmissionTiming getById(@PathVariable String itiCode, @PathVariable String phase,
+            HttpServletRequest request) {
+        requireItiScope(request, itiCode);
         return admissionTimingService.getById(itiCode, phase);
     }
     @Operation(summary = "Delete an admission timing schedule by ITI code and phase")
     @DeleteMapping("/{itiCode}/{phase}")
-    public String delete(@PathVariable String itiCode, @PathVariable String phase) {
+    public String delete(@PathVariable String itiCode, @PathVariable String phase,
+            HttpServletRequest request) {
+        requireItiScope(request, itiCode);
         admissionTimingService.delete(itiCode, phase);
         return "Schedule Entry Deleted Successfully";
     }
     @Operation(summary = "Update an admission timing schedule by ITI code and phase")
     @PutMapping("/{itiCode}/{phase}")
-    public AdmissionTiming updateAdmissionTiming(@PathVariable String itiCode, @PathVariable String phase, @RequestBody AdmissionTiming updatedAdmissionTiming) {
+    public AdmissionTiming updateAdmissionTiming(@PathVariable String itiCode, @PathVariable String phase,
+            @RequestBody AdmissionTiming updatedAdmissionTiming, HttpServletRequest request) {
+        requireItiScope(request, itiCode);
         return admissionTimingService.updateAdmissionTiming(itiCode, phase, updatedAdmissionTiming);
     }
     // 2. These three endpoints resolve the caller from request headers, the same convention
@@ -68,8 +85,9 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
             @RequestHeader(name = "X-Dist-Code", required = false) String distCode,
             @RequestHeader(name = "X-Ins-Code", required = false) String insCode,
             @RequestHeader(name = "X-Role-Id", required = false) String roleId,
-            @RequestBody CreateEntryRequest req) {
-        CurrentUser user = currentUser(itiCode, distCode, insCode, roleId);
+            @RequestBody CreateEntryRequest req,
+            HttpServletRequest request) {
+        CurrentUser user = currentUser(request);
         Map<String, Object> result = admissionTimingService.createScheduleEntry(req, user);
         return new ResponseEntity<>(result, HttpStatus.CREATED);
     }
@@ -81,8 +99,9 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
             @RequestHeader(name = "X-Dist-Code", required = false) String distCode,
             @RequestHeader(name = "X-Ins-Code", required = false) String insCode,
             @RequestHeader(name = "X-Role-Id", required = false) String roleId,
-            @Valid @RequestBody UpdateTimingsRequest req) {
-        CurrentUser user = currentUser(itiCode, distCode, insCode, roleId);
+            @Valid @RequestBody UpdateTimingsRequest req,
+            HttpServletRequest request) {
+        CurrentUser user = currentUser(request);
         Map<String, Object> result = admissionTimingService.addScheduleTimings(req, user);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
@@ -93,8 +112,9 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
             @RequestHeader(name = "X-Iti-Code", required = false) String itiCode,
             @RequestHeader(name = "X-Dist-Code", required = false) String distCode,
             @RequestHeader(name = "X-Ins-Code", required = false) String insCode,
-            @RequestHeader(name = "X-Role-Id", required = false) String roleId) {
-        CurrentUser user = currentUser(itiCode, distCode, insCode, roleId);
+            @RequestHeader(name = "X-Role-Id", required = false) String roleId,
+            HttpServletRequest request) {
+        CurrentUser user = currentUser(request);
         Map<String, Object> result = admissionTimingService.hasScheduleToday(user);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
@@ -106,8 +126,9 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
             @RequestHeader(name = "X-Dist-Code", required = false) String distCode,
             @RequestHeader(name = "X-Ins-Code", required = false) String insCode,
             @RequestHeader(name = "X-Role-Id", required = false) String roleId,
-            @RequestBody ViewScheduleRequest req) {
-        CurrentUser user = currentUser(itiCode, distCode, insCode, roleId);
+            @RequestBody ViewScheduleRequest req,
+            HttpServletRequest request) {
+        CurrentUser user = currentUser(request);
         Map<String, Object> result = admissionTimingService.viewScheduleTimings(req, user);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
@@ -121,7 +142,9 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
     @Operation(summary = "Districts for the delete-schedule page (optional govt filter)")
     @GetMapping("/districts")
     public List<Map<String, Object>> deleteDistricts(
-            @RequestParam(name = "govt", required = false) String govt) {
+            @RequestParam(name = "govt", required = false) String govt,
+            HttpServletRequest request) {
+        requireAdmin(request);
         return admissionTimingService.listDistrictsForDelete(govt);
     }
 
@@ -129,13 +152,17 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
     @GetMapping("/itis")
     public List<Map<String, Object>> deleteItis(
             @RequestParam(name = "distCode") String distCode,
-            @RequestParam(name = "govt", required = false) String govt) {
+            @RequestParam(name = "govt", required = false) String govt,
+            HttpServletRequest request) {
+        requireAdmin(request);
         return admissionTimingService.listItisForDelete(distCode, govt);
     }
 
     @Operation(summary = "Search schedule entries for the delete-schedule page")
     @PostMapping("/search")
-    public ResponseEntity<Map<String, Object>> deleteSearch(@RequestBody Map<String, String> req) {
+    public ResponseEntity<Map<String, Object>> deleteSearch(@RequestBody Map<String, String> req,
+            HttpServletRequest request) {
+        requireAdmin(request);
         Map<String, Object> result = admissionTimingService.searchScheduleForDelete(
                 req.get("distCode"), req.get("itiCode"), req.get("itiType"));
         return new ResponseEntity<>(result, HttpStatus.OK);
@@ -143,7 +170,9 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
 
     @Operation(summary = "Delete a schedule entry by its id")
     @PostMapping("/delete-by-id")
-    public ResponseEntity<Map<String, Object>> deleteById(@RequestBody Map<String, Object> req) {
+    public ResponseEntity<Map<String, Object>> deleteById(@RequestBody Map<String, Object> req,
+            HttpServletRequest request) {
+        requireAdmin(request);
         Object raw = req.get("sid");
         String sid = raw == null || String.valueOf(raw).isBlank() ? null : String.valueOf(raw).trim();
         if (sid == null) {
@@ -169,29 +198,45 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
      * schedule row was saved with {@code iti_code} and {@code dist_code} both null and Step 2 could
      * never find the placeholder it had just created.
      */
-    private CurrentUser currentUser(String itiCode, String distCode, String insCode, String roleId) {
-        if (isBlank(insCode) && isBlank(itiCode) && isBlank(distCode)) {
-            throw new IllegalArgumentException(
-                    "Missing institution code: send X-Ins-Code (or X-Iti-Code / X-Dist-Code)"
-                            + " to create or view a schedule");
+    private CurrentUser currentUser(HttpServletRequest request) {
+        Claims claims = verifiedClaims(request);
+        String role = String.valueOf(claims.get("roleId"));
+        String scope = claims.get("insCode") == null ? "" : String.valueOf(claims.get("insCode")).trim();
+        if (scope.isBlank() || (!"3".equals(role) && !"4".equals(role))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "District or ITI schedule access is required");
         }
-        String role = isBlank(roleId) ? "3" : roleId.trim();
-        String ins = !isBlank(insCode) ? insCode.trim() : (!isBlank(distCode) ? distCode.trim() : itiCode.trim());
+        return "3".equals(role)
+                ? new CurrentUser(null, scope, scope, role)
+                : new CurrentUser(scope, null, scope, role);
+    }
 
-        String resolvedIti = isBlank(itiCode) ? null : itiCode.trim();
-        String resolvedDist = isBlank(distCode) ? null : distCode.trim();
-
-        if ("3".equals(role)) {
-            // District login: the institution code is the district.
-            if (resolvedDist == null) {
-                resolvedDist = ins;
-            }
-        } else if (resolvedIti == null) {
-            // ITI login (and any other role): the institution code is the ITI.
-            resolvedIti = ins;
+    private void requireItiScope(HttpServletRequest request, String itiCode) {
+        Claims claims = verifiedClaims(request);
+        String role = String.valueOf(claims.get("roleId"));
+        String scope = claims.get("insCode") == null ? "" : String.valueOf(claims.get("insCode")).trim();
+        boolean allowed = ("2".equals(role) || "10".equals(role))
+                || ("4".equals(role) && !scope.isBlank() && scope.equalsIgnoreCase(itiCode))
+                || ("3".equals(role) && !scope.isBlank()
+                        && objectAuthorization.isItiInDistrict(itiCode, scope));
+        if (!allowed) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Schedule is outside your authorized scope");
         }
+    }
 
-        return new CurrentUser(resolvedIti, resolvedDist, ins, role);
+    private static void requireAdmin(HttpServletRequest request) {
+        Claims claims = verifiedClaims(request);
+        String role = String.valueOf(claims.get("roleId"));
+        if (!"2".equals(role) && !"10".equals(role)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "State or nodal administrator access is required");
+        }
+    }
+
+    private static Claims verifiedClaims(HttpServletRequest request) {
+        Object value = request.getAttribute(JwtAuthenticationFilter.CLAIMS_ATTRIBUTE);
+        if (!(value instanceof Claims claims)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "A verified official session is required");
+        }
+        return claims;
     }
 
     private static boolean isBlank(String value) {
@@ -199,6 +244,14 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
     }
 
 // 3. Add an Exception Handler to catch scheduling/overlap validation errors and send them to the frontend
+@ExceptionHandler(ResponseStatusException.class)
+public ResponseEntity<Map<String, Object>> handleAuthorizationError(ResponseStatusException ex) {
+    Map<String, Object> response = new HashMap<>();
+    response.put("success", false);
+    response.put("error", ex.getReason());
+    return new ResponseEntity<>(response, ex.getStatusCode());
+}
+
 @ExceptionHandler({IllegalArgumentException.class, RuntimeException.class})
 public ResponseEntity<Map<String, Object>> handleSchedulingErrors(Exception ex) {
     Map<String, Object> response = new HashMap<>();
