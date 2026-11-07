@@ -124,4 +124,8 @@ public class PrintAdmissionSlipController {
                     .body(Map.of("error", "Unable to fetch trades for this ITI. Please try again."));
         }
     }
+    private static String t(String value) {
+        return value == null ? "" : value.trim();
+    }
+
 }
