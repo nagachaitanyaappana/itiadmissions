@@ -26,11 +26,12 @@ public class Admission_Update_Controller {
 
     @GetMapping("/admission-update")
     public ResponseEntity<Admission_Update_DTO> getAdmission(
-            @RequestParam String admissionNumber) {
+            @RequestParam String admissionNumber,
+            @RequestParam String itiCode) {
 
         try {
             return ResponseEntity.ok(
-                    service.getAdmission(admissionNumber));
+                    service.getAdmission(admissionNumber, itiCode));
 
         } catch (IllegalArgumentException ex) {
 
