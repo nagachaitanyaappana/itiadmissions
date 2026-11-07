@@ -36,13 +36,19 @@ import javax.imageio.ImageIO;
 public class CaptchaController {
 
     private static final String SESSION_KEY = "CAPTCHA_TEXT";
+    private static final String ATTEMPTS_KEY = "CAPTCHA_ATTEMPTS";
+    static final String VERIFIED_AT_KEY = "CAPTCHA_VERIFIED_AT";
+    private static final int MAX_ATTEMPTS = 5;
     private static final String CHARS = "0123456789";
     private static final SecureRandom RANDOM = new SecureRandom();
 
     @GetMapping(produces = MediaType.IMAGE_PNG_VALUE)
     public void captcha(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String text = randomText(4);
-        request.getSession().setAttribute(SESSION_KEY, text);
+        HttpSession session = request.getSession();
+        session.setAttribute(SESSION_KEY, text);
+        session.setAttribute(ATTEMPTS_KEY, 0);
+        session.removeAttribute(VERIFIED_AT_KEY);
         response.setContentType(MediaType.IMAGE_PNG_VALUE);
         response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
         response.setDateHeader("Expires", 0);
@@ -100,11 +106,23 @@ public class CaptchaController {
         if (!BackendGatewayController.sameOrigin(request)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+        HttpSession session = request.getSession(false);
+        if (session == null) return ResponseEntity.badRequest().build();
+        Object attemptsValue = session.getAttribute(ATTEMPTS_KEY);
+        int attempts = attemptsValue instanceof Number number ? number.intValue() : 0;
+        if (attempts >= MAX_ATTEMPTS) {
+            session.removeAttribute(SESSION_KEY);
+            return ResponseEntity.status(429).build();
+        }
         if (!matches(request, submitted)) {
+            attempts++;
+            session.setAttribute(ATTEMPTS_KEY, attempts);
+            if (attempts >= MAX_ATTEMPTS) session.removeAttribute(SESSION_KEY);
             return ResponseEntity.badRequest().build();
         }
-        HttpSession session = request.getSession(false);
-        if (session != null) session.removeAttribute(SESSION_KEY);
+        session.removeAttribute(SESSION_KEY);
+        session.removeAttribute(ATTEMPTS_KEY);
+        session.setAttribute(VERIFIED_AT_KEY, System.currentTimeMillis());
         return ResponseEntity.noContent().build();
     }
 
