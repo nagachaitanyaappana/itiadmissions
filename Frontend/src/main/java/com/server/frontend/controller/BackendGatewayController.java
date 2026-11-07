@@ -140,11 +140,12 @@ public class BackendGatewayController {
         boolean candidateIdentityCheck = "GET".equals(methodName)
                 && ("/api/student/apply-gate".equals(path)
                     || "/api/student/verify-identity".equals(path));
-        boolean registrationIdLookup = "GET".equals(methodName)
+        boolean registrationIdLookup = "POST".equals(methodName)
                 && "/api/student/lookup-regid".equals(path);
         boolean captchaProtectedCheck = candidateIdentityCheck || registrationIdLookup;
         boolean publicRegistrationWrite = "POST".equals(methodName)
-                && ("/api/student/save".equals(path) || "/api/student/register".equals(path));
+                && ("/api/student/save".equals(path) || "/api/student/register".equals(path)
+                    || "/api/student/lookup-regid".equals(path));
         if (captchaProtectedCheck || publicRegistrationWrite) {
             HttpSession existing = request.getSession(false);
             if (!consumeCaptchaProof(existing, captchaProtectedCheck)) {
@@ -295,7 +296,6 @@ public class BackendGatewayController {
         if ("GET".equalsIgnoreCase(method)) {
             return "/api/student/apply-gate".equals(path)
                     || "/api/student/verify-identity".equals(path)
-                    || "/api/student/lookup-regid".equals(path)
                     || "/api/student/castes".equals(path)
                     || "/api/dsc/caste-list".equals(path)
                     || "/api/districts".equals(path)
