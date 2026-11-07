@@ -649,6 +649,22 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Integer lookupRegidByIdentity(String sscRegNo, String dob) {
+        if (sscRegNo == null || sscRegNo.isBlank()) return null;
+        java.sql.Date dobDate = parseDob(dob);
+        if (dobDate == null) return null;
+
+        // Return only the ID and fail closed if legacy data contains duplicate matches.
+        List<Integer> matches = jdbcTemplate.queryForList(
+                "SELECT regid FROM public.student_application "
+                        + "WHERE upper(trim(ssc_regno)) = upper(?) AND dob = ? "
+                        + "ORDER BY regid LIMIT 2",
+                Integer.class, sscRegNo.trim(), dobDate);
+        return matches.size() == 1 ? matches.get(0) : null;
+    }
+
+    @Override
     public List<StudentApplicationDto> getAllStudents() {
 
         return repository.findAll().stream()
