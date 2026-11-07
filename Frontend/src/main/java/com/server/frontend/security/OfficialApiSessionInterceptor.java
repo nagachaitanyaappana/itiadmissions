@@ -34,7 +34,12 @@ public class OfficialApiSessionInterceptor implements HandlerInterceptor {
             Map.entry("/VerifyApplication", Set.of("3", "4")),
             Map.entry("/CallLetterView", Set.of("3", "4")),
             Map.entry("/AdmissionPhase", Set.of("3", "4", "2", "10")),
-            Map.entry("/AddTrade", Set.of("4", "2", "10"))
+            Map.entry("/AddTrade", Set.of("4", "2", "10")),
+            Map.entry("/itiList", Set.of("2", "10")),
+            Map.entry("/iti-details", Set.of("2", "10")),
+            Map.entry("/iti-create", Set.of("2", "10")),
+            Map.entry("/iti-trade-selection", Set.of("3", "4", "2", "10")),
+            Map.entry("/shift-unit-permitted", Set.of("4", "2", "10"))
     );
 
     @Override
