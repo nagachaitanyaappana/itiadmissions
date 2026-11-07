@@ -21,7 +21,7 @@ PostgreSQL
 
 Do not publish the Backend port to the Internet. The Backend binds to loopback by default with `BACKEND_BIND_ADDRESS=127.0.0.1`. If Frontend and Backend are on separate hosts, bind Backend to a private interface and configure the host firewall/security group to accept the Backend port from the Frontend host only. Do not use a public Backend URL.
 
-The gateway uses an explicit public-candidate route allowlist. Existing-candidate reads/edits are bound to a Frontend HTTP session only after DOB + SSC hall-ticket verification. Official routes require the short-lived official JWT cookie. The Backend rejects browser-origin API calls that do not carry the trusted Frontend service credential.
+The gateway uses an explicit public-candidate route allowlist. Existing-candidate reads/edits are bound to a Frontend HTTP session only after DOB + SSC hall-ticket verification. Official routes require the short-lived official JWT cookie. Every Backend application endpoint requires the trusted Frontend service credential, regardless of whether an `Origin` header is present. Only documentation, health and framework error paths are excluded; legacy routes such as `/admission-timings` and `/checkRegOrNot` are protected too.
 
 ## Required configuration
 
@@ -63,8 +63,8 @@ Use the deployment platform's secret manager in production. Coordinate an intern
 - The gateway rejects unsafe methods unless the request has an exact same-origin `Origin` header or `Sec-Fetch-Site: same-origin`. The Frontend is configured to honor trusted reverse-proxy forwarding headers; only the actual edge proxy should be allowed to set those headers.
 - The gateway forwards only selected request/response headers and injects the internal service credential itself. Browser-supplied identity headers are not forwarded.
 - District and ITI verification/trade/shift-unit routes derive organization scope from signed JWT claims. Candidate record reads/edits are bound to the verified candidate registration ID in the Frontend session.
-- Public candidate creation accepts new records only. Existing registration edits use the verified-candidate path.
-- Candidate photographs are limited to 5 MB and validated by image signature/decoding before persistence. The Frontend gateway has matching multipart limits and lazy multipart parsing so it can forward the upload body.
+- Public candidate creation accepts new records only. Existing registration edits use the verified-candidate path. Forgot-registration-ID lookup requires a server-verified captcha plus DOB and SSC hall-ticket number, returns only the registration ID, and does not create an authenticated candidate session.
+- Candidate photographs are limited to 5 MB and 12 megapixels, then validated by image signature/decoding and re-encoded before persistence. The Frontend gateway has matching multipart limits and lazy multipart parsing so it can forward the upload body.
 
 ## Password migration
 
@@ -96,6 +96,6 @@ After adding the required local secrets to the existing, uncommitted `.env` file
 5. Sign in as a district official. Verify that the official can list/approve only their district's candidates and cannot submit a different district code.
 6. Sign in as an ITI official. Verify that trade and shift/unit operations work only for the ITI assigned to that account.
 7. Verify reports are scoped to the official's district/ITI and that state-wide reports remain restricted to state/nodal roles.
-8. Verify an unauthenticated request to an official `/backend/**` route returns 401, a cross-origin write returns 403, and a direct browser-origin request to Backend without the internal service credential returns 401.
+8. Verify an unauthenticated request to an official `/backend/**` route returns 401, a cross-origin write returns 403, and a direct request to any Backend application route without the internal service credential returns 401 even when no `Origin` header is supplied. Documentation/health paths are intentionally excluded.
 
 Do not test destructive operations against production data. Use a staging database or known test accounts and records.
