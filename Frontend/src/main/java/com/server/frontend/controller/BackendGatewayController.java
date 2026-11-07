@@ -141,31 +141,12 @@ public class BackendGatewayController {
                 && ("/api/student/save".equals(path) || "/api/student/register".equals(path));
         if (identityCheck || publicRegistrationWrite) {
             HttpSession existing = request.getSession(false);
-            Object verifiedAt = existing == null ? null : existing.getAttribute(CaptchaController.VERIFIED_AT_KEY);
-            Object usesValue = existing == null ? null : existing.getAttribute(CaptchaController.VERIFIED_USES_KEY);
-            long verifiedMillis = verifiedAt instanceof Number number ? number.longValue() : 0L;
-            int uses = usesValue instanceof Number number ? number.intValue() : 0;
-            if (verifiedMillis <= 0L || System.currentTimeMillis() - verifiedMillis > 5 * 60 * 1000L
-                    || uses <= 0) {
-                if (existing != null) {
-                    existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
-                    existing.removeAttribute(CaptchaController.VERIFIED_AT_KEY);
-                    existing.removeAttribute(CaptchaController.VERIFIED_USES_KEY);
-                }
+            if (!consumeCaptchaProof(existing, identityCheck)) {
+                if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
                 return ResponseEntity.status(403).build();
             }
-            if (identityCheck) {
-                existing.removeAttribute(CaptchaController.VERIFIED_AT_KEY);
-                existing.removeAttribute(CaptchaController.VERIFIED_USES_KEY);
+            if (identityCheck && existing != null) {
                 existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
-            } else {
-                int remainingUses = uses - 1;
-                if (remainingUses == 0) {
-                    existing.removeAttribute(CaptchaController.VERIFIED_AT_KEY);
-                    existing.removeAttribute(CaptchaController.VERIFIED_USES_KEY);
-                } else {
-                    existing.setAttribute(CaptchaController.VERIFIED_USES_KEY, remainingUses);
-                }
             }
         }
 
@@ -183,6 +164,34 @@ public class BackendGatewayController {
         } catch (RestClientException ex) {
             return ResponseEntity.status(502).build();
         }
+    }
+
+    static boolean consumeCaptchaProof(HttpSession session, boolean consumeAll) {
+        return consumeCaptchaProof(session, consumeAll, System.currentTimeMillis());
+    }
+
+    static boolean consumeCaptchaProof(HttpSession session, boolean consumeAll, long nowMillis) {
+        if (session == null) return false;
+        Object verifiedAt = session.getAttribute(CaptchaController.VERIFIED_AT_KEY);
+        Object usesValue = session.getAttribute(CaptchaController.VERIFIED_USES_KEY);
+        long verifiedMillis = verifiedAt instanceof Number number ? number.longValue() : 0L;
+        int uses = usesValue instanceof Number number ? number.intValue() : 0;
+        if (verifiedMillis <= 0L || nowMillis < verifiedMillis
+                || nowMillis - verifiedMillis > 5 * 60 * 1000L || uses <= 0) {
+            session.removeAttribute(CaptchaController.VERIFIED_AT_KEY);
+            session.removeAttribute(CaptchaController.VERIFIED_USES_KEY);
+            return false;
+        }
+        if (consumeAll) {
+            session.removeAttribute(CaptchaController.VERIFIED_AT_KEY);
+            session.removeAttribute(CaptchaController.VERIFIED_USES_KEY);
+        } else if (uses == 1) {
+            session.removeAttribute(CaptchaController.VERIFIED_AT_KEY);
+            session.removeAttribute(CaptchaController.VERIFIED_USES_KEY);
+        } else {
+            session.setAttribute(CaptchaController.VERIFIED_USES_KEY, uses - 1);
+        }
+        return true;
     }
 
     private static byte[] readLimited(InputStream input) throws IOException {
