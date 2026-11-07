@@ -561,19 +561,13 @@
             var submitBtn = $("#gateSubmitBtn");
             submitBtn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin"></i> Checking...');
 
-            $.get('${pageContext.request.contextPath}/captcha/text', function (serverCaptcha) {
-                if (entered !== String(serverCaptcha).trim().toUpperCase()) {
-                    submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
-                    $("#gateCaptchaError").text("Captcha does not match. Please try again.");
-                    refreshCaptcha();
-                    document.getElementById("captcha_gate").focus();
-                    return;
-                }
-
+            $.post('${pageContext.request.contextPath}/captcha/verify', { captcha: entered }, function () {
                 loadApplication();
             }).fail(function () {
                 submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
-                $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;">Verification service temporarily unavailable. Please retry.</div>');
+                $("#gateCaptchaError").text("Captcha does not match or could not be verified. Please try again.");
+                refreshCaptcha();
+                document.getElementById("captcha_gate").focus();
             });
 
             return false;
