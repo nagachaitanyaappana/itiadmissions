@@ -94,6 +94,7 @@ public class LoginController {
         session.removeAttribute("verifiedCandidateRegid");
         session.setAttribute("sessionUser", result);
         session.setAttribute("username", result.get("username"));
+        session.setAttribute("userName", result.get("username"));
         session.setAttribute("roleId", result.get("roleId"));
         session.setAttribute("insCode", result.get("insCode"));
         session.setAttribute("fullName", result.get("fullName"));
