@@ -166,7 +166,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if ("/api/shift-unit-permitted".equals(path)) {
-            return "4".equals(role) && hasScope(insCode);
+            return ("2".equals(role) || "10".equals(role))
+                    || ("4".equals(role) && hasScope(insCode));
         }
 
         // Admission-process operations use a principal derived from signed claims.
