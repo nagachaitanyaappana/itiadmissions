@@ -50,6 +50,7 @@ public class CaptchaController {
         session.setAttribute(SESSION_KEY, text);
         session.setAttribute(ATTEMPTS_KEY, 0);
         session.removeAttribute(VERIFIED_AT_KEY);
+        session.removeAttribute(VERIFIED_USES_KEY);
         response.setContentType(MediaType.IMAGE_PNG_VALUE);
         response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
         response.setDateHeader("Expires", 0);
