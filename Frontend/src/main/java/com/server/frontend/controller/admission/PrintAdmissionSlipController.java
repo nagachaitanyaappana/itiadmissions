@@ -84,8 +84,8 @@ public class PrintAdmissionSlipController {
     @ResponseBody
     public ResponseEntity<Object> masterData(HttpServletRequest request) {
         try {
-            ResponseEntity<Object> response = rest.getForEntity(
-                    backendBaseUrl + "/admission/master-data", proxySupport.entity(request), Object.class);
+            ResponseEntity<Object> response = rest.exchange(
+                    backendBaseUrl + "/admission/master-data", HttpMethod.GET, proxySupport.entity(request), Object.class);
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (RestClientException exception) {
             return ResponseEntity.status(502)
@@ -102,8 +102,8 @@ public class PrintAdmissionSlipController {
             return ResponseEntity.status(403).body(Map.of("error", "District scope mismatch"));
         }
         try {
-            ResponseEntity<Object> response = rest.getForEntity(
-                    backendBaseUrl + "/admission/district/" + distCode.trim() + "/itis", proxySupport.entity(request), Object.class);
+            ResponseEntity<Object> response = rest.exchange(
+                    backendBaseUrl + "/admission/district/" + distCode.trim() + "/itis", HttpMethod.GET, proxySupport.entity(request), Object.class);
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (RestClientException exception) {
             return ResponseEntity.status(502)
@@ -116,8 +116,8 @@ public class PrintAdmissionSlipController {
     public ResponseEntity<Object> tradesByIti(
             @PathVariable("itiCode") String itiCode, HttpServletRequest request) {
         try {
-            ResponseEntity<Object> response = rest.getForEntity(
-                    backendBaseUrl + "/admission/iti/" + itiCode.trim() + "/trades", proxySupport.entity(request), Object.class);
+            ResponseEntity<Object> response = rest.exchange(
+                    backendBaseUrl + "/admission/iti/" + itiCode.trim() + "/trades", HttpMethod.GET, proxySupport.entity(request), Object.class);
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (RestClientException exception) {
             return ResponseEntity.status(502)
