@@ -49,6 +49,37 @@ class CaptchaControllerTest {
         assertEquals(429, controller.verify("A7K2", request).getStatusCode());
     }
 
+    @Test
+    void consumesCorrectLoginCaptchaOnlyOnce() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("CAPTCHA_TEXT", "1234");
+        session.setAttribute("CAPTCHA_ATTEMPTS", 0);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setSession(session);
+
+        assertTrue(CaptchaController.consumeForLogin(request, "1234"));
+        assertNull(session.getAttribute("CAPTCHA_TEXT"));
+        assertNull(session.getAttribute("CAPTCHA_ATTEMPTS"));
+        assertFalse(CaptchaController.consumeForLogin(request, "1234"));
+    }
+
+    @Test
+    void expiresLoginCaptchaAfterFiveIncorrectAttempts() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("CAPTCHA_TEXT", "1234");
+        session.setAttribute("CAPTCHA_ATTEMPTS", 0);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setSession(session);
+
+        for (int i = 0; i < 5; i++) {
+            assertFalse(CaptchaController.consumeForLogin(request, "9999"));
+        }
+
+        assertEquals(5, session.getAttribute("CAPTCHA_ATTEMPTS"));
+        assertNull(session.getAttribute("CAPTCHA_TEXT"));
+        assertFalse(CaptchaController.consumeForLogin(request, "1234"));
+    }
+
     private static MockHttpServletRequest sameOriginRequest() {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/captcha/verify");
         request.setScheme("http");
