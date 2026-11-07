@@ -1,5 +1,8 @@
 package com.server.frontend.controller.admission;
 
+import com.server.frontend.security.BackendApiRequestSupport;
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +24,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class DscListController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public DscListController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
@@ -37,9 +45,18 @@ public class DscListController {
             @RequestParam(value = "tradeCode", required = false) String tradeCode,
             @RequestParam(value = "phase", required = false) String phase,
             @RequestParam(value = "year", required = false) String year,
-            @RequestParam(value = "admissionLevel", required = false) String admissionLevel) {
-        String iti = t(itiCode);
+            @RequestParam(value = "admissionLevel", required = false) String admissionLevel,
+            HttpServletRequest request) {
+        String role = BackendApiRequestSupport.role(request);
+        String ownIti = BackendApiRequestSupport.scope(request);
+        String iti = "4".equals(role) ? ownIti : t(itiCode);
         String trade = t(tradeCode);
+        if (!"4".equals(role) && !"2".equals(role) && !"10".equals(role)) {
+            return ResponseEntity.status(403).body(Map.of("error", "ITI or state administrator login is required."));
+        }
+        if (iti.isBlank()) {
+            return ResponseEntity.status(403).body(Map.of("error", "ITI scope is required."));
+        }
         String ph = t(phase);
         String yr = t(year);
         String level = t(admissionLevel);
@@ -52,7 +69,7 @@ public class DscListController {
                 .queryParam("phase", ph).queryParam("year", yr)
                 .queryParam("admissionLevel", level).toUriString();
         try {
-            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, null,
+            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request),
                     new ParameterizedTypeReference<Object>() {
                     });
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
@@ -74,7 +91,15 @@ public class DscListController {
     @ResponseBody
     public ResponseEntity<Object> dscOptions(
             @RequestParam(value = "dist_code", required = false) String distCode,
-            @RequestParam(value = "iti_code", required = false) String itiCode) {
+            @RequestParam(value = "iti_code", required = false) String itiCode,
+            HttpServletRequest request) {
+        String role = BackendApiRequestSupport.role(request);
+        if ("4".equals(role)) {
+            itiCode = BackendApiRequestSupport.scope(request);
+            distCode = null;
+        } else if (!"2".equals(role) && !"10".equals(role)) {
+            return ResponseEntity.status(403).body(Map.of("error", "ITI or state administrator login is required."));
+        }
         UriComponentsBuilder b = UriComponentsBuilder
                 .fromUriString(backendBaseUrl + "/api/reports/dsc-options");
         if (distCode != null && !distCode.isBlank()) {
@@ -84,7 +109,7 @@ public class DscListController {
             b.queryParam("iti_code", itiCode.trim());
         }
         try {
-            ResponseEntity<Object> resp = rest.getForEntity(b.toUriString(), Object.class);
+            ResponseEntity<Object> resp = rest.exchange(b.toUriString(), HttpMethod.GET, proxySupport.entity(request), Object.class);
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             return ResponseEntity.status(502)
@@ -95,10 +120,10 @@ public class DscListController {
     /** Existing backend current-admission-phase: defaults Year / Phase. */
     @GetMapping("/api/current-phase")
     @ResponseBody
-    public ResponseEntity<Object> currentPhase() {
+    public ResponseEntity<Object> currentPhase(HttpServletRequest request) {
         try {
             ResponseEntity<Object> resp = rest.getForEntity(
-                    backendBaseUrl + "/api/reports/current-admission-phase", Object.class);
+                    backendBaseUrl + "/api/reports/current-admission-phase", proxySupport.entity(request), Object.class);
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             return ResponseEntity.status(502)
@@ -108,10 +133,10 @@ public class DscListController {
     /** Existing backend admission phases: drives Phase / Year dropdowns. */
     @GetMapping("/api/phases")
     @ResponseBody
-    public ResponseEntity<Object> phases() {
+    public ResponseEntity<Object> phases(HttpServletRequest request) {
         try {
             ResponseEntity<Object> resp = rest.getForEntity(
-                    backendBaseUrl + "/api/admission-phase/all", Object.class);
+                    backendBaseUrl + "/api/admission-phase/all", proxySupport.entity(request), Object.class);
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             return ResponseEntity.status(502)
