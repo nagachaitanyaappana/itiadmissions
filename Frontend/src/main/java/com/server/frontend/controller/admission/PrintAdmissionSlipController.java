@@ -1,5 +1,8 @@
 package com.server.frontend.controller.admission;
 
+import com.server.frontend.security.BackendApiRequestSupport;
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +25,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class PrintAdmissionSlipController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public PrintAdmissionSlipController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
@@ -34,17 +42,29 @@ public class PrintAdmissionSlipController {
     @GetMapping("/api/admission-slip")
     @ResponseBody
     public ResponseEntity<Object> admissionSlip(
-            @RequestParam(value = "admissionNumber", required = false) String admissionNumber) {
+            @RequestParam(value = "admissionNumber", required = false) String admissionNumber,
+            @RequestParam(value = "distCode", required = false) String requestedDistrict,
+            @RequestParam(value = "itiCode", required = false) String requestedIti,
+            HttpServletRequest request) {
         String adm = admissionNumber == null ? "" : admissionNumber.trim();
         if (adm.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Please enter Admission Number."));
         }
 
+        String role = BackendApiRequestSupport.role(request);
+        String distCode = "3".equals(role) ? BackendApiRequestSupport.scope(request) : t(requestedDistrict);
+        String itiCode = "4".equals(role) ? BackendApiRequestSupport.scope(request) : t(requestedIti);
+        if (distCode.isBlank() == itiCode.isBlank()) {
+            return ResponseEntity.status(403).body(Map.of("error", "A single district or ITI scope is required."));
+        }
         String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/admission/admission-slip")
-                .queryParam("admissionNumber", adm).toUriString();
+                .queryParam("admissionNumber", adm)
+                .queryParamIfPresent("distCode", distCode.isBlank() ? java.util.Optional.empty() : java.util.Optional.of(distCode))
+                .queryParamIfPresent("itiCode", itiCode.isBlank() ? java.util.Optional.empty() : java.util.Optional.of(itiCode))
+                .toUriString();
         try {
-            ResponseEntity<Object> response = rest.exchange(url, HttpMethod.GET, null,
+            ResponseEntity<Object> response = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request),
                     new ParameterizedTypeReference<>() { });
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (HttpStatusCodeException exception) {
@@ -62,10 +82,10 @@ public class PrintAdmissionSlipController {
 
     @GetMapping("/api/master-data")
     @ResponseBody
-    public ResponseEntity<Object> masterData() {
+    public ResponseEntity<Object> masterData(HttpServletRequest request) {
         try {
             ResponseEntity<Object> response = rest.getForEntity(
-                    backendBaseUrl + "/admission/master-data", Object.class);
+                    backendBaseUrl + "/admission/master-data", proxySupport.entity(request), Object.class);
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (RestClientException exception) {
             return ResponseEntity.status(502)
@@ -76,10 +96,14 @@ public class PrintAdmissionSlipController {
     @GetMapping("/api/district/{distCode}/itis")
     @ResponseBody
     public ResponseEntity<Object> itisByDistrict(
-            @PathVariable("distCode") String distCode) {
+            @PathVariable("distCode") String distCode, HttpServletRequest request) {
+        if ("3".equals(BackendApiRequestSupport.role(request))
+                && !BackendApiRequestSupport.scope(request).equalsIgnoreCase(distCode.trim())) {
+            return ResponseEntity.status(403).body(Map.of("error", "District scope mismatch"));
+        }
         try {
             ResponseEntity<Object> response = rest.getForEntity(
-                    backendBaseUrl + "/admission/district/" + distCode.trim() + "/itis", Object.class);
+                    backendBaseUrl + "/admission/district/" + distCode.trim() + "/itis", proxySupport.entity(request), Object.class);
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (RestClientException exception) {
             return ResponseEntity.status(502)
@@ -90,10 +114,10 @@ public class PrintAdmissionSlipController {
     @GetMapping("/api/iti/{itiCode}/trades")
     @ResponseBody
     public ResponseEntity<Object> tradesByIti(
-            @PathVariable("itiCode") String itiCode) {
+            @PathVariable("itiCode") String itiCode, HttpServletRequest request) {
         try {
             ResponseEntity<Object> response = rest.getForEntity(
-                    backendBaseUrl + "/admission/iti/" + itiCode.trim() + "/trades", Object.class);
+                    backendBaseUrl + "/admission/iti/" + itiCode.trim() + "/trades", proxySupport.entity(request), Object.class);
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (RestClientException exception) {
             return ResponseEntity.status(502)
