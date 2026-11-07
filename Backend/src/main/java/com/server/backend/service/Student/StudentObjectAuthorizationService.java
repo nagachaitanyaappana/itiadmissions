@@ -51,6 +51,32 @@ public class StudentObjectAuthorizationService {
         }
     }
 
+    public boolean canReadInDistrict(Integer regid, String distCode) {
+        if (regid == null || distCode == null || distCode.isBlank()) return false;
+        try {
+            return Boolean.TRUE.equals(jdbc.queryForObject(
+                    "SELECT EXISTS (SELECT 1 FROM public.student_trade_sel "
+                            + "WHERE CAST(regid AS text) = ? AND CAST(dist_code AS text) = ?)",
+                    Boolean.class, String.valueOf(regid), distCode.trim()));
+        } catch (org.springframework.dao.DataAccessException ex) {
+            log.warn("Candidate district authorization could not be verified");
+            return false;
+        }
+    }
+
+    public boolean canReadInIti(Integer regid, String itiCode) {
+        if (regid == null || itiCode == null || itiCode.isBlank()) return false;
+        try {
+            return Boolean.TRUE.equals(jdbc.queryForObject(
+                    "SELECT EXISTS (SELECT 1 FROM public.student_trade_sel "
+                            + "WHERE CAST(regid AS text) = ? AND CAST(iti_code AS text) = ?)",
+                    Boolean.class, String.valueOf(regid), itiCode.trim()));
+        } catch (org.springframework.dao.DataAccessException ex) {
+            log.warn("Candidate ITI authorization could not be verified");
+            return false;
+        }
+    }
+
     public boolean isItiInDistrict(String itiCode, String distCode) {
         if (itiCode == null || itiCode.isBlank() || distCode == null || distCode.isBlank()) return false;
         try {
