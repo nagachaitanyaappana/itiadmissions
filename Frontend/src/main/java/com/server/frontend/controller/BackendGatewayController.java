@@ -261,7 +261,7 @@ public class BackendGatewayController {
     static boolean safePath(String path) {
         if (path == null || !path.startsWith("/") || path.startsWith("//")
                 || path.contains("\\") || path.contains("..") || path.indexOf(0) >= 0
-                || path.indexOf('\\r') >= 0 || path.indexOf('\\n') >= 0
+                || path.chars().anyMatch(ch -> ch == 13 || ch == 10)
                 || path.matches("(?i).*%(2f|5c|2e|25).*")) return false;
         String lower = path.toLowerCase();
         return !lower.startsWith("/actuator") && !lower.startsWith("/swagger")
