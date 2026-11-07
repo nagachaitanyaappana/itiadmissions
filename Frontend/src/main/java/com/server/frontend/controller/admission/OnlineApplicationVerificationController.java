@@ -104,7 +104,7 @@ public class OnlineApplicationVerificationController {
         }
         Map<String, Object> body = trustedPayload(payload, request, scope);
         String path = scope.iti() ? "/api/dv/reject-iti" : "/api/dv/reject";
-        return backendExchange(backendBaseUrl + path, HttpMethod.POST, body);
+        return backendExchange(backendBaseUrl + path, HttpMethod.POST, body, request);
     }
 
     private Scope requireScope(HttpServletRequest request) {
@@ -126,7 +126,7 @@ public class OnlineApplicationVerificationController {
             return new Scope(false, "", ResponseEntity.status(403)
                     .body(Map.of("message", "District or ITI login is required.")));
         }
-        Map<String, Object> window = backendGet(backendBaseUrl + "/api/dv/window-status");
+        Map<String, Object> window = backendGet(backendBaseUrl + "/api/dv/window-status", request);
         if (parsePhase(window.get("phase")) <= 1) {
             return new Scope(true, code, ResponseEntity.status(403)
                     .body(Map.of("message", "ITI verification is available only in Phase 2 and later.")));
