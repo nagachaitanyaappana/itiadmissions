@@ -655,19 +655,14 @@
                 var hallticket = document.getElementById("ssc_regno_gate").value.trim().toUpperCase();
                 var dob = document.getElementById("dob_gate").value;
 
-                $.get('${backendBaseUrl}/api/student/' + encodeURIComponent(regid), function (s) {
+                // Verify DOB + SSC hall ticket on the server before any personal
+                // application fields or photograph are returned to this browser.
+                $.get('${backendBaseUrl}/api/student/verify-identity', {
+                    regid: regid,
+                    dob: dob,
+                    ssc_regno: hallticket
+                }, function (s) {
                     submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
-
-                    if (String(s.sscRegNo || '').toUpperCase() !== hallticket) {
-                        $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-triangle me-2"></i>Hall Ticket Number does not match this Registration ID.</div>');
-                        refreshCaptcha();
-                        return;
-                    }
-                    if (s.dob && String(s.dob).substring(0, 10) !== dob) {
-                        $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-triangle me-2"></i>Date of Birth does not match this Registration ID.</div>');
-                        refreshCaptcha();
-                        return;
-                    }
 
                     CURRENT_REGID = s.regid;
                     prefill(s);
@@ -677,7 +672,7 @@
 
                 }).fail(function () {
                     submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
-                    $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-circle me-2"></i>No registration found for Registration ID <b>' + regid + '</b>.</div>');
+                    $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-circle me-2"></i>Registration ID, date of birth, or hall ticket number did not match.</div>');
                     refreshCaptcha();
                 });
 
