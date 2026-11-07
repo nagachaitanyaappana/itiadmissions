@@ -119,6 +119,48 @@ class JwtAuthenticationFilterTest {
         assertEquals(403, response.getStatus());
     }
 
+    @Test
+    void allowsCandidateToRemoveOnlyTheirVerifiedTradeSelectionRoutes() throws Exception {
+        MockHttpServletRequest request = gatewayRequest(
+                "DELETE", "/admission/student-trade-selection/12345/dist/07");
+        request.addHeader("X-Candidate-Regid", "12345");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        boolean[] reached = {false};
+
+        filter.doFilter(request, response, (req, res) -> reached[0] = true);
+
+        assertTrue(reached[0]);
+    }
+
+    @Test
+    void deniesUnscopedChecklistReadsToItiOfficials() throws Exception {
+        MockHttpServletRequest request = gatewayRequest("GET", "/api/checklist");
+        request.addHeader("Authorization", "Bearer " + tokens.issue("iti-user", 4, "ITI-001").value());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response,
+                (req, res) -> fail("Unscoped checklist listing must be denied"));
+
+        assertEquals(403, response.getStatus());
+    }
+
+    @Test
+    void allowsItiOfficialsToReadOnlyTheirOwnMeritList() throws Exception {
+        MockHttpServletRequest own = gatewayRequest("GET", "/api/meritlist/iti/ITI-001");
+        own.addHeader("Authorization", "Bearer " + tokens.issue("iti-user", 4, "ITI-001").value());
+        MockHttpServletResponse ownResponse = new MockHttpServletResponse();
+        boolean[] ownReached = {false};
+        filter.doFilter(own, ownResponse, (req, res) -> ownReached[0] = true);
+        assertTrue(ownReached[0]);
+
+        MockHttpServletRequest other = gatewayRequest("GET", "/api/meritlist/iti/ITI-002");
+        other.addHeader("Authorization", "Bearer " + tokens.issue("iti-user", 4, "ITI-001").value());
+        MockHttpServletResponse otherResponse = new MockHttpServletResponse();
+        filter.doFilter(other, otherResponse,
+                (req, res) -> fail("Cross-ITI merit list access must be denied"));
+        assertEquals(403, otherResponse.getStatus());
+    }
+
     private static MockHttpServletRequest gatewayRequest(String method, String path) {
         MockHttpServletRequest request = new MockHttpServletRequest(method, path);
         request.setRequestURI(path);
