@@ -122,8 +122,8 @@ public class DscListController {
     @ResponseBody
     public ResponseEntity<Object> currentPhase(HttpServletRequest request) {
         try {
-            ResponseEntity<Object> resp = rest.getForEntity(
-                    backendBaseUrl + "/api/reports/current-admission-phase", proxySupport.entity(request), Object.class);
+            ResponseEntity<Object> resp = rest.exchange(
+                    backendBaseUrl + "/api/reports/current-admission-phase", HttpMethod.GET, proxySupport.entity(request), Object.class);
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             return ResponseEntity.status(502)
@@ -135,8 +135,8 @@ public class DscListController {
     @ResponseBody
     public ResponseEntity<Object> phases(HttpServletRequest request) {
         try {
-            ResponseEntity<Object> resp = rest.getForEntity(
-                    backendBaseUrl + "/api/admission-phase/all", proxySupport.entity(request), Object.class);
+            ResponseEntity<Object> resp = rest.exchange(
+                    backendBaseUrl + "/api/admission-phase/all", HttpMethod.GET, proxySupport.entity(request), Object.class);
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             return ResponseEntity.status(502)
