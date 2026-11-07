@@ -38,6 +38,7 @@ public class CaptchaController {
     private static final String SESSION_KEY = "CAPTCHA_TEXT";
     private static final String ATTEMPTS_KEY = "CAPTCHA_ATTEMPTS";
     static final String VERIFIED_AT_KEY = "CAPTCHA_VERIFIED_AT";
+    static final String VERIFIED_USES_KEY = "CAPTCHA_VERIFIED_USES";
     private static final int MAX_ATTEMPTS = 5;
     private static final String CHARS = "0123456789";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -123,6 +124,9 @@ public class CaptchaController {
         session.removeAttribute(SESSION_KEY);
         session.removeAttribute(ATTEMPTS_KEY);
         session.setAttribute(VERIFIED_AT_KEY, System.currentTimeMillis());
+        // Step 1 save + final registration are the two writes in the public
+        // registration flow. Other identity gates consume the proof once.
+        session.setAttribute(VERIFIED_USES_KEY, 2);
         return ResponseEntity.noContent().build();
     }
 
