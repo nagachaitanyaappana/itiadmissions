@@ -3,6 +3,7 @@ package com.server.backend.config;
 import com.server.backend.service.Auth.JwtTokenService;
 import com.server.backend.service.Student.StudentObjectAuthorizationService;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -96,10 +97,11 @@ class JwtAuthenticationFilterTest {
 
         filter.doFilter(request, response, (req, res) -> {
             reached[0] = true;
-            assertEquals("3", req.getHeader("X-Role-Id"));
-            assertEquals("07", req.getHeader("X-Ins-Code"));
-            assertEquals("07", req.getHeader("X-Dist-Code"));
-            assertNull(req.getHeader("X-Iti-Code"));
+            HttpServletRequest servletRequest = (HttpServletRequest) req;
+            assertEquals("3", servletRequest.getHeader("X-Role-Id"));
+            assertEquals("07", servletRequest.getHeader("X-Ins-Code"));
+            assertEquals("07", servletRequest.getHeader("X-Dist-Code"));
+            assertNull(servletRequest.getHeader("X-Iti-Code"));
         });
 
         assertTrue(reached[0]);
@@ -107,9 +109,6 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void appliesObjectLevelDistrictAndItiChecksToStudentRecords() throws Exception {
-        when(studentObjects.canRead(12345, tokens.verify(
-                tokens.issue("district-user", 3, "07").value()))).thenReturn(false);
-
         MockHttpServletRequest request = gatewayRequest("GET", "/api/student/12345");
         request.addHeader("Authorization", "Bearer " + tokens.issue("district-user", 3, "07").value());
         MockHttpServletResponse response = new MockHttpServletResponse();
