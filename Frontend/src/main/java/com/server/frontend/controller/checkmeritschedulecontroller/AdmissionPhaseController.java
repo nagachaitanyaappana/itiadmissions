@@ -72,7 +72,7 @@ public class AdmissionPhaseController {
                     "Phase 2 and later admissions are processed by the ITI login for that ITI.");
             return "admission/phase2RoleRequired";
         }
-        model.addAttribute("casteOptions", fetchCasteOptions());
+        model.addAttribute("casteOptions", fetchCasteOptions(request));
         model.addAttribute("timingOptions", fetchTodayTimings(request));
         return "checkmeritschedule/AdmissionPhase";
     }
@@ -125,14 +125,14 @@ public class AdmissionPhaseController {
         if (!success) {
             if (resp != null && "ADMISSION_EXPIRED".equals(resp.get("code"))) {
                 populateAdmissionWindow(request, model);
-                model.addAttribute("casteOptions", fetchCasteOptions());
+                model.addAttribute("casteOptions", fetchCasteOptions(request));
                 model.addAttribute("timingOptions", fetchTodayTimings(request));
                 return "checkmeritschedule/AdmissionPhase";
             }
             Object err = resp == null ? "Server error" : resp.get("message");
             model.addAttribute("errorMsg", err == null ? "No counselling window is configured for today." : err);
             populateAdmissionWindow(request, model);
-            model.addAttribute("casteOptions", fetchCasteOptions());
+            model.addAttribute("casteOptions", fetchCasteOptions(request));
             model.addAttribute("timingOptions", fetchTodayTimings(request));
             return "checkmeritschedule/AdmissionPhase";
         }
@@ -183,7 +183,7 @@ public class AdmissionPhaseController {
             model.addAttribute("student", data);
             model.addAttribute("layout", layout);
             model.addAttribute("seat_matrix", seatMatrix);
-            model.addAttribute("casteOptions", fetchCasteOptions());
+            model.addAttribute("casteOptions", fetchCasteOptions(request));
             model.addAttribute("itiBoards", fetchList("/api/admission/iti-boards", request));
             // Legacy putOptions("admissions.ssc_examboard_mst",...) has no public endpoint yet;
             // reproduce the standard board list. TODO: source from backend when exposed.
@@ -198,7 +198,7 @@ public class AdmissionPhaseController {
         Object err = resp == null ? "Server error" : resp.get("message");
         if (resp != null && "ADMISSION_EXPIRED".equals(resp.get("code"))) {
             populateAdmissionWindow(request, model);
-            model.addAttribute("casteOptions", fetchCasteOptions());
+            model.addAttribute("casteOptions", fetchCasteOptions(request));
             model.addAttribute("timingOptions", fetchTodayTimings(request));
             return "checkmeritschedule/AdmissionPhase";
         }
@@ -306,7 +306,7 @@ public class AdmissionPhaseController {
                 : resp.containsKey("error") ? resp.get("error") : resp.get("message");
         if (resp != null && "ADMISSION_EXPIRED".equals(resp.get("code"))) {
             populateAdmissionWindow(request, model);
-            model.addAttribute("casteOptions", fetchCasteOptions());
+            model.addAttribute("casteOptions", fetchCasteOptions(request));
             model.addAttribute("timingOptions", fetchTodayTimings(request));
             return "checkmeritschedule/AdmissionPhase";
         }
@@ -429,7 +429,7 @@ public class AdmissionPhaseController {
     }
 
     @SuppressWarnings("unchecked")
-    private List<Map<String, String>> fetchCasteOptions() {
+    private List<Map<String, String>> fetchCasteOptions(HttpServletRequest request) {
         try {
             Map<String, Object> resp = rest.exchange(
                     backendBase + "/api/dsc/caste-list", HttpMethod.GET,
