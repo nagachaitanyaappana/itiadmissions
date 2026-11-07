@@ -2,6 +2,7 @@ package com.server.frontend.controller;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpSession;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -69,6 +70,42 @@ class BackendGatewayControllerTest {
         assertEquals("12345", BackendGatewayController.candidateRegid("PUT", "/api/student/update/12345"));
         assertEquals("12345", BackendGatewayController.candidateRegid("POST", "/admission/student-trade-selection/12345"));
         assertNull(BackendGatewayController.candidateRegid("GET", "/api/student/all"));
+    }
+
+    @Test
+    void consumesCaptchaProofForTwoRegistrationWritesThenExpiresIt() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(CaptchaController.VERIFIED_AT_KEY, 1_000L);
+        session.setAttribute(CaptchaController.VERIFIED_USES_KEY, 2);
+
+        assertTrue(BackendGatewayController.consumeCaptchaProof(session, false, 1_001L));
+        assertEquals(1, session.getAttribute(CaptchaController.VERIFIED_USES_KEY));
+        assertTrue(BackendGatewayController.consumeCaptchaProof(session, false, 1_002L));
+        assertNull(session.getAttribute(CaptchaController.VERIFIED_AT_KEY));
+        assertNull(session.getAttribute(CaptchaController.VERIFIED_USES_KEY));
+        assertFalse(BackendGatewayController.consumeCaptchaProof(session, false, 1_003L));
+    }
+
+    @Test
+    void consumesCaptchaProofCompletelyForIdentityChecks() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(CaptchaController.VERIFIED_AT_KEY, 1_000L);
+        session.setAttribute(CaptchaController.VERIFIED_USES_KEY, 2);
+
+        assertTrue(BackendGatewayController.consumeCaptchaProof(session, true, 1_001L));
+        assertNull(session.getAttribute(CaptchaController.VERIFIED_AT_KEY));
+        assertNull(session.getAttribute(CaptchaController.VERIFIED_USES_KEY));
+    }
+
+    @Test
+    void rejectsExpiredCaptchaProof() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(CaptchaController.VERIFIED_AT_KEY, 1_000L);
+        session.setAttribute(CaptchaController.VERIFIED_USES_KEY, 2);
+
+        assertFalse(BackendGatewayController.consumeCaptchaProof(session, false, 301_001L));
+        assertNull(session.getAttribute(CaptchaController.VERIFIED_AT_KEY));
+        assertNull(session.getAttribute(CaptchaController.VERIFIED_USES_KEY));
     }
 
     @Test
