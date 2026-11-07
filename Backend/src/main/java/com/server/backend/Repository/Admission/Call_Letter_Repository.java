@@ -32,10 +32,18 @@ public interface Call_Letter_Repository
           AND s.caste = :caste
           AND r.phase = :phase
           AND r.year = :year
+          AND (:itiCode IS NULL OR CAST(r.iti_code AS text) = :itiCode)
+          AND (:distCode IS NULL OR EXISTS (
+              SELECT 1 FROM public.iti i
+              WHERE CAST(i.iti_code AS text) = CAST(r.iti_code AS text)
+                AND CAST(i.dist_code AS text) = :distCode
+          ))
         """, nativeQuery = true)
     List<Object[]> findCallLetterData(
             @Param("rank") String rank,
             @Param("caste") String caste,
             @Param("phase") String phase,
-            @Param("year") String year);
+            @Param("year") String year,
+            @Param("distCode") String distCode,
+            @Param("itiCode") String itiCode);
 }
