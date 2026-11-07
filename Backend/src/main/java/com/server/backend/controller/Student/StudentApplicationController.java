@@ -67,12 +67,12 @@ public class StudentApplicationController {
     }
     // Gate check for the Apply page: verifies regid+dob+hall ticket, the application window, and
     // whether the candidate is already admitted (legacy applicationForm.Apply_iti + LastDate()).
-    @GetMapping("/apply-gate")
+    @PostMapping(value = "/apply-gate", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<java.util.Map<String, Object>> applyGate(
-            @RequestParam Integer regid,
-            @RequestParam(required = false) String dob,
-            @RequestParam(name = "ssc_regno", required = false) String sscRegNo) {
-
+            @RequestBody java.util.Map<String, Object> identity) {
+        Integer regid = parseRegid(identity == null ? null : identity.get("regid"));
+        String dob = identity == null ? null : stringValue(identity.get("dob"));
+        String sscRegNo = identity == null ? null : stringValue(identity.get("ssc_regno"));
         return ResponseEntity.ok(service.applyGate(regid, dob, sscRegNo));
     }
 
@@ -81,11 +81,12 @@ public class StudentApplicationController {
      * data. The Frontend gateway binds the successful regid to the HTTP session,
      * after which only that candidate's record/photo/marks can be read or edited.
      */
-    @GetMapping("/verify-identity")
+    @PostMapping(value = "/verify-identity", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<StudentApplicationDto> verifyIdentity(
-            @RequestParam Integer regid,
-            @RequestParam String dob,
-            @RequestParam(name = "ssc_regno") String sscRegNo) {
+            @RequestBody java.util.Map<String, Object> identity) {
+        Integer regid = parseRegid(identity == null ? null : identity.get("regid"));
+        String dob = identity == null ? null : stringValue(identity.get("dob"));
+        String sscRegNo = identity == null ? null : stringValue(identity.get("ssc_regno"));
         if (regid == null || regid <= 0 || dob == null || dob.isBlank()
                 || sscRegNo == null || sscRegNo.isBlank()) {
             return ResponseEntity.notFound().build();
@@ -103,6 +104,19 @@ public class StudentApplicationController {
         } catch (RuntimeException ex) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    private static Integer parseRegid(Object value) {
+        if (value == null) return null;
+        try {
+            return Integer.valueOf(String.valueOf(value).trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private static String stringValue(Object value) {
+        return value == null ? null : String.valueOf(value);
     }
 
     // Get Student By RegId
@@ -144,8 +158,23 @@ public class StudentApplicationController {
     @PutMapping("/update/{regid}")
     public ResponseEntity<StudentApplicationDto> updateStudent(
             @PathVariable Integer regid,
-            @RequestBody StudentApplicationDto dto) {
+            @RequestBody StudentApplicationDto dto,
+            @RequestHeader(value = "X-Candidate-Regid", required = false) String candidateRegid) {
 
+        if (candidateRegid != null) {
+            if (!candidateRegid.equals(String.valueOf(regid))) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            if (dto.getRegid() != null && !dto.getRegid().equals(regid)) {
+                return ResponseEntity.badRequest().build();
+            }
+            // These academic identity fields are read-only in candidate edit UI.
+            // A candidate cannot reassign their registration to another SSC identity.
+            if (dto.getSscRegNo() != null || dto.getSscBoard() != null
+                    || dto.getSscYear() != null || dto.getSscType() != null) {
+                return ResponseEntity.badRequest().build();
+            }
+        }
         return ResponseEntity.ok(service.updateStudent(regid, dto));
     }
 
