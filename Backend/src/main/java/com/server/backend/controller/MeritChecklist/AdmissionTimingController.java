@@ -64,7 +64,7 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
     @DeleteMapping("/{itiCode}/{phase}")
     public String delete(@PathVariable String itiCode, @PathVariable String phase,
             HttpServletRequest request) {
-        requireItiScope(request, itiCode);
+        requireAdmin(request);
         admissionTimingService.delete(itiCode, phase);
         return "Schedule Entry Deleted Successfully";
     }
@@ -72,7 +72,7 @@ public AdmissionTiming createAdmissionTiming(@RequestBody AdmissionTiming admiss
     @PutMapping("/{itiCode}/{phase}")
     public AdmissionTiming updateAdmissionTiming(@PathVariable String itiCode, @PathVariable String phase,
             @RequestBody AdmissionTiming updatedAdmissionTiming, HttpServletRequest request) {
-        requireItiScope(request, itiCode);
+        requireAdmin(request);
         return admissionTimingService.updateAdmissionTiming(itiCode, phase, updatedAdmissionTiming);
     }
     // 2. These three endpoints resolve the caller from request headers, the same convention
