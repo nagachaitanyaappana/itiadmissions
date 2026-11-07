@@ -159,6 +159,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (path.startsWith("/admission/add-trade/")) {
+            if ("2".equals(role) || "10".equals(role)) return true;
             String[] parts = path.split("/");
             return "4".equals(role) && hasScope(insCode)
                     && parts.length > 3 && insCode.equalsIgnoreCase(parts[3]);
@@ -462,7 +463,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if ("/admission/schedule-entry".equals(path)) {
             return ("3".equals(role) || "4".equals(role)) && hasScope(insCode);
         }
-        if ("/admission/trade".equals(path) || path.matches("^/admission/trade/[A-Za-z0-9_-]+/details$")) {
+        if ("/admission/trade".equals(path)
+                || path.matches("^/admission/trade/[A-Za-z0-9_-]+$")
+                || path.matches("^/admission/trade/[A-Za-z0-9_-]+/details$")) {
             return true; // public trade reference data
         }
         return false;
