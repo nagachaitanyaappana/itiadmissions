@@ -579,7 +579,7 @@
             var dob = document.getElementById("dob_gate").value;
             var submitBtn = $("#gateSubmitBtn");
 
-            $.get('${backendBaseUrl}/api/student/apply-gate', {
+            $.get('${pageContext.request.contextPath}/backend/api/student/apply-gate', {
                 regid: regid,
                 dob: dob,
                 ssc_regno: ssc_regno
@@ -609,7 +609,7 @@
                 document.getElementById("gateDiv").style.display = "none";
                 renderRegistrationDetails(s);
 
-                $.get('${backendBaseUrl}/api/student/marks/' + s.regid, function (m) {
+                $.get('${pageContext.request.contextPath}/backend/api/student/marks/' + s.regid, function (m) {
                     renderMarksDetails(s, m);
                 }).fail(function () {
                     renderMarksDetails(s, null);
@@ -725,7 +725,7 @@
 
         function loadDistrictOptions(after) {
             if (DISTRICT_OPTIONS) { after(); return; }
-            $.get('${backendBaseUrl}/api/districts', function (list) {
+            $.get('${pageContext.request.contextPath}/backend/api/districts', function (list) {
                 DISTRICT_OPTIONS = list || [];
                 after();
             }).fail(function () {
@@ -843,7 +843,7 @@
             var distCode = districtSelect.value;
             itiSelect.innerHTML = '<option value="">--Select ITI--</option>';
             if (!distCode) { return; }
-            $.get('${backendBaseUrl}/admission/eligible-itis/' + encodeURIComponent(distCode),
+            $.get('${pageContext.request.contextPath}/backend/admission/eligible-itis/' + encodeURIComponent(distCode),
                 function (list) {
                     var seen = {};
                     (list || []).forEach(function (i) {
@@ -887,7 +887,7 @@
         function showTrades(itiCode) {
             var box = document.getElementById("itiInfo");
             if (!itiCode) { box.innerHTML = ""; return; }
-            $.get('${backendBaseUrl}/admission/iti/' + encodeURIComponent(itiCode) + '/info',
+            $.get('${pageContext.request.contextPath}/backend/admission/iti/' + encodeURIComponent(itiCode) + '/info',
                 function (info) { renderTrades(itiCode, box, info); })
              .fail(function () { renderTrades(itiCode, box, null); });
         }
@@ -901,7 +901,7 @@
                     + (info.website ? '<p class="small mb-0"><a href="' + info.website + '" target="_blank">' + info.website + '</a></p>' : '')
                     + '</div>';
             }
-            $.get('${backendBaseUrl}/admission/iti/' + encodeURIComponent(itiCode) + '/trades',
+            $.get('${pageContext.request.contextPath}/backend/admission/iti/' + encodeURIComponent(itiCode) + '/trades',
                 function (list) {
                     var html = head
                         + '<div class="card p-3 mb-3 border-dark">'
@@ -955,7 +955,7 @@
             saveBtn.prop("disabled", true).val("Saving Selections...");
 
             $.ajax({
-                url: '${backendBaseUrl}/admission/student-trade-selection/' + CURRENT_REGID,
+                url: '${pageContext.request.contextPath}/backend/admission/student-trade-selection/' + CURRENT_REGID,
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({ regid: CURRENT_REGID, choices: choices }),
@@ -981,7 +981,7 @@
         function loadSavedSelections() {
             if (!CURRENT_REGID) return;
             var phaseOne = isPhaseOne();
-            $.get('${backendBaseUrl}/admission/student-trade-selection/' + CURRENT_REGID,
+            $.get('${pageContext.request.contextPath}/backend/admission/student-trade-selection/' + CURRENT_REGID,
                 function (list) {
                     APPLIED_CODES = [];
                     (list || []).forEach(function (r) {
@@ -1019,7 +1019,7 @@
 
         function deleteSavedSelection(type, code) {
             if (!CURRENT_REGID) return;
-            var url = '${backendBaseUrl}/admission/student-trade-selection/' + CURRENT_REGID;
+            var url = '${pageContext.request.contextPath}/backend/admission/student-trade-selection/' + CURRENT_REGID;
             if (type === 'dist') {
                 url += '/dist/' + encodeURIComponent(code);
             } else {
@@ -1061,7 +1061,7 @@
         }
 
         $(document).ready(function () {
-            $.get('${backendBaseUrl}/api/reports/current-admission-phase', function (data) {
+            $.get('${pageContext.request.contextPath}/backend/api/reports/current-admission-phase', function (data) {
                 if (data && data.year) {
                     CURRENT_YEAR = String(data.year);
                     CURRENT_PHASE = data.phase;
