@@ -678,16 +678,23 @@
             return false;
         }
 
+        function editEsc(value) {
+            if (value === null || value === undefined) return '';
+            return String(value).replace(/[&<>"']/g, function (ch) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+            });
+        }
+
         function prefill(s) {
             var boardMap = { '28': 'Andhra Pradesh State Board (SSC)', '51': 'CBSE', '52': 'ICSE', '36': 'Telangana' };
             var board = boardMap[String(s.sscBoard)] || (s.sscBoard || '-');
 
             document.getElementById("prefillInfo").innerHTML =
-                '<strong>Registration ID:</strong> <span class="badge bg-primary fs-6 me-2">' + s.regid + '</span> '
-                + '<strong>Hall Ticket:</strong> ' + (s.sscRegNo || '-') + ' &nbsp;|&nbsp; '
-                + '<strong>Board:</strong> ' + board + ' &nbsp;|&nbsp; '
-                + '<strong>Year:</strong> ' + (s.sscYear || '-') + ' &nbsp;|&nbsp; '
-                + '<strong>Result Type:</strong> ' + (s.sscType === 'sscm' ? 'Marks' : 'GPA');
+                '<strong>Registration ID:</strong> <span class="badge bg-primary fs-6 me-2">' + editEsc(s.regid) + '</span> '
+                + '<strong>Hall Ticket:</strong> ' + editEsc(s.sscRegNo || '-') + ' &nbsp;|&nbsp; '
+                + '<strong>Board:</strong> ' + editEsc(board) + ' &nbsp;|&nbsp; '
+                + '<strong>Year:</strong> ' + editEsc(s.sscYear || '-') + ' &nbsp;|&nbsp; '
+                + '<strong>Result Type:</strong> ' + editEsc(s.sscType === 'sscm' ? 'Marks' : 'GPA');
 
             document.getElementById("sscRegDisp").value = s.sscRegNo || '';
             document.getElementById("boardDisp").value = board;
