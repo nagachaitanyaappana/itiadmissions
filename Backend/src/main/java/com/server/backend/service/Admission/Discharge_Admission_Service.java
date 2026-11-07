@@ -7,6 +7,7 @@ public interface Discharge_Admission_Service {
 
     Discharge_Admission_DTO getAdmission(
             String admissionNumber,
-            String year);
+            String year,
+            String districtCode);
 
 }
