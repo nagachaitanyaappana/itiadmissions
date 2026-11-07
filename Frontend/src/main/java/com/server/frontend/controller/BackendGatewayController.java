@@ -1,6 +1,8 @@
 package com.server.frontend.controller;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
@@ -19,7 +21,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
@@ -37,6 +38,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RestController
 public class BackendGatewayController {
     private static final String CANDIDATE_SESSION_ATTRIBUTE = "verifiedCandidateRegid";
+    private static final int MAX_BODY_BYTES = 6 * 1024 * 1024;
     private static final Set<String> METHODS =
             Set.of("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS");
     private static final Set<String> REQUEST_HEADERS =
@@ -118,8 +120,17 @@ public class BackendGatewayController {
         String target = UriComponentsBuilder.fromUriString(backendBaseUrl)
                 .path(path).query(request.getQueryString()).build(true).toUriString();
         HttpMethod method = HttpMethod.valueOf(methodName);
-        byte[] body = method == HttpMethod.GET || method == HttpMethod.HEAD
-                ? new byte[0] : StreamUtils.copyToByteArray(request.getInputStream());
+        byte[] body = new byte[0];
+        if (method != HttpMethod.GET && method != HttpMethod.HEAD && method != HttpMethod.OPTIONS) {
+            if (request.getContentLengthLong() > MAX_BODY_BYTES) {
+                return ResponseEntity.status(413).build();
+            }
+            try {
+                body = readLimited(request.getInputStream());
+            } catch (PayloadTooLargeException ex) {
+                return ResponseEntity.status(413).build();
+            }
+        }
 
         // A fresh identity check replaces any previous candidate binding. A
         // failed check must never leave the old candidate authorized.
@@ -145,6 +156,23 @@ public class BackendGatewayController {
         } catch (RestClientException ex) {
             return ResponseEntity.status(502).build();
         }
+    }
+
+    private static byte[] readLimited(InputStream input) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int total = 0;
+        int count;
+        while ((count = input.read(buffer)) != -1) {
+            total += count;
+            if (total > MAX_BODY_BYTES) throw new PayloadTooLargeException();
+            output.write(buffer, 0, count);
+        }
+        return output.toByteArray();
+    }
+
+    private static final class PayloadTooLargeException extends IOException {
+        private static final long serialVersionUID = 1L;
     }
 
     private void bindCandidateSession(HttpServletRequest request, String path,
