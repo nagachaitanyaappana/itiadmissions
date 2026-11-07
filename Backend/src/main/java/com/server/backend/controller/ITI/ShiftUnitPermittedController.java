@@ -55,9 +55,12 @@ public class ShiftUnitPermittedController {
 
     private static void requireItiScope(HttpServletRequest request, String itiCode) {
         Object value = request.getAttribute(JwtAuthenticationFilter.CLAIMS_ATTRIBUTE);
-        if (!(value instanceof Claims claims)) return; // trusted Frontend server-side compatibility
+        if (!(value instanceof Claims claims)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "A verified official session is required");
+        }
         String role = String.valueOf(claims.get("roleId"));
         String scope = claims.get("insCode") == null ? "" : String.valueOf(claims.get("insCode"));
+        if ("2".equals(role) || "10".equals(role)) return;
         if (!"4".equals(role) || itiCode == null || !itiCode.trim().equalsIgnoreCase(scope.trim())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "An ITI official may only manage shift/unit permissions for their own ITI");
