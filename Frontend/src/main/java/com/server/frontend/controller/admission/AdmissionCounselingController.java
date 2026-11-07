@@ -1,5 +1,7 @@
 package com.server.frontend.controller.admission;
 
+import com.server.frontend.controller.BackendGatewayController;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,7 +114,7 @@ public class AdmissionCounselingController {
         if (notLoggedIn(request)) {
             return "redirect:/?error=session";
         }
-        addCurrentPhase(model);
+        addCurrentPhase(model, request);
         if ("1".equals(model.getAttribute("currentPhase"))) {
             return "redirect:/AdmissionPhase";
         }
@@ -469,6 +471,16 @@ public class AdmissionCounselingController {
     private static boolean sameCode(String left, String right) {
         return left != null && right != null && left.trim().matches("[A-Za-z0-9_-]{1,20}")
                 && left.trim().equalsIgnoreCase(right.trim());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> asMap(Object value) {
+        if (!(value instanceof Map<?, ?> map)) return null;
+        Map<String, Object> result = new LinkedHashMap<>();
+        map.forEach((key, item) -> {
+            if (key != null) result.put(String.valueOf(key), item);
+        });
+        return result;
     }
 
     private static boolean sameOriginWrite(HttpServletRequest request) {
