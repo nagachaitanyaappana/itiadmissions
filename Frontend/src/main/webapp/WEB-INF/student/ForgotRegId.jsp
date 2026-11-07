@@ -341,71 +341,64 @@
         function fetchRegId() {
             if (!validate()) return false;
 
-            var entered = document.getElementById("captcha").value.trim().toUpperCase();
-            var submitBtn = $("#mysubmit");
+            const entered = document.getElementById("captcha").value.trim().toUpperCase();
+            const hallticket = document.getElementById("ssc_regno").value.trim().toUpperCase();
+            const dob = document.getElementById("dob").value;
+            const submitBtn = $("#mysubmit");
             submitBtn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin"></i> Checking...');
 
-            $.get('${pageContext.request.contextPath}/captcha/text', function (serverCaptcha) {
-                if (entered !== String(serverCaptcha).trim().toUpperCase()) {
-                    submitBtn.prop("disabled", false).html('<i class="fas fa-search"></i> Submit');
-                    $("#captchaErr").text("Captcha does not match. Please try again.");
-                    refreshCaptcha();
-                    document.getElementById("captcha").focus();
-                    return;
-                }
+            // The captcha is checked and consumed on the server; its answer is never
+            // exposed to JavaScript or a public text endpoint.
+            $.post('\${pageContext.request.contextPath}/captcha/verify', { captcha: entered })
+                .done(function () {
+                    $.get('\${pageContext.request.contextPath}/backend/api/student/lookup-regid', {
+                        ssc_regno: hallticket,
+                        dob: dob
+                    }).done(function (result) {
+                        submitBtn.prop("disabled", false).html('<i class="fas fa-search"></i> Submit');
+                        const regid = String(result && result.regid != null ? result.regid : "");
+                        if (!/^\d+$/.test(regid)) {
+                            $("#alertBox").html('<div class="alert alert-danger py-2 text-center">No matching registration was found. Check your details and try again.</div>');
+                            refreshCaptcha();
+                            return;
+                        }
 
-                var hallticket = document.getElementById("ssc_regno").value.trim().toUpperCase();
-                var dob = document.getElementById("dob").value;
+                        // regid is validated as digits; no personal record fields are returned.
+                        const resultHtml = '<div class="result-card">'
+                            + '<i class="fas fa-check-circle" style="font-size: 3.5rem; color: #16a34a;"></i>'
+                            + '<h3 class="mt-3 fw-bold" style="color: #14532d;">Registration ID Found!</h3>'
+                            + '<p class="text-muted mb-1">Your Registration ID is:</p>'
+                            + '<div class="regid-badge"><span style="font-size:1rem;color:#475569;display:block;font-weight:600;">Registration ID</span>' + regid + '</div>'
+                            + '<div class="d-flex flex-wrap gap-2 justify-content-center">'
+                            + '  <a href="\${pageContext.request.contextPath}/student-apply" class="btn btn-primary-custom">'
+                            + '    <i class="fas fa-paper-plane"></i> Apply for ITI'
+                            + '  </a>'
+                            + '  <a href="\${pageContext.request.contextPath}/student-edit-details" class="btn btn-secondary-custom">'
+                            + '    <i class="fas fa-edit"></i> Edit Registration'
+                            + '  </a>'
+                            + '  <a href="\${pageContext.request.contextPath}/" class="btn btn-secondary-custom">'
+                            + '    <i class="fas fa-home"></i> Home'
+                            + '  </a>'
+                            + '</div>'
+                            + '</div>';
 
-                $.get('${backendBaseUrl}/api/student/hallticket/' + encodeURIComponent(hallticket), function (s) {
-                    submitBtn.prop("disabled", false).html('<i class="fas fa-search"></i> Submit');
-
-                    if (s.dob && String(s.dob).substring(0, 10) !== dob) {
-                        $("#alertBox").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-triangle me-2"></i>Date of Birth does not match this Hall Ticket Number.</div>');
+                        $("#gateDiv").hide();
+                        $("#forgotResult").html(resultHtml).slideDown("fast");
+                        window.scrollTo(0, 0);
+                    }).fail(function () {
+                        submitBtn.prop("disabled", false).html('<i class="fas fa-search"></i> Submit');
+                        $("#alertBox").html('<div class="alert alert-danger py-2 text-center">No matching registration was found. Check your details and try again.</div>');
                         refreshCaptcha();
-                        return;
-                    }
-
-                    var resultHtml = '<div class="result-card">'
-                        + '<i class="fas fa-check-circle" style="font-size: 3.5rem; color: #16a34a;"></i>'
-                        + '<h3 class="mt-3 fw-bold" style="color: #14532d;">Registration ID Found!</h3>'
-                        + '<p class="text-muted mb-1">Here are your registration details:</p>'
-                        + '<div class="regid-badge"><span style="font-size:1rem;color:#475569;display:block;font-weight:600;">Registration ID</span>' + s.regid + '</div>'
-                        + '<div class="bg-light p-3 rounded-3 mb-4 text-start" style="border: 1px solid #e2e8f0;">'
-                        + '  <div class="row g-2">'
-                        + '    <div class="col-sm-6"><strong>Hall Ticket:</strong> ' + (s.sscRegNo || '-') + '</div>'
-                        + '    <div class="col-sm-6"><strong>Applicant Name:</strong> ' + (s.name || '-') + '</div>'
-                        + '    <div class="col-sm-6"><strong>Year of Passing:</strong> ' + (s.sscYear || '-') + '</div>'
-                        + '    <div class="col-sm-6"><strong>Date of Birth:</strong> ' + (s.dob ? String(s.dob).substring(0, 10) : '-') + '</div>'
-                        + '  </div>'
-                        + '</div>'
-                        + '<div class="d-flex flex-wrap gap-2 justify-content-center">'
-                        + '  <a href="${pageContext.request.contextPath}/student-apply" class="btn btn-primary-custom">'
-                        + '    <i class="fas fa-paper-plane"></i> Apply for ITI'
-                        + '  </a>'
-                        + '  <a href="${pageContext.request.contextPath}/student-edit-details" class="btn btn-secondary-custom">'
-                        + '    <i class="fas fa-edit"></i> Edit Registration'
-                        + '  </a>'
-                        + '  <a href="${pageContext.request.contextPath}/" class="btn btn-secondary-custom">'
-                        + '    <i class="fas fa-home"></i> Home'
-                        + '  </a>'
-                        + '</div>'
-                        + '</div>';
-
-                    $("#gateDiv").hide();
-                    $("#forgotResult").html(resultHtml).slideDown('fast');
-                    window.scrollTo(0, 0);
-
-                }).fail(function () {
+                    });
+                }).fail(function (xhr) {
                     submitBtn.prop("disabled", false).html('<i class="fas fa-search"></i> Submit');
-                    $("#alertBox").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-circle me-2"></i>No registration found for Hall Ticket Number <b>' + hallticket + '</b>. Please register first.</div>');
+                    $("#captchaErr").text(xhr.status === 429
+                        ? "Too many attempts. Refresh the page and try again."
+                        : "Captcha does not match. Please try again.");
                     refreshCaptcha();
+                    document.getElementById("captcha").value = "";
+                    document.getElementById("captcha").focus();
                 });
-
-            }).fail(function () {
-                submitBtn.prop("disabled", false).html('<i class="fas fa-search"></i> Submit');
-                $("#alertBox").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;">Verification service temporarily unavailable. Please retry.</div>');
-            });
 
             return false;
         }
