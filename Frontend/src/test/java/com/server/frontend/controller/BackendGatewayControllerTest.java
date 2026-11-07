@@ -1,17 +1,14 @@
 package com.server.frontend.controller;
 
 import org.junit.jupiter.api.Test;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
+import org.springframework.mock.web.MockHttpServletRequest;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class BackendGatewayControllerTest {
-    private static final String SECRET = "01234567890123456789012345678901";
-    private static final String ACCESS_TOKEN = "header.payload.signature";
 
-    @Test void requiresCsrfForStateChangingMethodsOnly() {
+    @Test
+    void requiresSameOriginProtectionForStateChangingMethodsOnly() {
         assertTrue(BackendGatewayController.requiresCsrf("POST"));
         assertTrue(BackendGatewayController.requiresCsrf("PUT"));
         assertTrue(BackendGatewayController.requiresCsrf("PATCH"));
@@ -21,35 +18,68 @@ class BackendGatewayControllerTest {
         assertFalse(BackendGatewayController.requiresCsrf("OPTIONS"));
     }
 
-    @Test void validatesSignedDoubleSubmitTokensBoundToCurrentAccessToken() throws Exception {
-        String nonce = "test-random-nonce";
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-        byte[] access = ACCESS_TOKEN.getBytes(StandardCharsets.UTF_8);
-        byte[] random = nonce.getBytes(StandardCharsets.UTF_8);
-        mac.update((byte)(access.length >>> 24)); mac.update((byte)(access.length >>> 16));
-        mac.update((byte)(access.length >>> 8)); mac.update((byte)access.length); mac.update(access);
-        mac.update((byte)(random.length >>> 24)); mac.update((byte)(random.length >>> 16));
-        mac.update((byte)(random.length >>> 8)); mac.update((byte)random.length); mac.update(random);
-        String token = nonce + "." + Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(mac.doFinal());
+    @Test
+    void acceptsOnlyTheExactRequestOriginForWrites() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setScheme("https");
+        request.setServerName("portal.example.gov.in");
+        request.setServerPort(443);
+        request.addHeader("Origin", "https://portal.example.gov.in");
+        assertTrue(BackendGatewayController.sameOrigin(request));
 
-        assertTrue(BackendGatewayController.validCsrfToken(ACCESS_TOKEN, token, token, SECRET));
-        assertFalse(BackendGatewayController.validCsrfToken("different-access-token", token, token, SECRET));
-        assertFalse(BackendGatewayController.validCsrfToken(ACCESS_TOKEN, token, "attacker", SECRET));
-        assertFalse(BackendGatewayController.validCsrfToken(ACCESS_TOKEN, token, token, "short"));
-        assertFalse(BackendGatewayController.validCsrfToken(ACCESS_TOKEN, nonce + ".bad", nonce + ".bad", SECRET));
-        assertFalse(BackendGatewayController.validCsrfToken(ACCESS_TOKEN, token, null, SECRET));
-        assertFalse(BackendGatewayController.validCsrfToken(null, token, token, SECRET));
+        request.removeHeader("Origin");
+        request.addHeader("Origin", "https://attacker.example");
+        assertFalse(BackendGatewayController.sameOrigin(request));
     }
 
-    @Test void acceptsNormalBackendApiPaths() {
+    @Test
+    void requiresFetchMetadataWhenOriginHeaderIsAbsent() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setScheme("http");
+        request.setServerName("localhost");
+        request.setServerPort(5051);
+        assertFalse(BackendGatewayController.sameOrigin(request));
+
+        request.addHeader("Sec-Fetch-Site", "same-origin");
+        assertTrue(BackendGatewayController.sameOrigin(request));
+
+        request.removeHeader("Sec-Fetch-Site");
+        request.addHeader("Sec-Fetch-Site", "cross-site");
+        assertFalse(BackendGatewayController.sameOrigin(request));
+    }
+
+    @Test
+    void allowsOnlyExplicitPublicCandidateRoutes() {
+        assertTrue(BackendGatewayController.isPublicCandidateRequest("GET", "/api/student/apply-gate"));
+        assertTrue(BackendGatewayController.isPublicCandidateRequest("GET", "/api/student/castes"));
+        assertTrue(BackendGatewayController.isPublicCandidateRequest("GET", "/api/student/subcastes/BC-A"));
+        assertTrue(BackendGatewayController.isPublicCandidateRequest("GET", "/api/reports/current-admission-phase"));
+        assertTrue(BackendGatewayController.isPublicCandidateRequest("POST", "/api/student/register"));
+        assertFalse(BackendGatewayController.isPublicCandidateRequest("GET", "/api/student/all"));
+        assertFalse(BackendGatewayController.isPublicCandidateRequest("GET", "/api/student/12345"));
+        assertFalse(BackendGatewayController.isPublicCandidateRequest("POST", "/api/dv/approve"));
+    }
+
+    @Test
+    void bindsCandidateDataRoutesToARegistrationId() {
+        assertEquals("12345", BackendGatewayController.candidateRegid("GET", "/api/student/12345"));
+        assertEquals("12345", BackendGatewayController.candidateRegid("GET", "/api/student/photo/12345"));
+        assertEquals("12345", BackendGatewayController.candidateRegid("POST", "/api/student/photo/12345"));
+        assertEquals("12345", BackendGatewayController.candidateRegid("GET", "/api/student/marks/12345"));
+        assertEquals("12345", BackendGatewayController.candidateRegid("PUT", "/api/student/update/12345"));
+        assertEquals("12345", BackendGatewayController.candidateRegid("POST", "/admission/student-trade-selection/12345"));
+        assertNull(BackendGatewayController.candidateRegid("GET", "/api/student/all"));
+    }
+
+    @Test
+    void acceptsNormalBackendApiPaths() {
         assertTrue(BackendGatewayController.safePath("/api/districts"));
         assertTrue(BackendGatewayController.safePath("/api/student/12345"));
         assertTrue(BackendGatewayController.safePath("/admission/student-trade-selection/1"));
     }
 
-    @Test void rejectsTraversalAndEncodedSeparators() {
+    @Test
+    void rejectsTraversalAndEncodedSeparators() {
         assertFalse(BackendGatewayController.safePath("/api/../actuator"));
         assertFalse(BackendGatewayController.safePath("/api/%2e%2e/actuator"));
         assertFalse(BackendGatewayController.safePath("/api%2factuator"));
@@ -58,17 +88,19 @@ class BackendGatewayControllerTest {
         assertFalse(BackendGatewayController.safePath("/api\\actuator"));
     }
 
-    @Test void rejectsAdministrativeAndDocumentationEndpoints() {
+    @Test
+    void rejectsAdministrativeAndDocumentationEndpoints() {
         assertFalse(BackendGatewayController.safePath("/actuator/health"));
         assertFalse(BackendGatewayController.safePath("/swagger-ui/index.html"));
         assertFalse(BackendGatewayController.safePath("/v3/api-docs"));
         assertFalse(BackendGatewayController.safePath("/api/auth/login"));
     }
 
-    @Test void rejectsMalformedAndControlCharacterPaths() {
+    @Test
+    void rejectsMalformedAndControlCharacterPaths() {
         assertFalse(BackendGatewayController.safePath(null));
         assertFalse(BackendGatewayController.safePath("api/districts"));
         assertFalse(BackendGatewayController.safePath("//evil.example/path"));
-        assertFalse(BackendGatewayController.safePath("/api/districts\\r\\nX-Test: yes"));
+        assertFalse(BackendGatewayController.safePath("/api/districts\r\nX-Test: yes"));
     }
 }
