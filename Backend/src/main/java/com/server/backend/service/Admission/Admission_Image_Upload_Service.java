@@ -8,6 +8,7 @@ public interface Admission_Image_Upload_Service {
 
     Admission_Image_Upload_DTO verifyAdmission(
             String admissionNumber,
-            String sscHallticketNumber);
+            String sscHallticketNumber,
+            String itiCode);
 
 }
