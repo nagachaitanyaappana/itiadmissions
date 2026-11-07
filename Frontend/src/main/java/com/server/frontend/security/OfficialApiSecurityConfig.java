@@ -25,6 +25,10 @@ public class OfficialApiSecurityConfig implements WebMvcConfigurer {
                         "/admissions/admission-update/**",
                         "/admissions/application-reprint/**",
                         "/admissions/discharge-admission/**",
+                        "/admissions/print-admission-slip/**",
+                        "/admissions/reprint-verified-application/**",
+                        "/admissions/dsc-list/**",
+                        "/VerifyApplication/**",
                         "/CallLetterView/**",
                         "/AdmissionPhase/**",
                         "/AddTrade/**");
