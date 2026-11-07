@@ -44,7 +44,7 @@
 		
 		$.ajax({
 			type: 'get',
-			url: '${backendBaseUrl}/api/itis',
+			url: '${pageContext.request.contextPath}/backend/api/itis',
 			cache: false,
 			timeout: 6000000,
 			success:function(resp){
