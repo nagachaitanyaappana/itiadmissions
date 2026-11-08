@@ -4,7 +4,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/** Registers session/role checks for legacy same-origin proxy endpoints. */
+/** Registers the global same-origin CSRF guard and role checks for legacy proxy endpoints. */
 @Configuration
 public class OfficialApiSecurityConfig implements WebMvcConfigurer {
 
