@@ -13,6 +13,26 @@ class OfficialApiSessionInterceptorTest {
     private final OfficialApiSessionInterceptor interceptor = new OfficialApiSessionInterceptor();
 
     @Test
+    void rejectsCrossOriginWritesOnUnlistedFrontendEndpoints() throws Exception {
+        MockHttpServletRequest request = request("POST", "/public/submit");
+        request.removeHeader("Origin");
+        request.addHeader("Origin", "https://attacker.example");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertFalse(interceptor.preHandle(request, response, new Object()));
+        assertEquals(403, response.getStatus());
+    }
+
+    @Test
+    void allowsSameOriginWritesOnUnlistedFrontendEndpoints() throws Exception {
+        MockHttpServletRequest request = request("POST", "/public/submit");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(interceptor.preHandle(request, response, new Object()));
+        assertEquals(200, response.getStatus());
+    }
+
+    @Test
     void blocksUnauthenticatedLegacyProxyRequests() throws Exception {
         MockHttpServletRequest request = request("GET", "/ReservationEntry/api/iti/123/trades");
         MockHttpServletResponse response = new MockHttpServletResponse();
