@@ -94,28 +94,26 @@ public class StudentObjectAuthorizationService {
     }
 
     public boolean isItiInDistrict(String itiCode, String distCode) {
-        if (itiCode == null || itiCode.isBlank() || distCode == null || distCode.isBlank()) return false;
-        try {
-            return Boolean.TRUE.equals(jdbc.queryForObject(
-                    "SELECT EXISTS (SELECT 1 FROM public.iti "
-                            + "WHERE CAST(iti_code AS text) = ? AND CAST(dist_code AS text) = ?)",
-                    Boolean.class, itiCode.trim(), distCode.trim()));
-        } catch (org.springframework.dao.DataAccessException ex) {
-            log.warn("ITI district ownership could not be verified");
-            return false;
-        }
+        if (distCode == null || distCode.isBlank()) return false;
+        String actualDistrict = districtForIti(itiCode);
+        return actualDistrict != null && actualDistrict.equals(distCode.trim());
     }
 
-    /** Resolve an ITI's authoritative district code; null means no trusted mapping exists. */
+    /**
+     * Resolve an ITI's authoritative district code. Ambiguous, missing or failed
+     * mappings return null so an ITI can never inherit multiple district scopes.
+     */
     public String districtForIti(String itiCode) {
         if (itiCode == null || itiCode.isBlank()) return null;
         try {
             java.util.List<String> districts = jdbc.queryForList(
-                    "SELECT CAST(dist_code AS text) FROM public.iti "
-                            + "WHERE CAST(iti_code AS text) = ? LIMIT 1",
+                    "SELECT DISTINCT CAST(dist_code AS text) FROM public.iti "
+                            + "WHERE CAST(iti_code AS text) = ? AND dist_code IS NOT NULL",
                     String.class, itiCode.trim());
-            return districts.isEmpty() || districts.get(0) == null
-                    || districts.get(0).isBlank() ? null : districts.get(0).trim();
+            if (districts.size() != 1 || districts.get(0) == null || districts.get(0).isBlank()) {
+                return null;
+            }
+            return districts.get(0).trim();
         } catch (org.springframework.dao.DataAccessException ex) {
             log.warn("ITI district scope could not be resolved");
             return null;
