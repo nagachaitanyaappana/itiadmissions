@@ -21,6 +21,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Verify vendored SheetJS version and integrity
+        working-directory: Frontend/src/main/resources/static/js
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c xlsx.full.min.js.sha256
+          grep -Fq 'e.version="0.20.3"' xlsx.full.min.js
+
       - name: Scan dependencies and configuration with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0 (immutable commit)
         with:
