@@ -1,0 +1,9 @@
+SheetJS Community Edition (browser standalone)
+Version: 0.20.3
+Copyright: 2012-present SheetJS
+Source: https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js
+Distribution: vendored from the official versioned SheetJS release; local file Git blob SHA-1:
+21471af69ef0e4cda1613c2702c54101b92f48d2
+SHA-256:
+cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41
+License: Apache-2.0; see SheetJS-APACHE-2.0.txt.
