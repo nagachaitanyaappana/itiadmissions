@@ -537,14 +537,28 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
 
 
     /**
-     * Fields owned by the server. A student-submitted update must never be able to set these:
-     * appStatus / phase / verified* drive verification and phase-wise reporting, so accepting
-     * them from the client would let a candidate self-verify.
+     * Explicit allowlist for the candidate edit form. Do not copy every non-null DTO
+     * property into the entity: hidden fields such as verification state, SSC identity,
+     * merit data, certificates and audit columns must not be writable by mass assignment.
      */
-    private static final Set<String> SERVER_OWNED_FIELDS = Set.of(
-            "appStatus", "phase", "dataFlag",
-            "verifiedDate", "verifiedIp", "userId",
-            "trno", "entryDate");
+    private static final Set<String> CANDIDATE_EDITABLE_FIELDS = Set.of(
+            "name", "fname", "mname", "gender", "dob",
+            "adarno", "phno", "email", "addr", "pincode",
+            "caste", "subCaste", "local", "sscMonth", "sscPassed",
+            "economicWeakerSection", "phc", "pwdCategory", "exservice");
+
+    static void copyEditableCandidateFields(BeanWrapper source, BeanWrapper target) {
+        for (PropertyDescriptor descriptor : source.getPropertyDescriptors()) {
+            String propertyName = descriptor.getName();
+            if (!CANDIDATE_EDITABLE_FIELDS.contains(propertyName)) {
+                continue;
+            }
+            Object value = source.getPropertyValue(propertyName);
+            if (value != null) {
+                target.setPropertyValue(propertyName, value);
+            }
+        }
+    }
 
     @Override
 public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto dto) {
@@ -558,29 +572,7 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
 
     BeanWrapper src = new BeanWrapperImpl(dto);
     BeanWrapper trg = new BeanWrapperImpl(entity);
-
-    for (PropertyDescriptor pd : src.getPropertyDescriptors()) {
-
-        String propertyName = pd.getName();
-
-        if ("class".equals(propertyName) || "regid".equals(propertyName)
-                || "resumed".equals(propertyName)) {
-            continue;
-        }
-
-            // Server-owned fields are never accepted from the client: letting an applicant
-            // write appStatus/phase/verified* would let a candidate self-verify.
-            if (SERVER_OWNED_FIELDS.contains(propertyName)) {
-                continue;
-            }
-
-
-        Object value = src.getPropertyValue(propertyName);
-
-        if (value != null) {
-            trg.setPropertyValue(propertyName, value);
-        }
-    }
+    copyEditableCandidateFields(src, trg);
 
     AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
     if (cycle == null || cycle.year() == null || cycle.year().isBlank()
