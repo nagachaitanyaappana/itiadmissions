@@ -65,6 +65,21 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void deniesUnknownAdmissionProcessAndReservationRoutes() throws Exception {
+        for (String path : new String[] {
+                "/api/admission/unreviewed-export",
+                "/admission/reservation-entry/unreviewed-export",
+                "/admission/add-trade/ITI-001/unreviewed-export" }) {
+            MockHttpServletRequest request = gatewayRequest("GET", path);
+            request.addHeader("Authorization", "Bearer " + tokens.issue("iti-user", 4, "ITI-001").value());
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            filter.doFilter(request, response,
+                    (req, res) -> fail("Unknown route must not inherit ITI access: " + path));
+            assertEquals(403, response.getStatus());
+        }
+    }
+
+    @Test
     void allowsCandidateIdentityChecksOnlyAsPublicJsonPosts() throws Exception {
         for (String path : new String[] { "/api/student/apply-gate", "/api/student/verify-identity" }) {
             MockHttpServletRequest post = gatewayRequest("POST", path);
