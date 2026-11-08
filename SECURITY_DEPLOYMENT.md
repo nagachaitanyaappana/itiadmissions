@@ -38,7 +38,7 @@ Keep secrets in each service's local `.env` or deployment secret manager. Never 
 
 - `BACKEND_URL`: internal Backend URL, e.g. `http://127.0.0.1:5050` for same-host development.
 - `INTERNAL_API_SECRET`: the same random value as Backend's `INTERNAL_API_SECRET`.
-- `SESSION_COOKIE_SECURE=true` when the public Frontend is served over HTTPS. Keep it `false` only for local HTTP development.
+- `SESSION_COOKIE_SECURE=true` in both services when the public Frontend is served over HTTPS. Keep it `false` only for local HTTP development.
 - `DEV_LOGIN_ENABLED=false` outside a trusted local development environment.
 
 For local Windows PowerShell 5.1, generate two independent values without printing or sharing existing secrets:
