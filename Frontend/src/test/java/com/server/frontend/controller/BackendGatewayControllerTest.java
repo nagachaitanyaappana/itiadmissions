@@ -1,6 +1,7 @@
 package com.server.frontend.controller;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 
@@ -47,6 +48,27 @@ class BackendGatewayControllerTest {
         request.removeHeader("Sec-Fetch-Site");
         request.addHeader("Sec-Fetch-Site", "cross-site");
         assertFalse(BackendGatewayController.sameOrigin(request));
+    }
+
+    @Test
+    void neverForwardsAnOfficialBearerTokenToPublicOrCandidateScopedRoutes() {
+        HttpHeaders publicHeaders = new HttpHeaders();
+        BackendGatewayController.applyTrustedAuthHeaders(
+                publicHeaders, true, true, false, "stale.official.token", null);
+        assertNull(publicHeaders.getFirst(HttpHeaders.AUTHORIZATION));
+        assertNull(publicHeaders.getFirst("X-Candidate-Regid"));
+
+        HttpHeaders candidateHeaders = new HttpHeaders();
+        BackendGatewayController.applyTrustedAuthHeaders(
+                candidateHeaders, true, false, true, "stale.official.token", "12345");
+        assertNull(candidateHeaders.getFirst(HttpHeaders.AUTHORIZATION));
+        assertEquals("12345", candidateHeaders.getFirst("X-Candidate-Regid"));
+
+        HttpHeaders officialHeaders = new HttpHeaders();
+        BackendGatewayController.applyTrustedAuthHeaders(
+                officialHeaders, true, false, false, "official.access.token", null);
+        assertEquals("Bearer official.access.token",
+                officialHeaders.getFirst(HttpHeaders.AUTHORIZATION));
     }
 
     @Test
