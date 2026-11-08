@@ -108,12 +108,15 @@ public class BackendGatewayController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Internal-Service-Key", internalApiSecret);
-        if (officialRequest) {
-            headers.setBearerAuth(accessToken);
-        } else if (candidateSessionMatches) {
+        if (candidateSessionMatches) {
             // This value is derived from the server-side session, never copied
-            // from a browser-supplied header or query parameter.
+            // from a browser-supplied header or query parameter. Candidate-scoped
+            // access takes precedence over any stale official token cookie.
             headers.set("X-Candidate-Regid", candidateRegid);
+        } else if (officialRequest && !publicCandidateRequest) {
+            // Public candidate/reference routes must remain public even when the
+            // same browser happens to carry an official access-token cookie.
+            headers.setBearerAuth(accessToken);
         }
         for (String name : REQUEST_HEADERS) {
             String value = request.getHeader(name);
@@ -137,7 +140,7 @@ public class BackendGatewayController {
 
         // A fresh identity check replaces any previous candidate binding. A
         // failed check must never leave the old candidate authorized.
-        boolean candidateIdentityCheck = "GET".equals(methodName)
+        boolean candidateIdentityCheck = "POST".equals(methodName)
                 && ("/api/student/apply-gate".equals(path)
                     || "/api/student/verify-identity".equals(path));
         boolean registrationIdLookup = "POST".equals(methodName)
@@ -294,9 +297,7 @@ public class BackendGatewayController {
 
     static boolean isPublicCandidateRequest(String method, String path) {
         if ("GET".equalsIgnoreCase(method)) {
-            return "/api/student/apply-gate".equals(path)
-                    || "/api/student/verify-identity".equals(path)
-                    || "/api/student/castes".equals(path)
+            return "/api/student/castes".equals(path)
                     || "/api/dsc/caste-list".equals(path)
                     || "/api/districts".equals(path)
                     || "/api/reports/current-admission-phase".equals(path)
@@ -307,7 +308,10 @@ public class BackendGatewayController {
                     || path.matches("^/admission/iti/[A-Za-z0-9_-]+/(info|trades)$");
         }
         return "POST".equalsIgnoreCase(method)
-                && ("/api/student/save".equals(path) || "/api/student/register".equals(path)
+                && ("/api/student/apply-gate".equals(path)
+                    || "/api/student/verify-identity".equals(path)
+                    || "/api/student/save".equals(path)
+                    || "/api/student/register".equals(path)
                     || "/api/student/lookup-regid".equals(path));
     }
 
