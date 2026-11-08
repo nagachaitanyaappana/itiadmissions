@@ -51,7 +51,10 @@ class BackendGatewayControllerTest {
 
     @Test
     void allowsOnlyExplicitPublicCandidateRoutes() {
-        assertTrue(BackendGatewayController.isPublicCandidateRequest("GET", "/api/student/apply-gate"));
+        assertFalse(BackendGatewayController.isPublicCandidateRequest("GET", "/api/student/apply-gate"));
+        assertFalse(BackendGatewayController.isPublicCandidateRequest("GET", "/api/student/verify-identity"));
+        assertTrue(BackendGatewayController.isPublicCandidateRequest("POST", "/api/student/apply-gate"));
+        assertTrue(BackendGatewayController.isPublicCandidateRequest("POST", "/api/student/verify-identity"));
         assertTrue(BackendGatewayController.isPublicCandidateRequest("POST", "/api/student/lookup-regid"));
         assertFalse(BackendGatewayController.isPublicCandidateRequest("GET", "/api/student/lookup-regid"));
         assertTrue(BackendGatewayController.isPublicCandidateRequest("GET", "/api/student/castes"));
