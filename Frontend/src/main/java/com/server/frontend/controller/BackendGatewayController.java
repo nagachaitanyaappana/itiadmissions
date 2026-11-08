@@ -171,7 +171,7 @@ public class BackendGatewayController {
         } catch (org.springframework.web.client.HttpStatusCodeException ex) {
             if (captchaProtectedCheck) {
                 HttpSession existing = request.getSession(false);
-                if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+                if (existing != null) clearCandidateSession(existing);
             }
             return response(ex.getStatusCode(), ex.getResponseHeaders(), ex.getResponseBodyAsByteArray());
         } catch (RestClientException ex) {
