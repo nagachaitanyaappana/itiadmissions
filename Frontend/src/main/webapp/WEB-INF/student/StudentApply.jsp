@@ -579,11 +579,12 @@
             var dob = document.getElementById("dob_gate").value;
             var submitBtn = $("#gateSubmitBtn");
 
-            $.get('${pageContext.request.contextPath}/backend/api/student/apply-gate', {
-                regid: regid,
-                dob: dob,
-                ssc_regno: ssc_regno
-            }, function (res) {
+            $.ajax({
+                url: '${pageContext.request.contextPath}/backend/api/student/apply-gate',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ regid: regid, dob: dob, ssc_regno: ssc_regno }),
+                success: function (res) {
                 submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
                 var status = res && res.status;
                 if (status === 'expired') {
@@ -617,7 +618,7 @@
 
                 initSelectionStep();
                 window.scrollTo(0, 0);
-
+                }
             }).fail(function () {
                 submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
                 gateError('No registration record found for the provided details.');
