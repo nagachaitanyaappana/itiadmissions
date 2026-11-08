@@ -149,8 +149,10 @@ public class BackendGatewayController {
                 if (existing != null) clearCandidateSession(existing);
                 return ResponseEntity.status(403).build();
             }
-            // A new identity attempt must not inherit a previously verified candidate session.
-            if (captchaProtectedCheck && existing != null) {
+            // Any new public registration or identity attempt starts a fresh
+            // candidate context; never carry another candidate's verified regid
+            // into a new registration flow on a shared browser session.
+            if (existing != null) {
                 clearCandidateSession(existing);
             }
         }
