@@ -141,6 +141,14 @@ class LoginFlowTest {
     }
 
     @Test
+    void safeRedirectRejectsProtocolRelativeAndBackslashTargets() {
+        assertEquals("/authHome", LoginController.safeRedirect("//attacker.example", "/authHome"));
+        assertEquals("/authHome", LoginController.safeRedirect("/\\\\attacker.example", "/authHome"));
+        assertEquals("/reports", LoginController.safeRedirect("/reports", "/authHome"));
+        assertEquals("/authHome", LoginController.safeRedirect("https://attacker.example", "/authHome"));
+    }
+
+    @Test
     void authHomeWithoutLoginRedirectsToError() throws Exception {
         mvc.perform(get("/authHome"))
                 .andExpect(status().is3xxRedirection())
