@@ -16,26 +16,6 @@ public class OfficialApiSecurityConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(interceptor)
-                .addPathPatterns(
-                        "/ReservationEntry/**",
-                        "/SeatCorrection/**",
-                        "/ScheduleEntryView/**",
-                        "/admissions/search/**",
-                        "/admissions/admission-update/**",
-                        "/admissions/application-reprint/**",
-                        "/admissions/discharge-admission/**",
-                        "/admissions/print-admission-slip/**",
-                        "/admissions/reprint-verified-application/**",
-                        "/admissions/dsc-list/**",
-                        "/VerifyApplication/**",
-                        "/CallLetterView/**",
-                        "/AdmissionPhase/**",
-                        "/AddTrade/**",
-                        "/itiList/**",
-                        "/iti-details/**",
-                        "/iti-create/**",
-                        "/iti-trade-selection/**",
-                        "/shift-unit-permitted/**");
+        registry.addInterceptor(interceptor).addPathPatterns("/**");
     }
 }
