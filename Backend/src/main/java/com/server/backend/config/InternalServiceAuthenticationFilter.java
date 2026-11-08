@@ -38,11 +38,9 @@ public class InternalServiceAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        return path.equals("/error")
-                || path.equals("/swagger")
-                || path.startsWith("/swagger-ui/")
-                || path.startsWith("/v3/api-docs")
-                || path.equals("/actuator/health");
+        // Health and framework error dispatches are intentionally public.
+        // API documentation still requires the Frontend service credential.
+        return path.equals("/error") || path.equals("/actuator/health");
     }
 
     @Override
