@@ -144,6 +144,9 @@ public class LoginController {
 
     @GetMapping("/logout")
     public String logout(HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) {
+        // Logout is state-changing even though the legacy route is GET. Reject
+        // cross-origin navigation so another site cannot force a signed-in user out.
+        if (!BackendGatewayController.sameOrigin(request)) return "redirect:/";
         HttpSession activeSession = request.getSession(false);
         if (activeSession != null) {
             activeSession.invalidate();
