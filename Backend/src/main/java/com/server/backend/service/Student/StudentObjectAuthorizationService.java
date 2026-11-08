@@ -106,6 +106,22 @@ public class StudentObjectAuthorizationService {
         }
     }
 
+    /** Resolve an ITI's authoritative district code; null means no trusted mapping exists. */
+    public String districtForIti(String itiCode) {
+        if (itiCode == null || itiCode.isBlank()) return null;
+        try {
+            java.util.List<String> districts = jdbc.queryForList(
+                    "SELECT CAST(dist_code AS text) FROM public.iti "
+                            + "WHERE CAST(iti_code AS text) = ? LIMIT 1",
+                    String.class, itiCode.trim());
+            return districts.isEmpty() || districts.get(0) == null
+                    || districts.get(0).isBlank() ? null : districts.get(0).trim();
+        } catch (org.springframework.dao.DataAccessException ex) {
+            log.warn("ITI district scope could not be resolved");
+            return null;
+        }
+    }
+
     private static String claim(Claims claims, String name) {
         Object value = claims.get(name);
         return value == null ? null : String.valueOf(value);
