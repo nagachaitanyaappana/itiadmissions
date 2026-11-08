@@ -634,10 +634,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             public Map<String, String[]> getParameterMap() {
                 Map<String, String[]> parameters = new HashMap<>(super.getParameterMap());
                 if ("3".equals(role) || "4".equals(role)) {
-                    if (distCode != null) {
-                        for (String name : new String[] { "distCode", "dist_code", "districtCode", "dist" }) {
-                            parameters.put(name, new String[] { distCode });
-                        }
+                    // Always replace browser-supplied district values, even when an ITI
+                    // has no trusted district mapping (in that case expose an empty value).
+                    String trustedDistrict = distCode == null ? "" : distCode;
+                    for (String name : new String[] { "distCode", "dist_code", "districtCode", "dist" }) {
+                        parameters.put(name, new String[] { trustedDistrict });
                     }
                 }
                 if ("4".equals(role)) {
