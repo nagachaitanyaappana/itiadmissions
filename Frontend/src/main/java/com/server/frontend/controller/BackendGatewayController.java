@@ -37,7 +37,9 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 @RestController
 public class BackendGatewayController {
-    private static final String CANDIDATE_SESSION_ATTRIBUTE = "verifiedCandidateRegid";
+    static final String CANDIDATE_SESSION_ATTRIBUTE = "verifiedCandidateRegid";
+    static final String CANDIDATE_SESSION_VERIFIED_AT_ATTRIBUTE = "verifiedCandidateAt";
+    private static final long CANDIDATE_SESSION_TTL_MILLIS = 30L * 60L * 1000L;
     private static final int MAX_BODY_BYTES = 6 * 1024 * 1024;
     private static final Set<String> METHODS =
             Set.of("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS");
@@ -152,12 +154,12 @@ public class BackendGatewayController {
         if (captchaProtectedCheck || publicRegistrationWrite) {
             HttpSession existing = request.getSession(false);
             if (!consumeCaptchaProof(existing, captchaProtectedCheck)) {
-                if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+                if (existing != null) clearCandidateSession(existing);
                 return ResponseEntity.status(403).build();
             }
             // A new identity attempt must not inherit a previously verified candidate session.
             if (captchaProtectedCheck && existing != null) {
-                existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+                clearCandidateSession(existing);
             }
         }
 
@@ -238,20 +240,40 @@ public class BackendGatewayController {
                 regid = body.get("regid");
             }
             if (regid != null && String.valueOf(regid).matches("\\d+")) {
-                request.getSession(true).setAttribute(CANDIDATE_SESSION_ATTRIBUTE,
-                        String.valueOf(regid));
+                // Candidate identity verification elevates an anonymous session to a
+                // candidate-scoped session. Rotate the identifier before storing that
+                // authority to prevent session fixation.
+                request.getSession(true);
+                request.changeSessionId();
+                HttpSession candidateSession = request.getSession(false);
+                candidateSession.setAttribute(CANDIDATE_SESSION_ATTRIBUTE, String.valueOf(regid));
+                candidateSession.setAttribute(CANDIDATE_SESSION_VERIFIED_AT_ATTRIBUTE,
+                        System.currentTimeMillis());
             }
         } catch (Exception ignored) {
             HttpSession existing = request.getSession(false);
-            if (existing != null) existing.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+            if (existing != null) clearCandidateSession(existing);
         }
     }
 
-    private static String verifiedCandidateRegid(HttpSession session) {
+    static String verifiedCandidateRegid(HttpSession session) {
         if (session == null) return null;
         Object value = session.getAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+        Object verifiedAtValue = session.getAttribute(CANDIDATE_SESSION_VERIFIED_AT_ATTRIBUTE);
+        long verifiedAt = verifiedAtValue instanceof Number number ? number.longValue() : 0L;
+        long now = System.currentTimeMillis();
+        if (verifiedAt <= 0L || now < verifiedAt || now - verifiedAt > CANDIDATE_SESSION_TTL_MILLIS) {
+            clearCandidateSession(session);
+            return null;
+        }
         String regid = value == null ? null : String.valueOf(value);
         return regid != null && regid.matches("\\d+") ? regid : null;
+    }
+
+    static void clearCandidateSession(HttpSession session) {
+        if (session == null) return;
+        session.removeAttribute(CANDIDATE_SESSION_ATTRIBUTE);
+        session.removeAttribute(CANDIDATE_SESSION_VERIFIED_AT_ATTRIBUTE);
     }
 
     private static ResponseEntity<byte[]> response(
