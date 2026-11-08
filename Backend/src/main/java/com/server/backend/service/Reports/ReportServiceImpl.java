@@ -229,12 +229,27 @@ public class ReportServiceImpl implements ReportService {
 
     // 3a. Admission Report (ITI - candidate detail for role 4)
     @Override
-    public List<AdmissionReportDetailResponse> getAdmissionReportDetails(int page, int size) {
+    public List<AdmissionReportDetailResponse> getAdmissionReportDetails(String itiCode, int page, int size) {
         int safeSize = Math.max(1, Math.min(size, 10000));
         long offset = (long) Math.max(0, page) * safeSize;
-        String sql = "SELECT adm_num, ssc_regno, name, fname, mname, TO_CHAR(dob, 'DD-MM-YYYY') AS dob, phno, email_id, shift, unit, CASE WHEN pwd_category = '1' THEN 'Blind' WHEN pwd_category = '2' THEN 'Deaf' WHEN pwd_category = '3' THEN 'Motor Disability' WHEN pwd_category = '4' THEN 'Mental Disability' ELSE 'NA' END AS pwd_category, CASE WHEN economic_weaker_section = true THEN 'YES' ELSE 'NO' END AS economic_weaker_section, CASE WHEN is_trainee_dual_mode = true THEN 'YES' ELSE 'NO' END AS is_trainee_dual_mode FROM admissions.iti_admissions ORDER BY adm_num LIMIT ? OFFSET ?";
+        StringBuilder sql = new StringBuilder("SELECT adm_num, ssc_regno, name, fname, mname, "
+                + "TO_CHAR(dob, 'DD-MM-YYYY') AS dob, phno, email_id, shift, unit, "
+                + "CASE WHEN pwd_category = '1' THEN 'Blind' WHEN pwd_category = '2' THEN 'Deaf' "
+                + "WHEN pwd_category = '3' THEN 'Motor Disability' WHEN pwd_category = '4' THEN 'Mental Disability' "
+                + "ELSE 'NA' END AS pwd_category, "
+                + "CASE WHEN economic_weaker_section = true THEN 'YES' ELSE 'NO' END AS economic_weaker_section, "
+                + "CASE WHEN is_trainee_dual_mode = true THEN 'YES' ELSE 'NO' END AS is_trainee_dual_mode "
+                + "FROM admissions.iti_admissions WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+        if (itiCode != null && !itiCode.isBlank()) {
+            sql.append(" AND TRIM(iti_code::text) = TRIM(?::text)");
+            params.add(itiCode.trim());
+        }
+        sql.append(" ORDER BY adm_num LIMIT ? OFFSET ?");
+        params.add(safeSize);
+        params.add(offset);
 
-        return jdbcTemplate.query(sql, (rs, rowNum) -> new AdmissionReportDetailResponse(
+        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> new AdmissionReportDetailResponse(
                 rs.getString("adm_num"),
                 rs.getString("ssc_regno"),
                 rs.getString("name"),
@@ -248,7 +263,7 @@ public class ReportServiceImpl implements ReportService {
                 rs.getString("pwd_category"),
                 rs.getString("economic_weaker_section"),
                 rs.getString("is_trainee_dual_mode")
-        ), safeSize, offset);
+        ), params.toArray());
     }
 
     // 4. DSC Full Report
@@ -1828,9 +1843,15 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public long countAdmissionReportDetails() {
-        String sql = "SELECT COUNT(*) FROM admissions.iti_admissions";
-        Long count = jdbcTemplate.queryForObject(sql, Long.class);
+    public long countAdmissionReportDetails(String itiCode) {
+        if (itiCode == null || itiCode.isBlank()) {
+            Long count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM admissions.iti_admissions", Long.class);
+            return count != null ? count : 0L;
+        }
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM admissions.iti_admissions WHERE TRIM(iti_code::text) = TRIM(?::text)",
+                Long.class, itiCode.trim());
         return count != null ? count : 0L;
     }
 
