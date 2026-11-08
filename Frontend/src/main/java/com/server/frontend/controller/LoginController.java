@@ -95,7 +95,7 @@ public class LoginController {
         accessCookie.setMaxAge(15 * 60);
         accessCookie.setAttribute("SameSite", "Lax");
         response.addCookie(accessCookie);
-        session.removeAttribute("verifiedCandidateRegid");
+        BackendGatewayController.clearCandidateSession(session);
         // Never keep the bearer token in the general session map that JSPs may
         // expose to views. The token lives only in the HttpOnly access cookie.
         Map<String, Object> safeSessionUser = new HashMap<>(result);
