@@ -41,6 +41,11 @@ import com.server.backend.DTO.CurrentAdmissionPhaseResponse;
 import com.server.backend.DTO.ItiTradeDisplayResponse;
 import com.server.backend.service.Reports.ReportService;
 import com.server.backend.service.Reports.TradeDisplayReportService;
+import com.server.backend.config.JwtAuthenticationFilter;
+import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -99,9 +104,26 @@ public class ReportRestController {
     @GetMapping("/admission-report-iti")
     public org.springframework.http.ResponseEntity<PagedResponse<AdmissionReportDetailResponse>> getAdmissionReportIti(
             @RequestParam(required = false, defaultValue = "0") int page,
-            @RequestParam(defaultValue = "200") int size) {
-        java.util.List<AdmissionReportDetailResponse> data = reportService.getAdmissionReportDetails(page, size);
-        long count = reportService.countAdmissionReportDetails();
+            @RequestParam(defaultValue = "200") int size,
+            HttpServletRequest request) {
+        Object value = request.getAttribute(JwtAuthenticationFilter.CLAIMS_ATTRIBUTE);
+        if (!(value instanceof Claims claims)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "A verified official identity is required");
+        }
+        String role = String.valueOf(claims.get("roleId"));
+        String itiCode = null;
+        if ("4".equals(role)) {
+            Object scope = claims.get("insCode");
+            itiCode = scope == null ? null : String.valueOf(scope).trim();
+            if (itiCode == null || itiCode.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The ITI account has no assigned scope");
+            }
+        } else if (!"2".equals(role) && !"10".equals(role)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This report is restricted to ITI and state officials");
+        }
+        java.util.List<AdmissionReportDetailResponse> data =
+                reportService.getAdmissionReportDetails(itiCode, page, size);
+        long count = reportService.countAdmissionReportDetails(itiCode);
         return org.springframework.http.ResponseEntity.ok(new PagedResponse<>(data, page, size, count));
     }
 
