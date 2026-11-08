@@ -324,7 +324,12 @@ public class BackendGatewayController {
                     ? ("https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80) : uri.getPort();
             int requestPort = request.getServerPort();
             return uri.getScheme() != null
+                    && ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
                     && uri.getScheme().equalsIgnoreCase(request.getScheme())
+                    && uri.getRawUserInfo() == null
+                    && (uri.getRawPath() == null || uri.getRawPath().isEmpty())
+                    && uri.getRawQuery() == null
+                    && uri.getRawFragment() == null
                     && uri.getHost() != null
                     && uri.getHost().equalsIgnoreCase(request.getServerName())
                     && originPort == requestPort;
