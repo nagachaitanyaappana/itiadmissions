@@ -106,6 +106,25 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void allowsItiScheduleReadUpdateAndDeleteOnlyForItsOwnIti() throws Exception {
+        for (String method : new String[] { "GET", "PUT", "DELETE" }) {
+            MockHttpServletRequest own = gatewayRequest(method, "/admission-timings/ITI-001/1");
+            own.addHeader("Authorization", "Bearer " + tokens.issue("iti-user", 4, "ITI-001").value());
+            MockHttpServletResponse ownResponse = new MockHttpServletResponse();
+            boolean[] reached = {false};
+            filter.doFilter(own, ownResponse, (req, res) -> reached[0] = true);
+            assertTrue(reached[0], method + " should be allowed for the assigned ITI");
+
+            MockHttpServletRequest other = gatewayRequest(method, "/admission-timings/ITI-999/1");
+            other.addHeader("Authorization", "Bearer " + tokens.issue("iti-user", 4, "ITI-001").value());
+            MockHttpServletResponse otherResponse = new MockHttpServletResponse();
+            filter.doFilter(other, otherResponse,
+                    (req, res) -> fail(method + " must not be allowed for another ITI"));
+            assertEquals(403, otherResponse.getStatus());
+        }
+    }
+
+    @Test
     void deniesUnknownDistrictVerificationRoutesToEveryRole() throws Exception {
         for (int role : new int[] { 2, 3, 4, 10 }) {
             MockHttpServletRequest request = gatewayRequest("GET", "/api/dv/unreviewed-export");
