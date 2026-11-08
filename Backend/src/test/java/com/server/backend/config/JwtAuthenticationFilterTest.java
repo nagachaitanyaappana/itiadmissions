@@ -210,6 +210,24 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void allowsDetailedAdmissionsReportOnlyForTheAuthenticatedItiScope() throws Exception {
+        when(studentObjects.districtForIti("ITI-001")).thenReturn("07");
+        MockHttpServletRequest own = gatewayRequest("GET", "/api/reports/admission-report-iti");
+        own.addHeader("Authorization", "Bearer " + tokens.issue("iti-user", 4, "ITI-001").value());
+        MockHttpServletResponse ownResponse = new MockHttpServletResponse();
+        boolean[] ownReached = {false};
+        filter.doFilter(own, ownResponse, (req, res) -> ownReached[0] = true);
+        assertTrue(ownReached[0]);
+
+        MockHttpServletRequest district = gatewayRequest("GET", "/api/reports/admission-report-iti");
+        district.addHeader("Authorization", "Bearer " + tokens.issue("district-user", 3, "07").value());
+        MockHttpServletResponse districtResponse = new MockHttpServletResponse();
+        filter.doFilter(district, districtResponse,
+                (req, res) -> fail("District accounts must not use the ITI-only detail report"));
+        assertEquals(403, districtResponse.getStatus());
+    }
+
+    @Test
     void deniesItiReportsWhenTheItiHasNoTrustedDistrictMapping() throws Exception {
         when(studentObjects.districtForIti("ITI-001")).thenReturn(null);
         MockHttpServletRequest request = gatewayRequest("GET", "/api/reports/iti-wise-status");
