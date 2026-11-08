@@ -290,10 +290,33 @@ public class BackendGatewayController {
     }
 
     public static boolean sameOrigin(HttpServletRequest request) {
-        String origin = request.getHeader("Origin");
-        if (origin == null || origin.isBlank()) {
-            return "same-origin".equalsIgnoreCase(request.getHeader("Sec-Fetch-Site"));
+        // Reject duplicate security-sensitive headers instead of trusting whichever
+        // value a servlet container happens to expose first. This also prevents
+        // ambiguous Origin handling across reverse proxies and application servers.
+        java.util.Enumeration<String> origins = request.getHeaders("Origin");
+        String origin = null;
+        int originCount = 0;
+        if (origins != null) {
+            while (origins.hasMoreElements()) {
+                origin = origins.nextElement();
+                originCount++;
+                if (originCount > 1) return false;
+            }
         }
+        if (originCount == 0) {
+            java.util.Enumeration<String> fetchSites = request.getHeaders("Sec-Fetch-Site");
+            String fetchSite = null;
+            int fetchSiteCount = 0;
+            if (fetchSites != null) {
+                while (fetchSites.hasMoreElements()) {
+                    fetchSite = fetchSites.nextElement();
+                    fetchSiteCount++;
+                    if (fetchSiteCount > 1) return false;
+                }
+            }
+            return fetchSiteCount == 1 && "same-origin".equalsIgnoreCase(fetchSite);
+        }
+        if (origin == null || origin.isBlank()) return false;
         try {
             URI uri = URI.create(origin);
             int originPort = uri.getPort() < 0
