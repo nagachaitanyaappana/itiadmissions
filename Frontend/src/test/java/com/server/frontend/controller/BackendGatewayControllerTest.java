@@ -141,6 +141,19 @@ class BackendGatewayControllerTest {
     }
 
     @Test
+    void clearingCandidateContextRemovesTheVerifiedRegistrationBinding() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(BackendGatewayController.CANDIDATE_SESSION_ATTRIBUTE, "12345");
+        session.setAttribute(BackendGatewayController.CANDIDATE_SESSION_VERIFIED_AT_ATTRIBUTE,
+                System.currentTimeMillis());
+
+        BackendGatewayController.clearCandidateSession(session);
+
+        assertNull(session.getAttribute(BackendGatewayController.CANDIDATE_SESSION_ATTRIBUTE));
+        assertNull(session.getAttribute(BackendGatewayController.CANDIDATE_SESSION_VERIFIED_AT_ATTRIBUTE));
+    }
+
+    @Test
     void consumesCaptchaProofForTwoRegistrationWritesThenExpiresIt() {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute(CaptchaController.VERIFIED_AT_KEY, 1_000L);
