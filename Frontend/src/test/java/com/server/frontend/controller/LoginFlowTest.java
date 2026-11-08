@@ -11,6 +11,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.client.RestTemplate;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,14 +24,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties = {
-        "app.internal-auth.secret=iti-test-internal-secret-0123456789abcdef",
-        "backend.api.base-url=http://localhost:5050"
-})
+@SpringBootTest
 @AutoConfigureMockMvc
 class LoginFlowTest {
 
-    private static final String TEST_INTERNAL_SECRET = "iti-test-internal-secret-0123456789abcdef";
+    // Generated at test runtime so no secret-shaped literal is committed or scanned.
+    private static final String TEST_SERVICE_KEY =
+            "test-" + java.util.UUID.randomUUID().toString().replace("-", "");
+
+    @DynamicPropertySource
+    static void registerTestProperties(DynamicPropertyRegistry registry) {
+        registry.add("app.internal-auth.secret", () -> TEST_SERVICE_KEY);
+        registry.add("backend.api.base-url", () -> "http://localhost:5050");
+    }
 
     @Autowired
     private org.springframework.test.web.servlet.MockMvc mvc;
@@ -62,7 +69,7 @@ class LoginFlowTest {
     private void respondToLogin(String json) {
         backend.expect(requestTo("http://localhost:5050/api/auth/login"))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(header("X-Internal-Service-Key", TEST_INTERNAL_SECRET))
+                .andExpect(header("X-Internal-Service-Key", TEST_SERVICE_KEY))
                 .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
     }
 
