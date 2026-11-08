@@ -47,7 +47,7 @@ class CaptchaControllerTest {
             assertEquals(HttpStatus.BAD_REQUEST, controller.verify("WRONG", request).getStatusCode());
         }
         assertNull(request.getSession(false).getAttribute("CAPTCHA_TEXT"));
-        assertEquals(429, controller.verify("A7K2", request).getStatusCode());
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, controller.verify("A7K2", request).getStatusCode());
     }
 
     @Test
