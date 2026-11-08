@@ -110,16 +110,8 @@ public class BackendGatewayController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Internal-Service-Key", internalApiSecret);
-        if (candidateSessionMatches) {
-            // This value is derived from the server-side session, never copied
-            // from a browser-supplied header or query parameter. Candidate-scoped
-            // access takes precedence over any stale official token cookie.
-            headers.set("X-Candidate-Regid", candidateRegid);
-        } else if (officialRequest && !publicCandidateRequest) {
-            // Public candidate/reference routes must remain public even when the
-            // same browser happens to carry an official access-token cookie.
-            headers.setBearerAuth(accessToken);
-        }
+        applyTrustedAuthHeaders(headers, officialRequest, publicCandidateRequest,
+                candidateSessionMatches, accessToken, candidateRegid);
         for (String name : REQUEST_HEADERS) {
             String value = request.getHeader(name);
             if (value != null) headers.set(name, value);
@@ -314,6 +306,21 @@ public class BackendGatewayController {
                     && originPort == requestPort;
         } catch (IllegalArgumentException ex) {
             return false;
+        }
+    }
+
+    static void applyTrustedAuthHeaders(HttpHeaders headers, boolean officialRequest,
+                                        boolean publicCandidateRequest, boolean candidateSessionMatches,
+                                        String accessToken, String candidateRegid) {
+        if (candidateSessionMatches) {
+            // This value is derived from the server-side session, never copied
+            // from a browser-supplied header or query parameter. Candidate-scoped
+            // access takes precedence over any stale official token cookie.
+            headers.set("X-Candidate-Regid", candidateRegid);
+        } else if (officialRequest && !publicCandidateRequest) {
+            // Public candidate/reference routes must remain public even when the
+            // same browser happens to carry an official access-token cookie.
+            headers.setBearerAuth(accessToken);
         }
     }
 
