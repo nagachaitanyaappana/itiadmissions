@@ -989,13 +989,18 @@ public class AdmissionProcessService {
     }
 
     private String resolveCandidateTable(String year) {
+        // The table name is interpolated into SQL as an identifier, so accept
+        // only a four-digit academic year and never pass a request value through.
+        if (year == null || !year.matches("\\d{4}")) {
+            return "application";
+        }
         String suffixed = "application" + year;
         return tableExists(suffixed) ? suffixed : "application";
     }
 
     private boolean tableExists(String table) {
-        if (!table.matches("[A-Za-z0-9_]+")) {
-            throw new IllegalArgumentException("Unsafe table name: " + table);
+        if (!"application".equals(table) && !table.matches("application\\d{4}")) {
+            throw new IllegalArgumentException("Unsafe candidate table name");
         }
         Integer count = jdbc.getJdbcTemplate().queryForObject(
                 "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ?",
