@@ -64,17 +64,11 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
             // 1. Check if candidate is already admitted in current year or previous two years
             Map<String, Object> admitted = findAdmissionRecord(sscRegNo, null, null);
             if (admitted != null) {
-                String admNum = str(admitted.get("adm_num"));
-                String itiName = str(admitted.get("iti_name"));
-                String tradeName = str(admitted.get("trade_name"));
-                String admYear = str(admitted.get("year_of_admission"));
+                // This is a public, captcha-protected pre-registration check. Do not
+                // disclose the candidate's ITI, admission number, year or trade here.
                 throw new IllegalArgumentException(
-                        "Candidate with SSC Hall Ticket Number " + sscRegNo + " is already admitted at ITI: "
-                                + (itiName != null ? itiName : "-")
-                                + " (Admission Number: " + (admNum != null ? admNum : "-")
-                                + ", Year: " + (admYear != null ? admYear : "-")
-                                + ", Trade: " + (tradeName != null ? tradeName : "-")
-                                + "). Registration is not allowed.");
+                        "This SSC Hall Ticket Number is already linked to an admission. "
+                                + "Please contact the admissions office.");
             }
 
             // 2. Check if candidate is already registered in current year's student_application table
@@ -98,16 +92,11 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
                 String adarnoStr = str(row.get("adarno"));
                 Map<String, Object> regAdmitted = findAdmissionRecord(null, ridStr, adarnoStr);
                 if (regAdmitted != null) {
-                    String admNum = str(regAdmitted.get("adm_num"));
-                    String itiName = str(regAdmitted.get("iti_name"));
-                    String tradeName = str(regAdmitted.get("trade_name"));
-                    String admYear = str(regAdmitted.get("year_of_admission"));
+                    // Keep this public pre-registration response generic; the submitted
+                    // hall-ticket/board/year values are not sufficient to disclose admission data.
                     throw new IllegalArgumentException(
-                            "Candidate is already admitted at ITI: " + (itiName != null ? itiName : "-")
-                                    + " (Admission Number: " + (admNum != null ? admNum : "-")
-                                    + ", Year: " + (admYear != null ? admYear : "-")
-                                    + ", Trade: " + (tradeName != null ? tradeName : "-")
-                                    + "). Registration is not allowed.");
+                            "This application is already linked to an admission. "
+                                    + "Please contact the admissions office.");
                 }
 
                 StudentApplicationDto resumed = new StudentApplicationDto();
