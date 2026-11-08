@@ -336,9 +336,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return authorizeAdmissionLookup(claims, request, path, role, insCode);
         }
 
-        if (path.startsWith("/api/status")) {
-            return ("2".equals(role) || "10".equals(role))
-                    || (("3".equals(role) || "4".equals(role)) && hasScope(insCode));
+        if ("/api/status".equals(path)) {
+            return "GET".equals(method)
+                    && ("2".equals(role) || "3".equals(role) || "4".equals(role) || "10".equals(role));
         }
 
         // Default-deny for district/ITI roles. State and nodal administrators retain
