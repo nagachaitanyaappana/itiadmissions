@@ -149,6 +149,19 @@ class LoginFlowTest {
     }
 
     @Test
+    void crossOriginLogoutDoesNotInvalidateTheOfficialSession() throws Exception {
+        MockHttpSession session = devSession(4);
+
+        mvc.perform(get("/logout")
+                        .header("Origin", "https://attacker.example")
+                        .session(session))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"));
+
+        assertNotNull(session.getAttribute("sessionUser"));
+    }
+
+    @Test
     void authHomeWithoutLoginRedirectsToError() throws Exception {
         mvc.perform(get("/authHome"))
                 .andExpect(status().is3xxRedirection())
@@ -182,7 +195,7 @@ class LoginFlowTest {
 
     @Test
     void devLogoutSendsBackToDevLogin() throws Exception {
-        mvc.perform(get("/dev/logout").session(devSession(4)))
+        mvc.perform(get("/dev/logout").header("Origin", "http://localhost").session(devSession(4)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/dev/login"));
     }
