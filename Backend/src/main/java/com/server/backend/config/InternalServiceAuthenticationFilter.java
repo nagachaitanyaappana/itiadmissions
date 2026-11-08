@@ -32,7 +32,7 @@ public class InternalServiceAuthenticationFilter extends OncePerRequestFilter {
 
     public InternalServiceAuthenticationFilter(
             @Value("${app.internal-auth.secret:}") String configuredSecret) {
-        this.configuredSecret = configuredSecret == null ? "" : configuredSecret;
+        this.configuredSecret = configuredSecret == null ? "" : configuredSecret.trim();
     }
 
     @Override
