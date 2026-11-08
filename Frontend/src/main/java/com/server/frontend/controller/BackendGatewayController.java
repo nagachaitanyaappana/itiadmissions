@@ -303,17 +303,18 @@ public class BackendGatewayController {
                 if (originCount > 1) return false;
             }
         }
-        if (originCount == 0) {
-            java.util.Enumeration<String> fetchSites = request.getHeaders("Sec-Fetch-Site");
-            String fetchSite = null;
-            int fetchSiteCount = 0;
-            if (fetchSites != null) {
-                while (fetchSites.hasMoreElements()) {
-                    fetchSite = fetchSites.nextElement();
-                    fetchSiteCount++;
-                    if (fetchSiteCount > 1) return false;
-                }
+        java.util.Enumeration<String> fetchSites = request.getHeaders("Sec-Fetch-Site");
+        String fetchSite = null;
+        int fetchSiteCount = 0;
+        if (fetchSites != null) {
+            while (fetchSites.hasMoreElements()) {
+                fetchSite = fetchSites.nextElement();
+                fetchSiteCount++;
+                if (fetchSiteCount > 1) return false;
             }
+        }
+        if (fetchSiteCount == 1 && !"same-origin".equalsIgnoreCase(fetchSite)) return false;
+        if (originCount == 0) {
             return fetchSiteCount == 1 && "same-origin".equalsIgnoreCase(fetchSite);
         }
         if (origin == null || origin.isBlank()) return false;
