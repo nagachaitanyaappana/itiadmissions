@@ -65,6 +65,23 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void allowsCandidateIdentityChecksOnlyAsPublicJsonPosts() throws Exception {
+        for (String path : new String[] { "/api/student/apply-gate", "/api/student/verify-identity" }) {
+            MockHttpServletRequest post = gatewayRequest("POST", path);
+            MockHttpServletResponse postResponse = new MockHttpServletResponse();
+            boolean[] reached = {false};
+            filter.doFilter(post, postResponse, (req, res) -> reached[0] = true);
+            assertTrue(reached[0], "POST identity check should be public: " + path);
+
+            MockHttpServletRequest get = gatewayRequest("GET", path);
+            MockHttpServletResponse getResponse = new MockHttpServletResponse();
+            filter.doFilter(get, getResponse,
+                    (req, res) -> fail("Identity checks must not expose DOB/hall-ticket in GET URLs"));
+            assertEquals(401, getResponse.getStatus());
+        }
+    }
+
+    @Test
     void allowsCandidateRecordOnlyWhenGatewaySuppliesMatchingVerifiedRegid() throws Exception {
         MockHttpServletRequest request = gatewayRequest("GET", "/api/student/12345");
         request.addHeader("X-Candidate-Regid", "12345");
