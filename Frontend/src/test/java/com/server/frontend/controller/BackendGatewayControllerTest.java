@@ -80,6 +80,22 @@ class BackendGatewayControllerTest {
     }
 
     @Test
+    void verifiedCandidateSessionRequiresARecentVerificationTimestamp() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(BackendGatewayController.CANDIDATE_SESSION_ATTRIBUTE, "12345");
+        session.setAttribute(BackendGatewayController.CANDIDATE_SESSION_VERIFIED_AT_ATTRIBUTE,
+                System.currentTimeMillis());
+
+        assertEquals("12345", BackendGatewayController.verifiedCandidateRegid(session));
+
+        session.setAttribute(BackendGatewayController.CANDIDATE_SESSION_VERIFIED_AT_ATTRIBUTE,
+                System.currentTimeMillis() - 31L * 60L * 1000L);
+        assertNull(BackendGatewayController.verifiedCandidateRegid(session));
+        assertNull(session.getAttribute(BackendGatewayController.CANDIDATE_SESSION_ATTRIBUTE));
+        assertNull(session.getAttribute(BackendGatewayController.CANDIDATE_SESSION_VERIFIED_AT_ATTRIBUTE));
+    }
+
+    @Test
     void consumesCaptchaProofForTwoRegistrationWritesThenExpiresIt() {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute(CaptchaController.VERIFIED_AT_KEY, 1_000L);
