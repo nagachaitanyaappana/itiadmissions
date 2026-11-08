@@ -649,11 +649,12 @@
 
                 // Verify DOB + SSC hall ticket on the server before any personal
                 // application fields or photograph are returned to this browser.
-                $.get('${pageContext.request.contextPath}/backend/api/student/verify-identity', {
-                    regid: regid,
-                    dob: dob,
-                    ssc_regno: hallticket
-                }, function (s) {
+                $.ajax({
+                    url: '${pageContext.request.contextPath}/backend/api/student/verify-identity',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ regid: regid, dob: dob, ssc_regno: hallticket }),
+                    success: function (s) {
                     submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
 
                     CURRENT_REGID = s.regid;
@@ -661,7 +662,7 @@
                     document.getElementById("gateDiv").style.display = "none";
                     document.getElementById("editDiv").style.display = "";
                     window.scrollTo(0, 0);
-
+                    }
                 }).fail(function () {
                     submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
                     $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-circle me-2"></i>Registration ID, date of birth, or hall ticket number did not match.</div>');
