@@ -179,13 +179,11 @@ public class student_trade_selection_service {
         String phase = tradeSelectionService.resolvePhase(year);
         if (request.getYear() != null && !request.getYear().isBlank()
                 && !year.equals(request.getYear().trim())) {
-            logger.warn("Ignoring submitted year {} for trade selection; current cycle is {} phase {}",
-                    request.getYear(), year, phase);
+            logger.warn("Ignoring client-supplied year in trade selection; the current cycle is authoritative");
         }
         if (request.getPhase() != null && !request.getPhase().isBlank()
                 && !phase.equals(request.getPhase().trim())) {
-            logger.warn("Ignoring submitted phase {} for trade selection; current cycle is {} phase {}",
-                    request.getPhase(), year, phase);
+            logger.warn("Ignoring client-supplied phase in trade selection; the current cycle is authoritative");
         }
 
         // Phase 1 is district-only (legacy student_trade_sel2025phase1 rows carry iti_code='' with
