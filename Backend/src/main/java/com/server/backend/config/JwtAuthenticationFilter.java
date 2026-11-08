@@ -190,9 +190,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (path.startsWith("/admission/add-trade/")) {
             if ("2".equals(role) || "10".equals(role)) return true;
-            String[] parts = path.split("/");
-            return "4".equals(role) && hasScope(insCode)
-                    && parts.length > 3 && insCode.equalsIgnoreCase(parts[3]);
+            Matcher addTrade = Pattern.compile(
+                    "^/admission/add-trade/([A-Za-z0-9_-]+)(?:/trade(?:/[A-Za-z0-9_-]+)?|/approve-all|/freeze-trades)?$")
+                    .matcher(path);
+            if (!"4".equals(role) || !hasScope(insCode) || !addTrade.matches()
+                    || !insCode.equalsIgnoreCase(addTrade.group(1))) return false;
+            String suffix = path.substring(("/admission/add-trade/" + addTrade.group(1)).length());
+            if (suffix.isEmpty()) return "GET".equals(method);
+            if ("/trade".equals(suffix) || "/freeze-trades".equals(suffix)) return "POST".equals(method);
+            if ("/approve-all".equals(suffix)) return "PUT".equals(method);
+            return suffix.matches("^/trade/[A-Za-z0-9_-]+$")
+                    && ("GET".equals(method) || "PUT".equals(method));
         }
 
         if ("/api/shift-unit-permitted".equals(path)) {
@@ -200,9 +208,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     || ("4".equals(role) && hasScope(insCode));
         }
 
-        // Admission-process operations use a principal derived from signed claims.
+        // Explicitly allow the current AdmissionProcessController surface. Unknown
+        // future routes remain denied until their role and object scope are reviewed.
         if (path.startsWith("/api/admission/")) {
-            return ("3".equals(role) || "4".equals(role)) && hasScope(insCode);
+            if (!hasScope(insCode)) return false;
+            return switch (path) {
+                case "/api/admission/iti-boards", "/api/admission/shift-unit",
+                        "/api/admission/today-timings", "/api/admission/window-status" ->
+                        "GET".equals(method) && ("3".equals(role) || "4".equals(role));
+                case "/api/admission/iti-seat-matrix", "/api/admission/rank-lookup",
+                        "/api/admission/take-admission", "/api/admission/council-merits",
+                        "/api/admission/process-optimize" ->
+                        "POST".equals(method) && ("3".equals(role) || "4".equals(role));
+                case "/api/admission/general-pool/district" ->
+                        "POST".equals(method) && "3".equals(role);
+                case "/api/admission/general-pool/iti" ->
+                        "POST".equals(method) && "4".equals(role);
+                default -> false;
+            };
         }
 
         if (path.startsWith("/api/reports/")) {
@@ -284,13 +307,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (path.startsWith("/admission/reservation-entry")) {
-            if ("2".equals(role) || "10".equals(role)) return true;
+            Set<String> readPaths = Set.of(
+                    "/admission/reservation-entry",
+                    "/admission/reservation-entry/trades",
+                    "/admission/reservation-entry/approved-trades",
+                    "/admission/reservation-entry/readiness",
+                    "/admission/reservation-entry/seat-correction");
+            Set<String> writePaths = Set.of(
+                    "/admission/reservation-entry",
+                    "/admission/reservation-entry/seat-correction");
+            if ("2".equals(role) || "10".equals(role)) return readPaths.contains(path)
+                    || writePaths.contains(path);
             if (!hasScope(insCode)) return false;
-            if ("PUT".equals(method)) {
+            if ("PUT".equals(method) && writePaths.contains(path)) {
                 // The controller validates the ITI from the JSON body against these claims.
                 return "3".equals(role) || "4".equals(role);
             }
-            if ("GET".equals(method)) {
+            if ("GET".equals(method) && readPaths.contains(path)) {
                 String itiCode = request.getParameter("itiCode");
                 if (itiCode == null || itiCode.isBlank()) return false;
                 if ("4".equals(role)) return insCode.equalsIgnoreCase(itiCode.trim());
