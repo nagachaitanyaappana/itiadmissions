@@ -21,7 +21,7 @@ PostgreSQL
 
 Do not publish the Backend port to the Internet. The Backend binds to loopback by default with `BACKEND_BIND_ADDRESS=127.0.0.1`. If Frontend and Backend are on separate hosts, bind Backend to a private interface and configure the host firewall/security group to accept the Backend port from the Frontend host only. Do not use a public Backend URL.
 
-The gateway uses an explicit public-candidate route allowlist. Existing-candidate reads/edits are bound to a Frontend HTTP session only after DOB + SSC hall-ticket verification. Official routes require the short-lived official JWT cookie. Every Backend application endpoint requires the trusted Frontend service credential, regardless of whether an `Origin` header is present. Only health and framework error paths are excluded from the internal service credential. Backend API documentation also requires that credential; legacy routes such as `/admission-timings` and `/checkRegOrNot` are protected too.
+The gateway uses an explicit public-candidate route allowlist. Existing-candidate reads/edits are bound to a Frontend HTTP session only after DOB + SSC hall-ticket verification; the session identifier is rotated at that privilege change and the candidate authorization expires after 30 minutes. Official routes require the short-lived official JWT cookie. Every Backend application endpoint requires the trusted Frontend service credential, regardless of whether an `Origin` header is present. Only health and framework error paths are excluded from the internal service credential. Backend API documentation also requires that credential; legacy routes such as `/admission-timings` and `/checkRegOrNot` are protected too.
 
 ## Required configuration
 
