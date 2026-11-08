@@ -537,7 +537,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 "/api/reports/applicant-report-by-phase",
                 "/api/reports/dsc-full",
                 "/api/reports/dsc-options",
-                "/api/reports/permitted-shift-unit").contains(path);
+                "/api/reports/permitted-shift-unit",
+                "/api/reports/admission-report-iti").contains(path);
     }
 
     private HttpServletRequest withTrustedIdentityHeaders(HttpServletRequest request, Claims claims) {
