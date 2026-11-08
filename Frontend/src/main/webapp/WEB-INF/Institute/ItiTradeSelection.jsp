@@ -189,7 +189,7 @@
 
             const itiApiUrl = "${itiApiUrl}";
             const backendBaseUrl = "${backendApiBaseUrl}";
-            const itiLocked = ${itiLocked};
+            const itiLocked = "${itiLocked}" === "true";
 
             let allItis = [];
             let currentTrades = [];
