@@ -51,6 +51,17 @@ class BackendGatewayControllerTest {
     }
 
     @Test
+    void rejectsOriginValuesThatAreNotSerializedOrigins() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setScheme("https");
+        request.setServerName("portal.example.gov.in");
+        request.setServerPort(443);
+        request.addHeader("Origin", "https://user@portal.example.gov.in/path");
+
+        assertFalse(BackendGatewayController.sameOrigin(request));
+    }
+
+    @Test
     void rejectsConflictingOriginAndFetchMetadataHeaders() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setScheme("https");
