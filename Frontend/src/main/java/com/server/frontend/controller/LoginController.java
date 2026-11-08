@@ -162,7 +162,7 @@ public class LoginController {
             }
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("X-Internal-Service-Key", internalApiSecret);
+            headers.set("X-Internal-Service-Key", internalApiSecret.trim());
             ResponseEntity<AuthResponse> response =
                     rest.postForEntity(AUTH_URL, new HttpEntity<>(payload, headers), AuthResponse.class);
             AuthResponse body = response.getBody();
