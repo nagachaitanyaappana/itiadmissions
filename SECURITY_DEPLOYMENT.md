@@ -60,7 +60,7 @@ Use the deployment platform's secret manager in production. Coordinate an intern
 ## Browser/API protections
 
 - Browser-facing API URLs are rendered as the same-origin `/backend` gateway path. Do not put `BACKEND_URL` in client-side code.
-- The gateway rejects unsafe methods unless the request has an exact same-origin `Origin` header or `Sec-Fetch-Site: same-origin`. The Frontend is configured to honor trusted reverse-proxy forwarding headers; only the actual edge proxy should be allowed to set those headers.
+- A global Frontend request interceptor rejects every unsafe method unless exactly one `Origin` header matches the request scheme/host/port, or (only when `Origin` is absent) exactly one `Sec-Fetch-Site: same-origin` header is present. Duplicate, malformed, cross-origin and missing-origin metadata fail closed. The `/backend/**` gateway applies the same check again. The Frontend is configured to honor trusted reverse-proxy forwarding headers; only the actual edge proxy should be allowed to set those headers. Postman/API clients testing writes must send `Origin: http://localhost:5051` (or the exact deployed Frontend origin); never send the internal service secret from a client.
 - The gateway forwards only selected request/response headers and injects the internal service credential itself. Browser-supplied identity headers are not forwarded.
 - District and ITI verification/trade/shift-unit routes derive organization scope from signed JWT claims. Candidate record reads/edits are bound to the verified candidate registration ID in the Frontend session.
 - Public candidate creation accepts new records only. Existing registration edits use the verified-candidate path. Forgot-registration-ID lookup requires a server-verified captcha plus DOB and SSC hall-ticket number, returns only the registration ID, and does not create an authenticated candidate session.
@@ -75,7 +75,9 @@ Legacy plaintext/MD5 verification remains temporarily for backward compatibility
 - Gitleaks scans repository history/current changes for accidental secrets.
 - Trivy scans Maven/npm dependencies and configuration for high/critical vulnerabilities; its JSON report is retained as a workflow artifact.
 - CodeQL analyzes Java and JavaScript/TypeScript using extended security queries; its SARIF report is retained as a workflow artifact.
-- A clean scan is not proof of safety. Review findings and update vulnerable dependencies before production release.
+- The current Trivy report for both Maven modules contains no CRITICAL/HIGH dependency vulnerabilities. CodeQL is retained as SARIF for review; its static findings are not automatically treated as a clean bill of health. The latest reviewed report included query-parameter-to-fixed-Backend-URL SSRF taint paths, backend POST handlers protected by the Frontend gateway/internal-service boundary, route-policy taint paths, and quality findings. Confirm any future SSRF/CSRF finding against the actual sink and request boundary instead of suppressing it blindly.
+- The CodeQL run reviewed for this change reported no `java/sql-injection` findings. The manually reviewed dynamic SQL in the candidate registration service uses bound parameters for user values; the only dynamic table identifier is derived from a parsed numeric admission-cycle year, and the uniqueness-query column names are fixed internal literals. Continue reviewing SQL whenever query construction changes.
+- The ReDoS-prone hstore parser now uses possessive quantifiers; user-supplied log fields were removed from warning/info messages; the unpinned CDN script includes in the scanned JSPs were replaced by local static assets. A scan is not proof of safety. Review findings and update vulnerable dependencies before production release.
 
 ## Operational tasks not performed by this PR
 
@@ -97,6 +99,6 @@ After adding the required local secrets to the existing, uncommitted `.env` file
 5. Sign in as a district official. Verify that the official can list/approve only their district's candidates and cannot submit a different district code.
 6. Sign in as an ITI official. Verify that trade and shift/unit operations work only for the ITI assigned to that account.
 7. Verify reports are scoped to the official's district/ITI and that state-wide reports remain restricted to state/nodal roles.
-8. Verify an unauthenticated request to an official `/backend/**` route returns 401, a cross-origin write returns 403, and a direct request to any Backend application route without the internal service credential returns 401 even when no `Origin` header is supplied. Documentation/health paths are intentionally excluded.
+8. Verify an unauthenticated request to an official `/backend/**` route returns 401, a cross-origin write to both `/backend/**` and a legacy Frontend write route returns 403, and a same-origin write succeeds. For Postman, add the exact Frontend `Origin` header. Verify a direct request to any Backend application route without the internal service credential returns 401 even when no `Origin` header is supplied. Documentation/health paths are intentionally excluded.
 
 Do not test destructive operations against production data. Use a staging database or known test accounts and records.
