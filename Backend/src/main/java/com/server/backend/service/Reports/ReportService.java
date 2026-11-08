@@ -46,8 +46,8 @@ public interface ReportService {
     List<AdmissionReportResponse> getAdmissionReport(String year, String caste, String pwd);
 
     // 3a. Admission Report (ITI - candidate detail for role 4)
-    List<AdmissionReportDetailResponse> getAdmissionReportDetails(int page, int size);
-    long countAdmissionReportDetails();
+    List<AdmissionReportDetailResponse> getAdmissionReportDetails(String itiCode, int page, int size);
+    long countAdmissionReportDetails(String itiCode);
 
     // 4. DSC Full Report
     DscFullReportResponse getDscFullReport(String distCode, String itiCode, String tradeCode, String phase, String year, String modeAdm);
