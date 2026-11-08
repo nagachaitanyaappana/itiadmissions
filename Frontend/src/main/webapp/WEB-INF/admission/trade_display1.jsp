@@ -13,10 +13,10 @@
                     <jsp:include page="/WEB-INF/jsp/_api_base_url.jsp"/>
 <script type="text/javascript" src="./js/siteScript.js"></script>
 <!-- Add this script tag to include the XLSX library from a CDN -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+<script src="${pageContext.request.contextPath}/js/xlsx.full.min.js"></script>
 
  
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/all.min.css">
 <link rel="stylesheet" href="./css/style.css">
 <link href="./css/bootstrap.min.css" rel="stylesheet">
 
@@ -44,7 +44,7 @@
 		
 		$.ajax({
 			type: 'get',
-			url: '${backendBaseUrl}/api/itis',
+			url: '${pageContext.request.contextPath}/backend/api/itis',
 			cache: false,
 			timeout: 6000000,
 			success:function(resp){

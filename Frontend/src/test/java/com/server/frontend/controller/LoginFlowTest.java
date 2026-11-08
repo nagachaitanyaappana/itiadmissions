@@ -1,27 +1,56 @@
 package com.server.frontend.controller;
 
 import jakarta.servlet.http.HttpSession;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestTemplate;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "app.internal-auth.secret=iti-test-internal-secret-0123456789abcdef",
+        "backend.api.base-url=http://localhost:5050"
+})
 @AutoConfigureMockMvc
 class LoginFlowTest {
+
+    private static final String TEST_INTERNAL_SECRET = "iti-test-internal-secret-0123456789abcdef";
 
     @Autowired
     private org.springframework.test.web.servlet.MockMvc mvc;
 
+    @Autowired
+    private RestTemplate restTemplate;
+
+    private MockRestServiceServer backend;
+
+    @BeforeEach
+    void setUpBackendStub() {
+        backend = MockRestServiceServer.bindTo(restTemplate).build();
+    }
+
+    @AfterEach
+    void verifyBackendStub() {
+        backend.verify();
+    }
+
     private MockHttpSession sessionWithCaptcha() throws Exception {
         MockHttpSession session = new MockHttpSession();
-        // hit the captcha endpoint so the controller stores the text in this session
         mvc.perform(get("/captcha").session(session)).andExpect(status().isOk());
         return session;
     }
@@ -30,41 +59,106 @@ class LoginFlowTest {
         return (String) session.getAttribute("CAPTCHA_TEXT");
     }
 
+    private void respondToLogin(String json) {
+        backend.expect(requestTo("http://localhost:5050/api/auth/login"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header("X-Internal-Service-Key", TEST_INTERNAL_SECRET))
+                .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+    }
+
     @Test
-    void wrongCaptchaRedirectsHomeWithError() throws Exception {
-        MockHttpSession s = sessionWithCaptcha();
-        String wrong = "zzzzz".equals(captchaText(s)) ? "aaaaa" : "zzzzz";
+    void wrongCaptchaRedirectsHomeWithoutCallingBackend() throws Exception {
+        MockHttpSession session = sessionWithCaptcha();
+        String wrong = "zzzzz".equals(captchaText(session)) ? "aaaaa" : "zzzzz";
         mvc.perform(post("/iti/login.do")
-                        .param("uname", "iti1536").param("pwd", "cSoMG2").param("captcha", wrong)
-                        .session(s))
+                        .header("Origin", "http://localhost")
+                        .param("uname", "test-user")
+                        .param("pwd", "not-a-real-password")
+                        .param("captcha", wrong)
+                        .session(session))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/?error=captcha"));
     }
 
     @Test
-    void correctCaptchaButWrongPasswordRedirectsWithInvalid() throws Exception {
-        MockHttpSession s = sessionWithCaptcha();
+    void correctCaptchaButRejectedCredentialsRedirectWithInvalid() throws Exception {
+        respondToLogin("""
+                {"success":false,"message":"Invalid credentials"}
+                """);
+        MockHttpSession session = sessionWithCaptcha();
         mvc.perform(post("/iti/login.do")
-                        .param("uname", "iti1536").param("pwd", "definitely-wrong").param("captcha", captchaText(s))
-                        .session(s))
+                        .header("Origin", "http://localhost")
+                        .param("uname", "test-user")
+                        .param("pwd", "not-a-real-password")
+                        .param("captcha", captchaText(session))
+                        .session(session))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/?error=invalid"));
     }
 
     @Test
-    void fullLoginSuccessStoresUserAndAuthHomeShowsRole() throws Exception {
-        MockHttpSession s = sessionWithCaptcha();
+    void successfulLoginStoresOnlySafeUserDataAndIssuesHttpOnlyAccessCookie() throws Exception {
+        respondToLogin("""
+                {
+                  "success":true,
+                  "message":"Login successful",
+                  "username":"test-user",
+                  "roleId":4,
+                  "insCode":"TEST-ITI",
+                  "fullName":"Test Official",
+                  "itiName":"Test ITI",
+                  "distName":"",
+                  "loginCount":1,
+                  "lastLogins":[],
+                  "accessToken":"test.signed.access-token",
+                  "expiresAt":"2030-01-01T00:15:00Z",
+                  "tokenType":"Bearer"
+                }
+                """);
+        MockHttpSession session = sessionWithCaptcha();
         mvc.perform(post("/iti/login.do")
-                        .param("uname", "iti1536").param("pwd", "cSoMG2").param("captcha", captchaText(s))
-                        .session(s))
+                        .header("Origin", "http://localhost")
+                        .param("uname", "test-user")
+                        .param("pwd", "test-password")
+                        .param("captcha", captchaText(session))
+                        .session(session))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/authHome"));
+                .andExpect(redirectedUrl("/authHome"))
+                .andExpect(cookie().httpOnly("ITIAP_ACCESS_TOKEN", true));
 
-        assertEquals(4, ((Number) s.getAttribute("roleId")).intValue());
-        assertEquals("iti1536", s.getAttribute("username"));
+        assertEquals(4, ((Number) session.getAttribute("roleId")).intValue());
+        assertEquals("test-user", session.getAttribute("username"));
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> safeUser =
+                (java.util.Map<String, Object>) session.getAttribute("sessionUser");
+        assertNotNull(safeUser);
+        assertFalse(safeUser.containsKey("accessToken"));
+        assertFalse(safeUser.containsKey("expiresAt"));
+        assertFalse(safeUser.containsKey("tokenType"));
 
-        mvc.perform(get("/authHome").session(s))
+        mvc.perform(get("/authHome").session(session))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void safeRedirectRejectsProtocolRelativeAndBackslashTargets() {
+        assertEquals("/authHome", LoginController.safeRedirect("//attacker.example", "/authHome"));
+        assertEquals("/authHome", LoginController.safeRedirect("/\\\\attacker.example", "/authHome"));
+        assertEquals("/reports", LoginController.safeRedirect("/reports", "/authHome"));
+        assertEquals("/authHome", LoginController.safeRedirect("https://attacker.example", "/authHome"));
+    }
+
+    @Test
+    void crossOriginLogoutDoesNotInvalidateTheOfficialSession() throws Exception {
+        MockHttpSession session = devSession(4);
+
+        mvc.perform(get("/logout")
+                        .header("Origin", "https://attacker.example")
+                        .session(session))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"));
+
+        assertNotNull(session.getAttribute("sessionUser"));
     }
 
     @Test
@@ -78,11 +172,11 @@ class LoginFlowTest {
 
     /** Signed-in session for a given roleId, without touching the backend. */
     private MockHttpSession devSession(Object roleId) {
-        MockHttpSession s = new MockHttpSession();
-        s.setAttribute("sessionUser", new java.util.HashMap<String, Object>());
-        s.setAttribute("username", "devuser");
-        if (roleId != null) s.setAttribute("roleId", roleId);
-        return s;
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("sessionUser", new java.util.HashMap<String, Object>());
+        session.setAttribute("username", "devuser");
+        if (roleId != null) session.setAttribute("roleId", roleId);
+        return session;
     }
 
     @Test
@@ -101,7 +195,7 @@ class LoginFlowTest {
 
     @Test
     void devLogoutSendsBackToDevLogin() throws Exception {
-        mvc.perform(get("/dev/logout").session(devSession(4)))
+        mvc.perform(get("/dev/logout").header("Origin", "http://localhost").session(devSession(4)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/dev/login"));
     }
@@ -136,9 +230,8 @@ class LoginFlowTest {
     }
 
     @Test
-    void sharedPageOpensForEveryLogin() throws Exception {
-        // ReportsController allows dsc-list for roles 4, 3 and 10.
-        for (Object role : new Object[]{4, 3, 10}) {
+    void sharedPageOpensForEverySupportedOfficialRole() throws Exception {
+        for (Object role : new Object[]{4, 3, 10, 2}) {
             mvc.perform(get("/dev/view/reports/dsc-list").session(devSession(role)))
                     .andExpect(status().isOk());
         }
@@ -150,22 +243,16 @@ class LoginFlowTest {
                 .andExpect(status().isOk());
         mvc.perform(get("/dev/view/reports/api-dashboard-state").session(devSession(2)))
                 .andExpect(status().isOk());
-        mvc.perform(get("/dev/view/reports/api-dashboard-iti").session(devSession(2)))
-                .andExpect(status().isOk());
     }
 
     @Test
-    void unroutedWipPageOpensForEveryLogin() throws Exception {
-        // admission/addTrade has no controller route and therefore no role guard.
+    void unroutedWipPageRequiresARecognizedOfficialRole() throws Exception {
         mvc.perform(get("/dev/view/admission/addTrade").session(devSession(4)))
                 .andExpect(status().isOk());
         mvc.perform(get("/dev/view/admission/addTrade").session(devSession(10)))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    void sessionWithoutRoleIdIsNotFiltered() throws Exception {
-        mvc.perform(get("/dev/view/reports/api-dashboard-state").session(devSession(null)))
-                .andExpect(status().isOk());
+        mvc.perform(get("/dev/view/admission/addTrade").session(devSession(null)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dev?error=denied&page=admission%2FaddTrade"));
     }
 }

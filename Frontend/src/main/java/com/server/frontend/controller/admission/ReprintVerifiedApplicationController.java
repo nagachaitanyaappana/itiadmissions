@@ -1,5 +1,8 @@
 package com.server.frontend.controller.admission;
 
+import com.server.frontend.security.BackendApiRequestSupport;
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -39,6 +42,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class ReprintVerifiedApplicationController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public ReprintVerifiedApplicationController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
@@ -59,7 +67,8 @@ public class ReprintVerifiedApplicationController {
     @GetMapping("/api/reprint-verified-application")
     @ResponseBody
     public ResponseEntity<Object> reprintVerifiedApplication(
-            @RequestParam(value = "registrationId", required = false) String registrationId) {
+            @RequestParam(value = "registrationId", required = false) String registrationId,
+            HttpServletRequest request) {
         String reg = registrationId == null ? "" : registrationId.trim();
         if (reg.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -73,7 +82,7 @@ public class ReprintVerifiedApplicationController {
                 .fromUriString(backendBaseUrl + "/api/student/" + reg)
                 .toUriString();
         try {
-            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, null,
+            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request),
                     new ParameterizedTypeReference<Object>() {
                     });
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());

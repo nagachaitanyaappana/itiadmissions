@@ -28,7 +28,9 @@ public class Call_Letter_ServiceImpl
     @Override
     public List<Call_Letter_DTO> getCallLetterData(
             String rank,
-            String caste) {
+            String caste,
+            String distCode,
+            String itiCode) {
 
         AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
         if (cycle == null || cycle.phase() == null || cycle.year() == null) {
@@ -36,7 +38,8 @@ public class Call_Letter_ServiceImpl
                     "No current admission year and phase found in admissions.admission_phase.");
         }
         List<Object[]> results = repository.findCallLetterData(
-                rank, caste, cycle.phase(), cycle.year());
+                rank, caste, cycle.phase(), cycle.year(),
+                blankToNull(distCode), blankToNull(itiCode));
 
         List<Call_Letter_DTO> response =
                 new ArrayList<>();
@@ -53,7 +56,7 @@ public class Call_Letter_ServiceImpl
             String regid =
                     row[2] != null ? row[2].toString() : null;
 
-            String itiCode =
+            String rowItiCode =
                     row[3] != null ? row[3].toString() : null;
 
             String qualification =
@@ -81,7 +84,7 @@ public class Call_Letter_ServiceImpl
                             rankValue,
                             casteValue,
                             regid,
-                            itiCode,
+                            rowItiCode,
                             qualification,
                             tempPk,
                             phase,
@@ -94,6 +97,10 @@ public class Call_Letter_ServiceImpl
         }
 
         return response;
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
 }

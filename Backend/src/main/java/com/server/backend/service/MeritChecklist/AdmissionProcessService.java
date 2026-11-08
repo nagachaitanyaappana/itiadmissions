@@ -63,8 +63,10 @@ public class AdmissionProcessService {
     private static final String EX_S = "EX-S";
     private static final String EX_SW = "EX-SW";
     private static final String IM = "IM";
+    // Possessive quantifiers and disjoint quoted-value alternatives keep parsing linear
+    // even when a malformed hstore value contains many backslashes or quote characters.
     private static final Pattern HSTORE_INTEGER_ENTRY = Pattern.compile(
-            "(?:^|,)\\s*(?:\"((?:\\\\.|[^\"])*)\"|([^=,\\s]+))\\s*=>\\s*(?:\"((?:\\\\.|[^\"])*)\"|([^,\\s]+))\\s*(?=,|$)");
+            "(?:^|,)\\s*(?:\"((?:\\\\.|[^\"\\\\])*+)\"|([^=,\\s]++))\\s*=>\\s*(?:\"((?:\\\\.|[^\"\\\\])*+)\"|([^,\\s]++))\\s*(?=,|$)");
 
     private final NamedParameterJdbcTemplate jdbc;
     private final TransactionTemplate photoTransaction;
@@ -716,8 +718,7 @@ public class AdmissionProcessService {
         Map<String, Object> config = currentPhaseConfig();
         String year = currentYear(config);
         String phase = text(config.get("phase"));
-        logger.info("open general pool: dist_code={} caste={} year={} phase={}", distCode, caste, year,
-                phase);
+        logger.info("District general-pool activation requested");
 
         int updated = jdbc.update(
                 "UPDATE generalpool.open_general_pool SET caste = :caste, gender = 'male', year = :year, "
@@ -760,8 +761,7 @@ public class AdmissionProcessService {
         String phase = text(config.get("phase"));
         String distCode = itiCode.length() >= 2 ? itiCode.substring(0, 2) : itiCode;
         long trno = jdbc.getJdbcTemplate().queryForObject("SELECT nextval('trno_seq')", Long.class);
-        logger.info("open general pool (ITI): iti_code={} caste={} year={} phase={} trno={}", itiCode,
-                caste, year, phase, trno);
+        logger.info("ITI general-pool activation requested");
 
         int updated = jdbc.update(
                 "UPDATE generalpool.open_general_pool SET caste = :caste, gender = 'male', year = :year, "
@@ -989,13 +989,18 @@ public class AdmissionProcessService {
     }
 
     private String resolveCandidateTable(String year) {
+        // The table name is interpolated into SQL as an identifier, so accept
+        // only a four-digit academic year and never pass a request value through.
+        if (year == null || !year.matches("\\d{4}")) {
+            return "application";
+        }
         String suffixed = "application" + year;
         return tableExists(suffixed) ? suffixed : "application";
     }
 
     private boolean tableExists(String table) {
-        if (!table.matches("[A-Za-z0-9_]+")) {
-            throw new IllegalArgumentException("Unsafe table name: " + table);
+        if (!"application".equals(table) && !table.matches("application\\d{4}")) {
+            throw new IllegalArgumentException("Unsafe candidate table name");
         }
         Integer count = jdbc.getJdbcTemplate().queryForObject(
                 "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ?",
@@ -1492,6 +1497,18 @@ public class AdmissionProcessService {
     }
 
     /** Shift/unit options the admission page may offer for an ITI/trade ({@code getShiftUnit.jsp}). */
+    /** Verifies that a district-scoped official may access the requested ITI. */
+    public boolean isItiInDistrict(String itiCode, String distCode) {
+        if (itiCode == null || itiCode.isBlank() || distCode == null || distCode.isBlank()) return false;
+        Integer count = jdbc.queryForObject(
+                "SELECT count(*) FROM public.iti WHERE CAST(iti_code AS text) = :itiCode "
+                        + "AND CAST(dist_code AS text) = :distCode",
+                new MapSqlParameterSource("itiCode", itiCode.trim())
+                        .addValue("distCode", distCode.trim()),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
     public List<Map<String, Object>> getShiftUnits(String itiCode, String tradeCode) {
         return jdbc.queryForList(
                 "SELECT shift_allowed, unit_allowed, strength, strength_vacant "

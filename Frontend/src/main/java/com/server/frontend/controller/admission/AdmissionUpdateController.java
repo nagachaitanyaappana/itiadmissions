@@ -1,5 +1,8 @@
 package com.server.frontend.controller.admission;
 
+import com.server.frontend.security.BackendApiRequestSupport;
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -30,6 +33,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class AdmissionUpdateController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public AdmissionUpdateController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
@@ -48,17 +56,23 @@ public class AdmissionUpdateController {
     @GetMapping("/api/admission-update")
     @ResponseBody
     public ResponseEntity<Object> admissionUpdate(
-            @RequestParam(value = "admissionNumber", required = false) String admissionNumber) {
+            @RequestParam(value = "admissionNumber", required = false) String admissionNumber,
+            HttpServletRequest request) {
         String adm = admissionNumber == null ? "" : admissionNumber.trim();
         if (adm.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(java.util.Map.of("error", "Please enter Admission Number."));
         }
+        String itiCode = BackendApiRequestSupport.scope(request);
+        if (itiCode.isBlank()) {
+            return ResponseEntity.status(403).body(java.util.Map.of("error", "ITI scope is required."));
+        }
         String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/admission/admission-update")
                 .queryParam("admissionNumber", adm)
+                .queryParam("itiCode", itiCode)
                 .toUriString();
         try {
-            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, null,
+            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request),
                     new ParameterizedTypeReference<Object>() {
                     });
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());

@@ -64,17 +64,11 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
             // 1. Check if candidate is already admitted in current year or previous two years
             Map<String, Object> admitted = findAdmissionRecord(sscRegNo, null, null);
             if (admitted != null) {
-                String admNum = str(admitted.get("adm_num"));
-                String itiName = str(admitted.get("iti_name"));
-                String tradeName = str(admitted.get("trade_name"));
-                String admYear = str(admitted.get("year_of_admission"));
+                // This is a public, captcha-protected pre-registration check. Do not
+                // disclose the candidate's ITI, admission number, year or trade here.
                 throw new IllegalArgumentException(
-                        "Candidate with SSC Hall Ticket Number " + sscRegNo + " is already admitted at ITI: "
-                                + (itiName != null ? itiName : "-")
-                                + " (Admission Number: " + (admNum != null ? admNum : "-")
-                                + ", Year: " + (admYear != null ? admYear : "-")
-                                + ", Trade: " + (tradeName != null ? tradeName : "-")
-                                + "). Registration is not allowed.");
+                        "This SSC Hall Ticket Number is already linked to an admission. "
+                                + "Please contact the admissions office.");
             }
 
             // 2. Check if candidate is already registered in current year's student_application table
@@ -98,16 +92,11 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
                 String adarnoStr = str(row.get("adarno"));
                 Map<String, Object> regAdmitted = findAdmissionRecord(null, ridStr, adarnoStr);
                 if (regAdmitted != null) {
-                    String admNum = str(regAdmitted.get("adm_num"));
-                    String itiName = str(regAdmitted.get("iti_name"));
-                    String tradeName = str(regAdmitted.get("trade_name"));
-                    String admYear = str(regAdmitted.get("year_of_admission"));
+                    // Keep this public pre-registration response generic; the submitted
+                    // hall-ticket/board/year values are not sufficient to disclose admission data.
                     throw new IllegalArgumentException(
-                            "Candidate is already admitted at ITI: " + (itiName != null ? itiName : "-")
-                                    + " (Admission Number: " + (admNum != null ? admNum : "-")
-                                    + ", Year: " + (admYear != null ? admYear : "-")
-                                    + ", Trade: " + (tradeName != null ? tradeName : "-")
-                                    + "). Registration is not allowed.");
+                            "This application is already linked to an admission. "
+                                    + "Please contact the admissions office.");
                 }
 
                 StudentApplicationDto resumed = new StudentApplicationDto();
@@ -286,7 +275,14 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
         if (!phaseWindows.isOpen(Window.APPLICATION)) {
             throw new ResponseStatusException(HttpStatus.GONE, "Date has Expired");
         }
-        boolean isUpdate = dto.getRegid() != null;
+        if (dto == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Registration details are required");
+        }
+        if (dto.getRegid() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Existing registrations must use the verified-candidate update endpoint");
+        }
+        boolean isUpdate = false;
 
         // Reference to the submitting client, equivalent to the legacy logTrace + request.getRemoteAddr().
         String ip = null;
@@ -513,14 +509,9 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
 
     /** img_cand_photos insert/replace, matching open_Application_InterfaceAction_Student lines 328-353. */
     private void writePhoto(Integer regid, byte[] photo, String contentType) {
-        if (regid == null || photo == null || photo.length == 0) {
-            return;
-        }
-        boolean isPng = "image/png".equalsIgnoreCase(contentType);
-        boolean isJpeg = "image/jpeg".equalsIgnoreCase(contentType);
-        if (!isPng && !isJpeg) {
-            throw new IllegalArgumentException("Photograph must be a PNG or JPEG image");
-        }
+        if (regid == null || photo == null || photo.length == 0) return;
+        // Use the same strict decoder and normalization for registration and later photo edits.
+        photo = CandidatePhotoValidator.validateAndNormalize(photo);
         Integer existing = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM public.img_cand_photos WHERE regid = ?", Integer.class, regid);
         if (existing != null && existing > 0) {
@@ -546,14 +537,28 @@ public class StudentApplicationServiceImpl implements StudentApplicationService 
 
 
     /**
-     * Fields owned by the server. A student-submitted update must never be able to set these:
-     * appStatus / phase / verified* drive verification and phase-wise reporting, so accepting
-     * them from the client would let a candidate self-verify.
+     * Explicit allowlist for the candidate edit form. Do not copy every non-null DTO
+     * property into the entity: hidden fields such as verification state, SSC identity,
+     * merit data, certificates and audit columns must not be writable by mass assignment.
      */
-    private static final Set<String> SERVER_OWNED_FIELDS = Set.of(
-            "appStatus", "phase", "dataFlag",
-            "verifiedDate", "verifiedIp", "userId",
-            "trno", "entryDate");
+    private static final Set<String> CANDIDATE_EDITABLE_FIELDS = Set.of(
+            "name", "fname", "mname", "gender", "dob",
+            "adarno", "phno", "email", "addr", "pincode",
+            "caste", "subCaste", "local", "sscMonth", "sscPassed",
+            "economicWeakerSection", "phc", "pwdCategory", "exservice");
+
+    static void copyEditableCandidateFields(BeanWrapper source, BeanWrapper target) {
+        for (PropertyDescriptor descriptor : source.getPropertyDescriptors()) {
+            String propertyName = descriptor.getName();
+            if (!CANDIDATE_EDITABLE_FIELDS.contains(propertyName)) {
+                continue;
+            }
+            Object value = source.getPropertyValue(propertyName);
+            if (value != null) {
+                target.setPropertyValue(propertyName, value);
+            }
+        }
+    }
 
     @Override
 public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto dto) {
@@ -567,29 +572,7 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
 
     BeanWrapper src = new BeanWrapperImpl(dto);
     BeanWrapper trg = new BeanWrapperImpl(entity);
-
-    for (PropertyDescriptor pd : src.getPropertyDescriptors()) {
-
-        String propertyName = pd.getName();
-
-        if ("class".equals(propertyName) || "regid".equals(propertyName)
-                || "resumed".equals(propertyName)) {
-            continue;
-        }
-
-            // Server-owned fields are never accepted from the client: letting an applicant
-            // write appStatus/phase/verified* would let a candidate self-verify.
-            if (SERVER_OWNED_FIELDS.contains(propertyName)) {
-                continue;
-            }
-
-
-        Object value = src.getPropertyValue(propertyName);
-
-        if (value != null) {
-            trg.setPropertyValue(propertyName, value);
-        }
-    }
+    copyEditableCandidateFields(src, trg);
 
     AdmissionPhaseWindowService.Cycle cycle = phaseWindows.currentCycle();
     if (cycle == null || cycle.year() == null || cycle.year().isBlank()
@@ -609,6 +592,17 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
             "Given Email is already available for another candidate.");
     assertUnique("adarno", entity.getAdarno(), regid,
             "Given Aadhaar Number is already available for another candidate.");
+
+    if (entity.getSscRegNo() != null && !entity.getSscRegNo().isBlank()) {
+        Integer duplicateHallTickets = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM student_application "
+                        + "WHERE upper(trim(ssc_regno)) = upper(?) AND regid <> ?",
+                Integer.class, entity.getSscRegNo().trim(), regid);
+        if (duplicateHallTickets != null && duplicateHallTickets > 0) {
+            throw new IllegalArgumentException(
+                    "SSC hall ticket number is already registered to another candidate.");
+        }
+    }
 
     StudentApplication updated = repository.save(entity);
 
@@ -651,6 +645,22 @@ public StudentApplicationDto updateStudent(Integer regid, StudentApplicationDto 
                 .orElseThrow(() -> new RuntimeException("Student Not Found"));
 
         return toDto(entity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Integer lookupRegidByIdentity(String sscRegNo, String dob) {
+        if (sscRegNo == null || sscRegNo.isBlank()) return null;
+        java.sql.Date dobDate = parseDob(dob);
+        if (dobDate == null) return null;
+
+        // Return only the ID and fail closed if legacy data contains duplicate matches.
+        List<Integer> matches = jdbcTemplate.queryForList(
+                "SELECT regid FROM public.student_application "
+                        + "WHERE upper(trim(ssc_regno)) = upper(?) AND dob = ? "
+                        + "ORDER BY regid LIMIT 2",
+                Integer.class, sscRegNo.trim(), dobDate);
+        return matches.size() == 1 ? matches.get(0) : null;
     }
 
     @Override

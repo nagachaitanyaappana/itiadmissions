@@ -1,5 +1,8 @@
 package com.server.frontend.controller.admission;
 
+import com.server.frontend.security.BackendApiRequestSupport;
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -30,6 +33,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class DischargeAdmissionController {
 
     private final RestTemplate rest = new RestTemplate();
+    private final BackendApiRequestSupport proxySupport;
+
+    public DischargeAdmissionController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
@@ -50,19 +58,25 @@ public class DischargeAdmissionController {
     @ResponseBody
     public ResponseEntity<Object> dischargeAdmission(
             @RequestParam(value = "admissionNumber", required = false) String admissionNumber,
-            @RequestParam(value = "year", required = false) String year) {
+            @RequestParam(value = "year", required = false) String year,
+            HttpServletRequest request) {
         String adm = admissionNumber == null ? "" : admissionNumber.trim();
         String yr = year == null ? "" : year.trim();
         if (adm.isEmpty() || yr.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(java.util.Map.of("error", "Please enter Admission Number and Year."));
         }
+        String distCode = BackendApiRequestSupport.scope(request);
+        if (distCode.isBlank()) {
+            return ResponseEntity.status(403).body(java.util.Map.of("error", "District scope is required."));
+        }
         String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/admission/discharge-admission")
                 .queryParam("admissionNumber", adm)
                 .queryParam("year", yr)
+                .queryParam("distCode", distCode)
                 .toUriString();
         try {
-            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, null,
+            ResponseEntity<Object> resp = rest.exchange(url, HttpMethod.GET, proxySupport.entity(request),
                     new ParameterizedTypeReference<Object>() {
                     });
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());

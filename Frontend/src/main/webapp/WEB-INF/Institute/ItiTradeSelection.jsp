@@ -189,6 +189,7 @@
 
             const itiApiUrl = "${itiApiUrl}";
             const backendBaseUrl = "${backendApiBaseUrl}";
+            const itiLocked = "${itiLocked}" === "true";
 
             let allItis = [];
             let currentTrades = [];
@@ -223,15 +224,24 @@
                         return response.json();
                     })
                     .then(data => {
-                        allItis = data;
+                        // A role-4 ITI official receives only their own ITI object;
+                        // district users receive a list scoped to their district.
+                        allItis = Array.isArray(data) ? data : (data ? [data] : []);
                         populateItiDropdown(allItis);
 
-                        // Check if itiCode is provided in URL
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const urlItiCode = urlParams.get('itiCode');
-                        if (urlItiCode) {
-                            itiSelect.value = urlItiCode;
-                            loadTradesForIti(urlItiCode);
+                        if (itiLocked && allItis.length === 1) {
+                            const ownItiCode = allItis[0].itiCode;
+                            itiSelect.value = ownItiCode;
+                            itiSelect.disabled = true;
+                            loadTradesForIti(ownItiCode);
+                        } else {
+                            // District officials may choose only from their district's ITIs.
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const urlItiCode = urlParams.get('itiCode');
+                            if (urlItiCode && allItis.some(iti => iti.itiCode === urlItiCode)) {
+                                itiSelect.value = urlItiCode;
+                                loadTradesForIti(urlItiCode);
+                            }
                         }
                     })
                     .catch(error => {

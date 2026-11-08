@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import com.server.frontend.security.BackendApiRequestSupport;
 
 /**
  * Exact 1:1 port of the legacy Phase-1 admission flow:
@@ -47,6 +48,11 @@ public class AdmissionPhaseController {
 
     private final RestTemplate rest = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final BackendApiRequestSupport proxySupport;
+
+    public AdmissionPhaseController(BackendApiRequestSupport proxySupport) {
+        this.proxySupport = proxySupport;
+    }
 
     @GetMapping
     public String show(HttpServletRequest request, Model model) {
@@ -66,7 +72,7 @@ public class AdmissionPhaseController {
                     "Phase 2 and later admissions are processed by the ITI login for that ITI.");
             return "admission/phase2RoleRequired";
         }
-        model.addAttribute("casteOptions", fetchCasteOptions());
+        model.addAttribute("casteOptions", fetchCasteOptions(request));
         model.addAttribute("timingOptions", fetchTodayTimings(request));
         return "checkmeritschedule/AdmissionPhase";
     }
@@ -76,11 +82,11 @@ public class AdmissionPhaseController {
      * photograph as an image. Delegates to the backend's base64 photo endpoint.
      */
     @GetMapping("/photo/{regid}")
-    public ResponseEntity<byte[]> photo(@PathVariable("regid") String regid) {
+    public ResponseEntity<byte[]> photo(@PathVariable("regid") String regid, HttpServletRequest request) {
         try {
             Map<String, Object> resp = rest.exchange(
                     backendBase + "/api/student/photo/" + regid, HttpMethod.GET,
-                    new HttpEntity<>(new HttpHeaders()), Map.class).getBody();
+                    proxySupport.entity(request), Map.class).getBody();
             Object b64 = resp == null ? null : resp.get("photo");
             if (b64 == null || !(b64 instanceof String s) || s.isBlank()) {
                 // Legacy imageRetrival.jsp emits an empty image/jpg body when no photo
@@ -119,14 +125,14 @@ public class AdmissionPhaseController {
         if (!success) {
             if (resp != null && "ADMISSION_EXPIRED".equals(resp.get("code"))) {
                 populateAdmissionWindow(request, model);
-                model.addAttribute("casteOptions", fetchCasteOptions());
+                model.addAttribute("casteOptions", fetchCasteOptions(request));
                 model.addAttribute("timingOptions", fetchTodayTimings(request));
                 return "checkmeritschedule/AdmissionPhase";
             }
             Object err = resp == null ? "Server error" : resp.get("message");
             model.addAttribute("errorMsg", err == null ? "No counselling window is configured for today." : err);
             populateAdmissionWindow(request, model);
-            model.addAttribute("casteOptions", fetchCasteOptions());
+            model.addAttribute("casteOptions", fetchCasteOptions(request));
             model.addAttribute("timingOptions", fetchTodayTimings(request));
             return "checkmeritschedule/AdmissionPhase";
         }
@@ -177,7 +183,7 @@ public class AdmissionPhaseController {
             model.addAttribute("student", data);
             model.addAttribute("layout", layout);
             model.addAttribute("seat_matrix", seatMatrix);
-            model.addAttribute("casteOptions", fetchCasteOptions());
+            model.addAttribute("casteOptions", fetchCasteOptions(request));
             model.addAttribute("itiBoards", fetchList("/api/admission/iti-boards", request));
             // Legacy putOptions("admissions.ssc_examboard_mst",...) has no public endpoint yet;
             // reproduce the standard board list. TODO: source from backend when exposed.
@@ -192,7 +198,7 @@ public class AdmissionPhaseController {
         Object err = resp == null ? "Server error" : resp.get("message");
         if (resp != null && "ADMISSION_EXPIRED".equals(resp.get("code"))) {
             populateAdmissionWindow(request, model);
-            model.addAttribute("casteOptions", fetchCasteOptions());
+            model.addAttribute("casteOptions", fetchCasteOptions(request));
             model.addAttribute("timingOptions", fetchTodayTimings(request));
             return "checkmeritschedule/AdmissionPhase";
         }
@@ -300,7 +306,7 @@ public class AdmissionPhaseController {
                 : resp.containsKey("error") ? resp.get("error") : resp.get("message");
         if (resp != null && "ADMISSION_EXPIRED".equals(resp.get("code"))) {
             populateAdmissionWindow(request, model);
-            model.addAttribute("casteOptions", fetchCasteOptions());
+            model.addAttribute("casteOptions", fetchCasteOptions(request));
             model.addAttribute("timingOptions", fetchTodayTimings(request));
             return "checkmeritschedule/AdmissionPhase";
         }
@@ -389,7 +395,7 @@ public class AdmissionPhaseController {
 
     private HttpHeaders headers(HttpServletRequest request) {
         HttpSession s = request.getSession(false);
-        HttpHeaders h = new HttpHeaders();
+        HttpHeaders h = proxySupport.headers(request);
         h.setContentType(MediaType.APPLICATION_JSON);
         if (s != null) {
             Object role = s.getAttribute("roleId");
@@ -423,9 +429,11 @@ public class AdmissionPhaseController {
     }
 
     @SuppressWarnings("unchecked")
-    private List<Map<String, String>> fetchCasteOptions() {
+    private List<Map<String, String>> fetchCasteOptions(HttpServletRequest request) {
         try {
-            Map<String, Object> resp = rest.getForObject(backendBase + "/api/dsc/caste-list", Map.class);
+            Map<String, Object> resp = rest.exchange(
+                    backendBase + "/api/dsc/caste-list", HttpMethod.GET,
+                    new HttpEntity<>(headers(request)), Map.class).getBody();
             Object data = resp == null ? null : resp.get("data");
             return data == null ? List.of() : (List<Map<String, String>>) data;
         } catch (Exception e) {

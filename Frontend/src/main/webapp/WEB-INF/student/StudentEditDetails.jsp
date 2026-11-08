@@ -642,51 +642,48 @@
             var submitBtn = $("#gateSubmitBtn");
             submitBtn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin"></i> Checking...');
 
-            $.get('${pageContext.request.contextPath}/captcha/text', function (serverCaptcha) {
-                if (entered !== String(serverCaptcha).trim().toUpperCase()) {
-                    submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
-                    $("#gateCaptchaError").text("Captcha does not match. Please try again.");
-                    refreshCaptcha();
-                    document.getElementById("captcha_gate").focus();
-                    return;
-                }
-
+            $.post('${pageContext.request.contextPath}/captcha/verify', { captcha: entered }, function () {
                 var regid = document.getElementById("regid_gate").value.trim();
                 var hallticket = document.getElementById("ssc_regno_gate").value.trim().toUpperCase();
                 var dob = document.getElementById("dob_gate").value;
 
-                $.get('${backendBaseUrl}/api/student/' + encodeURIComponent(regid), function (s) {
+                // Verify DOB + SSC hall ticket on the server before any personal
+                // application fields or photograph are returned to this browser.
+                $.ajax({
+                    url: '${pageContext.request.contextPath}/backend/api/student/verify-identity',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ regid: regid, dob: dob, ssc_regno: hallticket }),
+                    success: function (s) {
                     submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
-
-                    if (String(s.sscRegNo || '').toUpperCase() !== hallticket) {
-                        $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-triangle me-2"></i>Hall Ticket Number does not match this Registration ID.</div>');
-                        refreshCaptcha();
-                        return;
-                    }
-                    if (s.dob && String(s.dob).substring(0, 10) !== dob) {
-                        $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-triangle me-2"></i>Date of Birth does not match this Registration ID.</div>');
-                        refreshCaptcha();
-                        return;
-                    }
 
                     CURRENT_REGID = s.regid;
                     prefill(s);
                     document.getElementById("gateDiv").style.display = "none";
                     document.getElementById("editDiv").style.display = "";
                     window.scrollTo(0, 0);
-
+                    }
                 }).fail(function () {
                     submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
-                    $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-circle me-2"></i>No registration found for Registration ID <b>' + regid + '</b>.</div>');
+                    $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;"><i class="fas fa-exclamation-circle me-2"></i>Registration ID, date of birth, or hall ticket number did not match.</div>');
                     refreshCaptcha();
                 });
 
             }).fail(function () {
                 submitBtn.prop("disabled", false).html('<i class="fas fa-arrow-right"></i> Submit');
-                $("#gateAlert").html('<div class="alert alert-danger py-2 text-center" style="font-size:0.9rem;">Verification service temporarily unavailable. Please retry.</div>');
+                $("#gateCaptchaError").text("Captcha does not match or could not be verified. Please try again.");
+                refreshCaptcha();
+                document.getElementById("captcha_gate").focus();
             });
 
             return false;
+        }
+
+        function editEsc(value) {
+            if (value === null || value === undefined) return '';
+            return String(value).replace(/[&<>"']/g, function (ch) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+            });
         }
 
         function prefill(s) {
@@ -694,11 +691,11 @@
             var board = boardMap[String(s.sscBoard)] || (s.sscBoard || '-');
 
             document.getElementById("prefillInfo").innerHTML =
-                '<strong>Registration ID:</strong> <span class="badge bg-primary fs-6 me-2">' + s.regid + '</span> '
-                + '<strong>Hall Ticket:</strong> ' + (s.sscRegNo || '-') + ' &nbsp;|&nbsp; '
-                + '<strong>Board:</strong> ' + board + ' &nbsp;|&nbsp; '
-                + '<strong>Year:</strong> ' + (s.sscYear || '-') + ' &nbsp;|&nbsp; '
-                + '<strong>Result Type:</strong> ' + (s.sscType === 'sscm' ? 'Marks' : 'GPA');
+                '<strong>Registration ID:</strong> <span class="badge bg-primary fs-6 me-2">' + editEsc(s.regid) + '</span> '
+                + '<strong>Hall Ticket:</strong> ' + editEsc(s.sscRegNo || '-') + ' &nbsp;|&nbsp; '
+                + '<strong>Board:</strong> ' + editEsc(board) + ' &nbsp;|&nbsp; '
+                + '<strong>Year:</strong> ' + editEsc(s.sscYear || '-') + ' &nbsp;|&nbsp; '
+                + '<strong>Result Type:</strong> ' + editEsc(s.sscType === 'sscm' ? 'Marks' : 'GPA');
 
             document.getElementById("sscRegDisp").value = s.sscRegNo || '';
             document.getElementById("boardDisp").value = board;
@@ -728,7 +725,7 @@
             setRadio("ews", s.economicWeakerSection === true ? 'yes' : (s.economicWeakerSection === false ? 'no' : ''));
 
             // Load existing photo
-            $.get('${backendBaseUrl}/api/student/photo/' + s.regid, function (r) {
+            $.get('${pageContext.request.contextPath}/backend/api/student/photo/' + s.regid, function (r) {
                 var img = document.getElementById("existingPhoto");
                 var noPhotoText = document.getElementById("noPhotoText");
                 if (r && r.photo) {
@@ -780,7 +777,7 @@
         }
 
         function loadCastes() {
-            $.get('${backendBaseUrl}/api/student/castes', function (list) {
+            $.get('${pageContext.request.contextPath}/backend/api/student/castes', function (list) {
                 $.each(list, function (i, c) {
                     $('#casteSelect').append('<option value="' + c.casteCode + '">' + c.casteName + '</option>');
                 });
@@ -792,7 +789,7 @@
             var sel = document.getElementById("subCasteSelect");
             sel.innerHTML = '<option value="">--Select Sub Category--</option>';
             if (!code) { return; }
-            $.get('${backendBaseUrl}/api/student/subcastes/' + encodeURIComponent(code))
+            $.get('${pageContext.request.contextPath}/backend/api/student/subcastes/' + encodeURIComponent(code))
                 .done(function (list) {
                     (list || []).forEach(function (r) {
                         var label = (r.subCasteName && r.subCasteName !== '') ? r.subCasteName : ('Sub-caste ' + r.subCasteId);
@@ -863,7 +860,7 @@
                 var fd = new FormData();
                 fd.append("photo", fileInput.files[0]);
                 $.ajax({
-                    url: '${backendBaseUrl}/api/student/photo/' + CURRENT_REGID,
+                    url: '${pageContext.request.contextPath}/backend/api/student/photo/' + CURRENT_REGID,
                     type: 'POST',
                     data: fd,
                     processData: false,
@@ -909,7 +906,7 @@
             };
 
             $.ajax({
-                url: '${backendBaseUrl}/api/student/update/' + CURRENT_REGID,
+                url: '${pageContext.request.contextPath}/backend/api/student/update/' + CURRENT_REGID,
                 type: 'PUT',
                 contentType: 'application/json',
                 data: JSON.stringify(payload),
@@ -945,7 +942,7 @@
 
         $(document).ready(function () {
             loadCastes();
-            $.get('${backendBaseUrl}/api/reports/current-admission-phase', function (data) {
+            $.get('${pageContext.request.contextPath}/backend/api/reports/current-admission-phase', function (data) {
                 if (data && data.year) {
                     $('.sessionYearPhase').text(String(data.year) + ' (Phase-' + data.phase + ')');
                 }

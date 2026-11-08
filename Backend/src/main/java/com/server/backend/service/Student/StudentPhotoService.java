@@ -36,25 +36,12 @@ public class StudentPhotoService {
         if (photo == null || photo.isEmpty()) {
             throw new IllegalArgumentException("Please select a photograph to upload");
         }
-        String contentType = photo.getContentType();
-        boolean isPng = "image/png".equalsIgnoreCase(contentType);
-        boolean isJpeg = "image/jpeg".equalsIgnoreCase(contentType);
-        if (!isPng && !isJpeg) {
-            throw new IllegalArgumentException(
-                    "Photograph must be a PNG or JPEG image (received " + contentType + ")");
-        }
-
-        applicationRepository.findById(regid)
-                .orElseThrow(() -> new RuntimeException("Student Not Found"));
-
-        byte[] bytes;
+        // Decode, validate dimensions and re-encode to strip metadata and trailing payloads.
+        final byte[] bytes;
         try {
-            bytes = photo.getBytes();
-        } catch (Exception ex) {
+            bytes = CandidatePhotoValidator.validateAndNormalize(photo.getBytes());
+        } catch (java.io.IOException ex) {
             throw new IllegalArgumentException("Could not read the uploaded photograph");
-        }
-        if (bytes.length == 0) {
-            throw new IllegalArgumentException("The uploaded photograph is empty");
         }
 
         Integer existing = jdbcTemplate.queryForObject(

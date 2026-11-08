@@ -4,6 +4,8 @@ import com.server.backend.Repository.LoginUserRepository;
 import com.server.backend.entity.LoginUser;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCrypt;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -16,12 +18,17 @@ import java.util.UUID;
 @Service
 public class AuthService {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+    private volatile Boolean bcryptMigrationSchemaSupported;
+
     private final LoginUserRepository repo;
     private final JdbcTemplate jdbc;
+    private final JwtTokenService jwtTokens;
 
-    public AuthService(LoginUserRepository repo, JdbcTemplate jdbc) {
+    public AuthService(LoginUserRepository repo, JdbcTemplate jdbc, JwtTokenService jwtTokens) {
         this.repo = repo;
         this.jdbc = jdbc;
+        this.jwtTokens = jwtTokens;
     }
 
     public Map<String, Object> login(String username, String rawPassword, String ip, String sessionId) {
@@ -50,6 +57,11 @@ public class AuthService {
             res.put("message", "Invalid credentials");
             return res;
         }
+
+        // Upgrade legacy credentials only after inspecting the live PostgreSQL
+        // schema. If the columns cannot safely store BCrypt and clear plaintext,
+        // the valid login succeeds and the migration is skipped.
+        upgradeLegacyPasswordIfSupported(user, rawPassword);
 
         res.put("success", true);
         res.put("message", "Login successful");
@@ -109,6 +121,11 @@ public class AuthService {
                 res.put("distName", "");
             }
         }
+        JwtTokenService.IssuedToken issued = jwtTokens.issue(
+                user.getUserName(), user.getRoleId(), user.getDistCode());
+        res.put("accessToken", issued.value());
+        res.put("expiresAt", issued.expiresAt().toString());
+        res.put("tokenType", "Bearer");
         return res;
     }
 
@@ -140,6 +157,72 @@ public class AuthService {
         // legacy plaintext fallback
         String plain = user.getPassword();
         return plain != null && !plain.isBlank() && plain.equals(raw);
+    }
+
+    private void upgradeLegacyPasswordIfSupported(LoginUser user, String rawPassword) {
+        if (user.getSlno() == null) return;
+        String oldHash = user.getHashPassword();
+        String oldPlain = user.getPassword();
+        boolean hasPlaintext = oldPlain != null && !oldPlain.isBlank();
+        boolean hasBcrypt = oldHash != null && oldHash.trim().startsWith("$2");
+        if (hasBcrypt && !hasPlaintext) return;
+        if (!schemaSupportsSafeBcryptMigration()) return;
+
+        String replacementHash = hasBcrypt ? oldHash.trim() : toBcrypt(rawPassword);
+        try {
+            int updated = jdbc.update(
+                    "UPDATE public.login_users SET hash_password = ?, password = NULL "
+                            + "WHERE slno = ? AND COALESCE(hash_password, '') = ? "
+                            + "AND COALESCE(password, '') = ?",
+                    replacementHash, user.getSlno(),
+                    oldHash == null ? "" : oldHash,
+                    oldPlain == null ? "" : oldPlain);
+            if (updated == 1) log.info("Migrated one legacy login credential to BCrypt");
+        } catch (org.springframework.dao.DataAccessException ex) {
+            // A concurrent password change, permission restriction, or schema
+            // drift must not turn a valid login into an outage.
+            log.warn("BCrypt password migration was skipped; login remains successful");
+        }
+    }
+
+    /**
+     * hash_password must accept at least 60 characters (or be TEXT), and the
+     * legacy password column must be nullable so it can be cleared atomically.
+     */
+    private boolean schemaSupportsSafeBcryptMigration() {
+        Boolean cached = bcryptMigrationSchemaSupported;
+        if (cached != null) return cached;
+        try {
+            List<Map<String, Object>> columns = jdbc.queryForList(
+                    "SELECT column_name, data_type, character_maximum_length, is_nullable "
+                            + "FROM information_schema.columns "
+                            + "WHERE table_schema = 'public' AND table_name = 'login_users' "
+                            + "AND column_name IN ('hash_password', 'password')");
+            Map<String, Map<String, Object>> byName = new HashMap<>();
+            for (Map<String, Object> column : columns) {
+                byName.put(String.valueOf(column.get("column_name")).toLowerCase(), column);
+            }
+            Map<String, Object> hash = byName.get("hash_password");
+            Map<String, Object> plain = byName.get("password");
+            if (hash == null || plain == null) {
+                bcryptMigrationSchemaSupported = Boolean.FALSE;
+                return false;
+            }
+            String type = String.valueOf(hash.get("data_type"));
+            Object lengthValue = hash.get("character_maximum_length");
+            boolean enoughSpace = "text".equalsIgnoreCase(type)
+                    || (lengthValue instanceof Number n && n.intValue() >= 60);
+            boolean canClearPlaintext = "YES".equalsIgnoreCase(String.valueOf(plain.get("is_nullable")));
+            boolean supported = enoughSpace && canClearPlaintext;
+            bcryptMigrationSchemaSupported = supported;
+            if (!supported) {
+                log.warn("BCrypt password migration is disabled because login_users columns are not schema-compatible");
+            }
+            return supported;
+        } catch (org.springframework.dao.DataAccessException ex) {
+            log.warn("BCrypt password migration is disabled because the login_users schema could not be inspected");
+            return false;
+        }
     }
 
     /** Upgrade a legacy account to bcrypt. Returns the bcrypt hash to store in hash_password. */

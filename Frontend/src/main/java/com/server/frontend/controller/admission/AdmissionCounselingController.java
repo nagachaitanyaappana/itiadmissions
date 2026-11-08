@@ -1,17 +1,16 @@
 package com.server.frontend.controller.admission;
 
-import java.util.ArrayList;
+import com.server.frontend.controller.BackendGatewayController;
+import com.server.frontend.security.BackendApiRequestSupport;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -62,8 +61,6 @@ public class AdmissionCounselingController {
     private final RestTemplate rest = new RestTemplate();
 
     /** Timeout + small result cache so repeat rank lookups feel instant. */
-    private static final long RESOLVE_TIMEOUT_MS = 25000L;
-
     /**
      * Rank resolution is cached only briefly. The rank -> candidate mapping is not immutable: it
      * changes every time the merit list is regenerated (a rank can start pointing at a different
@@ -83,6 +80,9 @@ public class AdmissionCounselingController {
     @Value("${backend.api.base-url}")
     private String backendBaseUrl;
 
+    @Value("${app.internal-auth.secret:}")
+    private String internalApiSecret;
+
     // ========== PAGES (legacy UI, same chrome as live site) ==========
 
     /** Docs screen 2/3 - Start Admission Process form. */
@@ -91,7 +91,7 @@ public class AdmissionCounselingController {
         if (notLoggedIn(request)) {
             return "redirect:/?error=session";
         }
-        addCurrentPhase(model);
+        addCurrentPhase(model, request);
         if ("1".equals(model.getAttribute("currentPhase"))) {
             return "redirect:/AdmissionPhase";
         }
@@ -115,7 +115,7 @@ public class AdmissionCounselingController {
         if (notLoggedIn(request)) {
             return "redirect:/?error=session";
         }
-        addCurrentPhase(model);
+        addCurrentPhase(model, request);
         if ("1".equals(model.getAttribute("currentPhase"))) {
             return "redirect:/AdmissionPhase";
         }
@@ -131,11 +131,11 @@ public class AdmissionCounselingController {
     }
 
     /** Publishes the active year and phase (from admissions.admission_phase) to the page defaults. */
-    private void addCurrentPhase(org.springframework.ui.Model model) {
+    private void addCurrentPhase(org.springframework.ui.Model model, HttpServletRequest request) {
         ResponseEntity<Map<String, Object>> resp = rest.exchange(
                 backendBaseUrl + "/api/admission/window-status",
                 org.springframework.http.HttpMethod.GET,
-                null,
+                new HttpEntity<>(scopeHeaders(request)),
                 new ParameterizedTypeReference<Map<String, Object>>() {
                 });
         Map<String, Object> body = resp.getBody();
@@ -199,15 +199,18 @@ public class AdmissionCounselingController {
     @ResponseBody
     public ResponseEntity<Object> candidate(@RequestParam("rank") String rank,
                                             @RequestParam("phase") String phase,
-                                            @RequestParam("year") String year) {
+                                            @RequestParam("year") String year,
+                                            HttpServletRequest request) {
+        if (!hasRole(request, "2", "10")) return forbidden();
         String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/admission/candidate")
                 .queryParam("rank", rank)
                 .queryParam("phase", phase)
                 .queryParam("year", year)
                 .toUriString();
         try {
-            ResponseEntity<Object> resp = rest.getForEntity(url,
-                    Object.class);
+            ResponseEntity<Object> resp = rest.exchange(url,
+                    org.springframework.http.HttpMethod.GET, new HttpEntity<>(scopeHeaders(request)),
+                    new ParameterizedTypeReference<Object>() {});
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             // Backend currently 500s for unknown rank/phase/year combos;
@@ -221,14 +224,17 @@ public class AdmissionCounselingController {
     @ResponseBody
     public ResponseEntity<Object> itis(
             @RequestParam(value = "distCode", required = false) String distCodeParam,
-            @org.springframework.web.bind.annotation.PathVariable(value = "distCode", required = false) String distCodePath) {
+            @org.springframework.web.bind.annotation.PathVariable(value = "distCode", required = false) String distCodePath,
+            HttpServletRequest request) {
         String distCode = distCodePath != null ? distCodePath : distCodeParam;
+        if (!canReadDistrict(request, distCode)) return forbidden();
         if (distCode == null || distCode.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "distCode is required"));
         }
         String url = backendBaseUrl + "/admission/itis/" + distCode;
         try {
-            ResponseEntity<Object> resp = rest.getForEntity(url, Object.class);
+            ResponseEntity<Object> resp = rest.exchange(url, org.springframework.http.HttpMethod.GET,
+                    new HttpEntity<>(scopeHeaders(request)), new ParameterizedTypeReference<Object>() {});
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             return ResponseEntity.ok(new Object[0]);
@@ -238,10 +244,12 @@ public class AdmissionCounselingController {
     /** Proxy: GET /admission/master-data - {itiNames[], tradeNames[]}. */
     @GetMapping("/api/master-data")
     @ResponseBody
-    public ResponseEntity<Object> masterData() {
+    public ResponseEntity<Object> masterData(HttpServletRequest request) {
+        if (!hasRole(request, "4")) return forbidden();
         try {
-            ResponseEntity<Object> resp = rest.getForEntity(
-                    backendBaseUrl + "/admission/master-data", Object.class);
+            ResponseEntity<Object> resp = rest.exchange(
+                    backendBaseUrl + "/admission/master-data", org.springframework.http.HttpMethod.GET,
+                    new HttpEntity<>(scopeHeaders(request)), new ParameterizedTypeReference<Object>() {});
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("itiNames", new Object[0], "tradeNames", new Object[0]));
@@ -251,15 +259,18 @@ public class AdmissionCounselingController {
     /** Proxy: GET /api/reports/student-details?regid= - full student record (fallback rank lookup). */
     @GetMapping("/api/student-details")
     @ResponseBody
-    public ResponseEntity<Object> studentDetails(@RequestParam("regid") String regid) {
+    public ResponseEntity<Object> studentDetails(@RequestParam("regid") String regid,
+                                                  HttpServletRequest request) {
+        if (!hasRole(request, "4") || regid == null || !regid.matches("\\d+")) return forbidden();
         String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/api/reports/student-details")
                 .queryParam("regid", regid)
                 .toUriString();
         try {
-            ResponseEntity<Object> resp = rest.getForEntity(url, Object.class);
+            ResponseEntity<Object> resp = rest.exchange(url, org.springframework.http.HttpMethod.GET,
+                    new HttpEntity<>(scopeHeaders(request)), new ParameterizedTypeReference<Object>() {});
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
-            return ResponseEntity.ok(Map.of("registration", null));
+            return ResponseEntity.ok(Map.of("registration", Map.of()));
         }
     }
 
@@ -267,13 +278,16 @@ public class AdmissionCounselingController {
     @GetMapping("/api/students-not-admitted")
     @ResponseBody
     public ResponseEntity<Object> studentsNotAdmitted(@RequestParam("year") String year,
-                                                      @RequestParam(value = "phase", required = false) String phase) {
+                                                      @RequestParam(value = "phase", required = false) String phase,
+                                                      HttpServletRequest request) {
+        if (!hasRole(request, "2", "10")) return forbidden();
         UriComponentsBuilder b = UriComponentsBuilder
                 .fromUriString(backendBaseUrl + "/api/reports/students-not-admitted")
                 .queryParam("year", year);
         if (phase != null && !phase.isBlank()) b.queryParam("phase", phase);
         try {
-            ResponseEntity<Object> resp = rest.getForEntity(b.toUriString(), Object.class);
+            ResponseEntity<Object> resp = rest.exchange(b.toUriString(), org.springframework.http.HttpMethod.GET,
+                    new HttpEntity<>(scopeHeaders(request)), new ParameterizedTypeReference<Object>() {});
             return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("data", new Object[0], "success", false));
@@ -292,7 +306,7 @@ public class AdmissionCounselingController {
                     "source", "scope",
                     "message", "Phase 2 and later admissions require an ITI login."));
         }
-        Map<String, Object> cycle = currentCycle();
+        Map<String, Object> cycle = currentCycle(request);
         phase = String.valueOf(cycle.get("phase"));
         year = String.valueOf(cycle.get("year"));
         if ("1".equals(phase)) {
@@ -321,7 +335,7 @@ public class AdmissionCounselingController {
             cachePut(key, resolved);
             return ResponseEntity.ok(resolved);
         }
-        // 2) fallback scan below (parallel student-details merit match, bounded)
+        // No unscoped state-wide candidate scan is used as a fallback.
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("source", "none");
         out.put("rank", rank);
@@ -422,6 +436,15 @@ public class AdmissionCounselingController {
     /** Login-scope headers from the servlet session, matching the page's own apiHeaders(). */
     private HttpHeaders scopeHeaders(HttpServletRequest request) {
         HttpHeaders headers = new HttpHeaders();
+        if (internalApiSecret == null || internalApiSecret.trim().length() < 32) {
+            throw new IllegalStateException("Frontend internal API authentication is not configured");
+        }
+        headers.set("X-Internal-Service-Key", internalApiSecret.trim());
+        String accessToken = BackendApiRequestSupport.accessToken(request);
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new IllegalStateException("An authenticated official access token is required");
+        }
+        headers.setBearerAuth(accessToken);
         String role = sessionValue(request, "roleId");
         String ins = sessionValue(request, "insCode");
         if (role != null) headers.set("X-Role-Id", role);
@@ -436,6 +459,51 @@ public class AdmissionCounselingController {
         return headers;
     }
 
+    private static boolean hasRole(HttpServletRequest request, String... allowed) {
+        if (notLoggedIn(request)) return false;
+        String role = sessionValue(request, "roleId");
+        for (String value : allowed) if (value.equals(role)) return true;
+        return false;
+    }
+
+    private static boolean canReadDistrict(HttpServletRequest request, String distCode) {
+        if (notLoggedIn(request) || distCode == null || !distCode.matches("[A-Za-z0-9_-]{1,10}")) return false;
+        String role = sessionValue(request, "roleId");
+        if ("2".equals(role) || "10".equals(role)) return true;
+        return "3".equals(role) && sameCode(distCode, sessionValue(request, "insCode"));
+    }
+
+    private static boolean sameCode(String left, String right) {
+        return left != null && right != null && left.trim().matches("[A-Za-z0-9_-]{1,20}")
+                && left.trim().equalsIgnoreCase(right.trim());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> asMap(Object value) {
+        if (!(value instanceof Map<?, ?> map)) return null;
+        Map<String, Object> result = new LinkedHashMap<>();
+        map.forEach((key, item) -> {
+            if (key != null) result.put(String.valueOf(key), item);
+        });
+        return result;
+    }
+
+    private static boolean sameOriginWrite(HttpServletRequest request) {
+        return BackendGatewayController.sameOrigin(request);
+    }
+
+    private static String cookie(HttpServletRequest request, String name) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return null;
+        for (Cookie cookie : cookies) if (name.equals(cookie.getName())) return cookie.getValue();
+        return null;
+    }
+
+    private static ResponseEntity<Object> forbidden() {
+        return ResponseEntity.status(403).body(Map.of("success", false,
+                "message", "Operation is outside your authorized role or organization scope"));
+    }
+
     private static String sessionValue(HttpServletRequest request, String name) {
         if (request == null) return null;
         var session = request.getSession(false);
@@ -444,11 +512,11 @@ public class AdmissionCounselingController {
         return value == null ? null : String.valueOf(value);
     }
 
-    private Map<String, Object> currentCycle() {
+    private Map<String, Object> currentCycle(HttpServletRequest request) {
         ResponseEntity<Map<String, Object>> resp = rest.exchange(
                 backendBaseUrl + "/api/admission/window-status",
                 org.springframework.http.HttpMethod.GET,
-                null,
+                new HttpEntity<>(scopeHeaders(request)),
                 new ParameterizedTypeReference<Map<String, Object>>() {
                 });
         Map<String, Object> body = resp.getBody();
@@ -464,168 +532,10 @@ public class AdmissionCounselingController {
         return session == null || session.getAttribute("sessionUser") == null;
     }
 
-    /** Paged fallback: parallel meritList[].rank+phase match. Bounded by timeout. */
-    private Map<String, Object> fallbackByMerit(String rank, String phase, String year) {
-        ExecutorService pool = Executors.newFixedThreadPool(10);
-        long deadline = System.currentTimeMillis() + RESOLVE_TIMEOUT_MS;
-        try {
-            int size = 200;
-            for (int page = 0; page < 5; page++) {
-                String listUrl = UriComponentsBuilder
-                        .fromUriString(backendBaseUrl + "/api/reports/students-not-admitted")
-                        .queryParam("year", year).queryParam("phase", phase)
-                        .queryParam("page", page).queryParam("size", size).toUriString();
-                Map<String, Object> listResp = rest.exchange(listUrl,
-                        org.springframework.http.HttpMethod.GET, null,
-                        new ParameterizedTypeReference<Map<String, Object>>() {
-                        }).getBody();
-                if (listResp == null) break;
-                List<Object> rows = toList(listResp.get("data"));
-                if (rows.isEmpty()) break;
-                Map<String, Object> hit = scanPageParallel(pool, rows, rank, phase, year, deadline);
-                if (hit != null) return hit;
-                Number count = (Number) listResp.get("count");
-                if (count != null && (page + 1) * size >= count.intValue()) break;
-                if (System.currentTimeMillis() > deadline) break;
-            }
-        } catch (Exception ignored) {
-        } finally {
-            pool.shutdownNow();
-        }
-        return null;
-    }
-
-    /** Scan one page of not-admitted rows in parallel for a merit match. */
-    private Map<String, Object> scanPageParallel(ExecutorService pool, List<Object> rows,
-                                                 String rank, String phase, String year,
-                                                 long deadline) {
-        List<Future<Map<String, Object>>> futures = new ArrayList<>();
-        for (Object r : rows) {
-            Map<String, Object> row0 = asMap(r);
-            if (row0 == null) continue;
-            Object regid = row0.get("regid");
-            if (regid == null) continue;
-            String rid = String.valueOf(regid);
-            Callable<Map<String, Object>> task = () -> {
-                Map<String, Object> sd = fetchDetails(rid);
-                if (sd == null) return null;
-                return matchMerit(sd, row0, rank, phase, year);
-            };
-            futures.add(pool.submit(task));
-        }
-        for (Future<Map<String, Object>> f : futures) {
-            long left = deadline - System.currentTimeMillis();
-            if (left <= 0) break;
-            try {
-                Map<String, Object> hit = f.get(Math.min(left, 4000L), TimeUnit.MILLISECONDS);
-                if (hit != null) {
-                    for (Future<Map<String, Object>> o : futures) o.cancel(true);
-                    return hit;
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        return null;
-    }
-
-    /** Fetch one student-details record by regid (null on error). */
-    private Map<String, Object> fetchDetails(String regid) {
-        try {
-            String sdUrl = UriComponentsBuilder
-                    .fromUriString(backendBaseUrl + "/api/reports/student-details")
-                    .queryParam("regid", regid).toUriString();
-            ResponseEntity<Map<String, Object>> resp = rest.exchange(sdUrl,
-                    org.springframework.http.HttpMethod.GET, null,
-                    new ParameterizedTypeReference<Map<String, Object>>() {
-                    });
-            return resp.getBody();
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    /** Build unified candidate when a merit entry matches rank+phase. */
-    private Map<String, Object> matchMerit(Map<String, Object> sd, Map<String, Object> row0,
-                                           String rank, String phase, String year) {
-        for (Object m : toList(sd.get("meritList"))) {
-            Map<String, Object> mm = asMap(m);
-            if (mm == null) continue;
-            boolean ok = String.valueOf(mm.get("rank")).equals(String.valueOf(rank))
-                    && String.valueOf(mm.get("phase")).equals(String.valueOf(phase));
-            if (!ok) continue;
-            return buildCandidate(sd, row0, mm, rank, phase, year);
-        }
-        return null;
-    }
-
-    /** Assemble the unified candidate payload from registration + merit + list row. */
-    private Map<String, Object> buildCandidate(Map<String, Object> sd, Map<String, Object> row0,
-                                              Map<String, Object> mm,
-                                              String rank, String phase, String year) {
-        Map<String, Object> reg = asMapOrEmpty(sd.get("registration"));
-        Map<String, Object> cand = new LinkedHashMap<>();
-        cand.put("regid", reg.getOrDefault("registrationId", row0.getOrDefault("regid", "")));
-        cand.put("rank", rank);
-        cand.put("phase", phase);
-        cand.put("year", year);
-        cand.put("name", reg.getOrDefault("name", row0.getOrDefault("name", "")));
-        cand.put("fatherName", reg.getOrDefault("fatherName", row0.getOrDefault("fname", "")));
-        cand.put("dist_code", mm.getOrDefault("distName", ""));
-        cand.put("distName", mm.getOrDefault("distName", ""));
-        cand.put("iti_code", mm.getOrDefault("itiName", ""));
-        cand.put("qual", mm.getOrDefault("qualification", "all"));
-        cand.put("app_status", row0.getOrDefault("appStatus", "A"));
-        cand.put("gender", reg.getOrDefault("gender", row0.getOrDefault("gender", "")));
-        cand.put("caste", reg.getOrDefault("caste", row0.getOrDefault("caste", "")));
-        cand.put("phoneNo", reg.getOrDefault("phoneNo", row0.getOrDefault("phno", "")));
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("source", "student-details");
-        out.put("rank", rank);
-        out.put("phase", phase);
-        out.put("year", year);
-        out.put("candidate", cand);
-        return out;
-    }
-
-    private static List<Object> toList(Object body) {
-        if (body instanceof List<?> list) {
-            return new ArrayList<>(list);
-        }
-        if (body instanceof Map<?, ?> map) {
-            Object d = map.get("data");
-            if (d instanceof List<?> dataList) {
-                return new ArrayList<>(dataList);
-            }
-        }
-        return new ArrayList<>();
-    }
-
-    /** Type-safe view of a decoded JSON object without unchecked casts. */
-    private static Map<String, Object> asMap(Object value) {
-        if (!(value instanceof Map<?, ?> map)) {
-            return null;
-        }
-        Map<String, Object> out = new LinkedHashMap<>();
-        for (Map.Entry<?, ?> e : map.entrySet()) {
-            out.put(String.valueOf(e.getKey()), e.getValue());
-        }
-        return out;
-    }
-
-    private static Map<String, Object> asMapOrEmpty(Object value) {
-        Map<String, Object> m = asMap(value);
-        return m != null ? m : Map.of();
-    }
-
-    /**
-     * Proxy the real seat matrix: {@code POST /api/admission/iti-seat-matrix}.
-     * Returns {@code {success, year, phase, data:[{iti_code,iti_name,trade_code,trade_name,
-     * strength_total,categories:{General:{T,F,V},IM,PH,EXS}}]}} for the caller's scope
-     * (district login = every ITI in the district).
-     */
     @PostMapping("/api/seat-matrix")
     @ResponseBody
     public ResponseEntity<Object> seatMatrix(HttpServletRequest request) {
+        if (!hasRole(request, "4") || !sameOriginWrite(request)) return forbidden();
         try {
             HttpHeaders headers = scopeHeaders(request);
             ResponseEntity<Object> resp = rest.exchange(
@@ -648,6 +558,7 @@ public class AdmissionCounselingController {
     @GetMapping("/api/iti-boards")
     @ResponseBody
     public ResponseEntity<Object> itiBoards(HttpServletRequest request) {
+        if (!hasRole(request, "4")) return forbidden();
         try {
             HttpEntity<Void> entity = new HttpEntity<>(scopeHeaders(request));
             ResponseEntity<Object> resp = rest.exchange(
@@ -669,6 +580,7 @@ public class AdmissionCounselingController {
     @ResponseBody
     public ResponseEntity<Object> takeAdmission(@RequestBody Map<String, Object> body,
                                                 HttpServletRequest request) {
+        if (!hasRole(request, "4") || !sameOriginWrite(request)) return forbidden();
         try {
             HttpHeaders headers = scopeHeaders(request);
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -694,6 +606,7 @@ public class AdmissionCounselingController {
     public ResponseEntity<Object> shiftUnit(@RequestParam("itiCode") String itiCode,
                                             @RequestParam("tradeCode") String tradeCode,
                                             HttpServletRequest request) {
+        if (!hasRole(request, "4") || !sameCode(itiCode, sessionValue(request, "insCode"))) return forbidden();
         String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/api/admission/shift-unit")
                 .queryParam("itiCode", itiCode)
                 .queryParam("tradeCode", tradeCode)
@@ -713,13 +626,14 @@ public class AdmissionCounselingController {
     /** Proxy open-seats. */
     @GetMapping("/api/open-seats")
     @ResponseBody
-    public ResponseEntity<Object> openSeats(@RequestParam("year") String year) {
+    public ResponseEntity<Object> openSeats(@RequestParam("year") String year, HttpServletRequest request) {
+        if (!hasRole(request, "2", "10")) return forbidden();
         String url = UriComponentsBuilder.fromUriString(backendBaseUrl + "/api/reports/open-seats")
                 .queryParam("year", year)
                 .toUriString();
         try {
             ResponseEntity<Map<String, Object>> resp = rest.exchange(url,
-                    org.springframework.http.HttpMethod.GET, null,
+                    org.springframework.http.HttpMethod.GET, new HttpEntity<>(scopeHeaders(request)),
                     new ParameterizedTypeReference<Map<String, Object>>() {
                     });
             return ResponseEntity.ok((Object) resp.getBody());

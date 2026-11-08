@@ -33,6 +33,9 @@ public interface StudentApplicationService {
 
     StudentApplicationDto getStudentByHallTicket(String sscRegNo);
 
+    /** Returns only the registration ID after SSC hall-ticket and DOB match. */
+    Integer lookupRegidByIdentity(String sscRegNo, String dob);
+
     List<StudentApplicationDto> getAllStudents();
 
     void deleteStudent(Integer regid);

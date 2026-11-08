@@ -37,6 +37,10 @@ jobs:
           cache: maven
           cache-dependency-path: Frontend/pom.xml
 
-      - name: Build frontend WAR
-        run: ./mvnw -B -DskipTests package
+      - name: Test and build frontend WAR
+        run: ./mvnw -B verify
         working-directory: Frontend
+
+      - name: Build and test backend WAR
+        working-directory: Backend
+        run: ./mvnw -B verify

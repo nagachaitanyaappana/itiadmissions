@@ -136,7 +136,7 @@
             const navPhaseItem = document.getElementById('nav-admission-phase');
             if (navPhaseItem) {
                 try {
-                    const response = await fetch('${backendBaseUrl}/api/status', { credentials: 'include',
+                    const response = await fetch('${pageContext.request.contextPath}/backend/api/status', { credentials: 'include',
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' }
                     });

@@ -25,11 +25,13 @@ public class Print_Admission_Slip_Controller {
 
     @GetMapping("/admission-slip")
     public ResponseEntity<Print_Admission_slip_DTO> getAdmissionSlip(
-            @RequestParam String admissionNumber) {
+            @RequestParam String admissionNumber,
+            @RequestParam(required = false) String distCode,
+            @RequestParam(required = false) String itiCode) {
 
         try {
             return ResponseEntity.ok(
-                    service.getAdmissionSlip(admissionNumber));
+                    service.getAdmissionSlip(admissionNumber, distCode, itiCode));
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, ex.getMessage());

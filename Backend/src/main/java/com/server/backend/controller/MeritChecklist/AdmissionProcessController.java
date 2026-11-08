@@ -103,7 +103,14 @@ public class AdmissionProcessController {
             @RequestHeader(name = "X-Iti-Code", required = false) String itiCodeHeader,
             @RequestHeader(name = "X-Dist-Code", required = false) String distCode) {
         return handle(() -> {
-            resolveUser(roleId, insCode, itiCodeHeader, distCode);
+            UserPrincipal user = resolveUser(roleId, insCode, itiCodeHeader, distCode);
+            if ("4".equals(user.roleid())) {
+                if (!user.itiCode().equalsIgnoreCase(itiCode)) {
+                    throw new IllegalArgumentException("An ITI official may only view their own ITI shift/unit options.");
+                }
+            } else if (!admissionProcessService.isItiInDistrict(itiCode, user.distCode())) {
+                throw new IllegalArgumentException("The selected ITI does not belong to your district.");
+            }
             Map<String, Object> body = new java.util.LinkedHashMap<>();
             body.put("success", true);
             body.put("shifts", admissionProcessService.getShiftUnits(itiCode, tradeCode));
@@ -216,26 +223,17 @@ public class AdmissionProcessController {
         String role = (roleId == null || roleId.isBlank()) ? null : roleId.trim();
         String ins = (insCode == null || insCode.isBlank()) ? null : insCode.trim();
 
-        if (role == null) {
-            throw new IllegalArgumentException(
-                    "X-Role-Id is required so the admission can be scoped to a district or an ITI");
+        // Admission Process is scoped to a district official or an ITI official.
+        // The JWT filter supplies these headers from signed claims, never from
+        // browser-controlled X-Role-Id / X-Ins-Code headers.
+        if (!"3".equals(role) && !"4".equals(role)) {
+            throw new IllegalArgumentException("Only district and ITI officials may use this admission operation.");
         }
-
-        String resolvedIti = (itiCode == null || itiCode.isBlank()) ? null : itiCode.trim();
-        String resolvedDist = (distCode == null || distCode.isBlank()) ? null : distCode.trim();
-
-        if ("3".equals(role)) {
-            if (resolvedDist == null) {
-                resolvedDist = ins;
-            }
-        } else if (resolvedIti == null) {
-            resolvedIti = ins;
+        if (ins == null) {
+            throw new IllegalArgumentException("The authenticated account has no district/ITI scope.");
         }
-
-        if (resolvedIti == null && resolvedDist == null) {
-            throw new IllegalArgumentException(
-                    "X-Ins-Code is required so the admission can be scoped to a district or an ITI");
-        }
-        return new UserPrincipal(role, resolvedIti, resolvedDist);
+        return "3".equals(role)
+                ? new UserPrincipal(role, null, ins)
+                : new UserPrincipal(role, ins, null);
     }
 }
