@@ -121,13 +121,23 @@ public class LoginController {
     }
 
     /** Only same-site relative paths are honoured, so the param can't be used as an open redirect. */
-    private static String safeRedirect(String redirectTo, String fallback) {
+    static String safeRedirect(String redirectTo, String fallback) {
         if (redirectTo == null) {
             return fallback;
         }
         String target = redirectTo.trim();
-        if (target.startsWith("/") && !target.startsWith("//") && !target.contains(":")) {
-            return target;
+        try {
+            java.net.URI uri = java.net.URI.create(target);
+            boolean hasControlCharacter = target.chars().anyMatch(ch -> ch <= 0x1f || ch == 0x7f);
+            if (target.startsWith("/") && !target.startsWith("//")
+                    && !target.contains("\\") && !target.contains(":")
+                    && !hasControlCharacter && !uri.isAbsolute()
+                    && uri.getRawAuthority() == null && uri.getRawPath() != null
+                    && uri.getRawPath().startsWith("/")) {
+                return target;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Invalid URI syntax is never a safe redirect target.
         }
         return fallback;
     }
