@@ -27,6 +27,7 @@ jobs:
         run: |
           set -euo pipefail
           sha256sum -c xlsx.full.min.js.sha256
+          test "$(git hash-object xlsx.full.min.js)" = "21471af69ef0e4cda1613c2702c54101b92f48d2"
           grep -Fq 'e.version="0.20.3"' xlsx.full.min.js
 
       - name: Scan dependencies and configuration with Trivy
