@@ -95,9 +95,14 @@ class InternalServiceAuthenticationFilterTest {
 
         var swagger = new MockHttpServletRequest("GET", "/swagger");
         swagger.setRequestURI("/swagger");
+        var swaggerResponse = new MockHttpServletResponse();
+        filter.doFilter(swagger, swaggerResponse,
+                (req, res) -> fail("Backend documentation must require the internal service credential"));
+        assertEquals(401, swaggerResponse.getStatus());
+        assertFalse(filter.shouldNotFilter(swagger));
+
         var health = new MockHttpServletRequest("GET", "/actuator/health");
         health.setRequestURI("/actuator/health");
-        assertTrue(filter.shouldNotFilter(swagger));
         assertTrue(filter.shouldNotFilter(health));
     }
 
