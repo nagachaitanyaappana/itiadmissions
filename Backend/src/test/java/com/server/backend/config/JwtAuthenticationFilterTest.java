@@ -65,6 +65,18 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void deniesUnknownStatusSubroutesToDistrictAndItiRoles() throws Exception {
+        for (int role : new int[] { 3, 4 }) {
+            MockHttpServletRequest request = gatewayRequest("GET", "/api/status/export");
+            request.addHeader("Authorization", "Bearer " + tokens.issue("official", role, "07").value());
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            filter.doFilter(request, response,
+                    (req, res) -> fail("Unknown status subroutes must be denied"));
+            assertEquals(403, response.getStatus());
+        }
+    }
+
+    @Test
     void deniesUnknownAdmissionProcessAndReservationRoutes() throws Exception {
         for (String path : new String[] {
                 "/api/admission/unreviewed-export",
