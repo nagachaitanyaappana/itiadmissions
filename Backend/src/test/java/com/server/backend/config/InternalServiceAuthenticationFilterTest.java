@@ -79,7 +79,7 @@ class InternalServiceAuthenticationFilterTest {
     }
 
     @Test
-    void acceptsCredentialOnLegacyBackendPathAndExemptsOnlyDocsAndHealth() throws Exception {
+    void requiresCredentialForDocumentationAndExemptsOnlyHealthAndErrorDispatch() throws Exception {
         var filter = new InternalServiceAuthenticationFilter(SECRET);
         var request = new MockHttpServletRequest("GET", "/admission-timings/entry");
         request.setRequestURI("/admission-timings/entry");
