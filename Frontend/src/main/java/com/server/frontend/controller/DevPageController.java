@@ -309,6 +309,7 @@ public class DevPageController {
     /** Drops the dev session and sends the developer back to the dev login form. */
     @GetMapping("/dev/logout")
     public String devLogout(HttpServletRequest request) {
+        if (!BackendGatewayController.sameOrigin(request)) return "redirect:/dev";
         HttpSession session = request.getSession(false);
         if (session != null) {
             session.invalidate();
