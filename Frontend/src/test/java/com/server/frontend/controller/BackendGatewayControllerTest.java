@@ -51,6 +51,18 @@ class BackendGatewayControllerTest {
     }
 
     @Test
+    void rejectsConflictingOriginAndFetchMetadataHeaders() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setScheme("https");
+        request.setServerName("portal.example.gov.in");
+        request.setServerPort(443);
+        request.addHeader("Origin", "https://portal.example.gov.in");
+        request.addHeader("Sec-Fetch-Site", "cross-site");
+
+        assertFalse(BackendGatewayController.sameOrigin(request));
+    }
+
+    @Test
     void neverForwardsAnOfficialBearerTokenToPublicOrCandidateScopedRoutes() {
         HttpHeaders publicHeaders = new HttpHeaders();
         BackendGatewayController.applyTrustedAuthHeaders(
