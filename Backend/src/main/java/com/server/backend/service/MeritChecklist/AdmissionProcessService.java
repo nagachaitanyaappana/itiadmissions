@@ -63,8 +63,10 @@ public class AdmissionProcessService {
     private static final String EX_S = "EX-S";
     private static final String EX_SW = "EX-SW";
     private static final String IM = "IM";
+    // Possessive quantifiers and disjoint quoted-value alternatives keep parsing linear
+    // even when a malformed hstore value contains many backslashes or quote characters.
     private static final Pattern HSTORE_INTEGER_ENTRY = Pattern.compile(
-            "(?:^|,)\\s*(?:\"((?:\\\\.|[^\"])*)\"|([^=,\\s]+))\\s*=>\\s*(?:\"((?:\\\\.|[^\"])*)\"|([^,\\s]+))\\s*(?=,|$)");
+            "(?:^|,)\\s*(?:\"((?:\\\\.|[^\"\\\\])*+)\"|([^=,\\s]++))\\s*=>\\s*(?:\"((?:\\\\.|[^\"\\\\])*+)\"|([^,\\s]++))\\s*(?=,|$)");
 
     private final NamedParameterJdbcTemplate jdbc;
     private final TransactionTemplate photoTransaction;
@@ -716,8 +718,7 @@ public class AdmissionProcessService {
         Map<String, Object> config = currentPhaseConfig();
         String year = currentYear(config);
         String phase = text(config.get("phase"));
-        logger.info("open general pool: dist_code={} caste={} year={} phase={}", distCode, caste, year,
-                phase);
+        logger.info("District general-pool activation requested");
 
         int updated = jdbc.update(
                 "UPDATE generalpool.open_general_pool SET caste = :caste, gender = 'male', year = :year, "
@@ -760,8 +761,7 @@ public class AdmissionProcessService {
         String phase = text(config.get("phase"));
         String distCode = itiCode.length() >= 2 ? itiCode.substring(0, 2) : itiCode;
         long trno = jdbc.getJdbcTemplate().queryForObject("SELECT nextval('trno_seq')", Long.class);
-        logger.info("open general pool (ITI): iti_code={} caste={} year={} phase={} trno={}", itiCode,
-                caste, year, phase, trno);
+        logger.info("ITI general-pool activation requested");
 
         int updated = jdbc.update(
                 "UPDATE generalpool.open_general_pool SET caste = :caste, gender = 'male', year = :year, "
