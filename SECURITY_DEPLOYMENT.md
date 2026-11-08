@@ -21,7 +21,7 @@ PostgreSQL
 
 Do not publish the Backend port to the Internet. The Backend binds to loopback by default with `BACKEND_BIND_ADDRESS=127.0.0.1`. If Frontend and Backend are on separate hosts, bind Backend to a private interface and configure the host firewall/security group to accept the Backend port from the Frontend host only. Do not use a public Backend URL.
 
-The gateway uses an explicit public-candidate route allowlist. Existing-candidate reads/edits are bound to a Frontend HTTP session only after DOB + SSC hall-ticket verification. Official routes require the short-lived official JWT cookie. Every Backend application endpoint requires the trusted Frontend service credential, regardless of whether an `Origin` header is present. Only documentation, health and framework error paths are excluded; legacy routes such as `/admission-timings` and `/checkRegOrNot` are protected too.
+The gateway uses an explicit public-candidate route allowlist. Existing-candidate reads/edits are bound to a Frontend HTTP session only after DOB + SSC hall-ticket verification. Official routes require the short-lived official JWT cookie. Every Backend application endpoint requires the trusted Frontend service credential, regardless of whether an `Origin` header is present. Only health and framework error paths are excluded from the internal service credential. Backend API documentation also requires that credential; legacy routes such as `/admission-timings` and `/checkRegOrNot` are protected too.
 
 ## Required configuration
 
@@ -83,7 +83,8 @@ Legacy plaintext/MD5 verification remains temporarily for backward compatibility
 2. Decide whether historical Git history must be rewritten. Coordinate this with all collaborators and clones; do not rewrite shared history without an explicit maintenance window.
 3. Apply private network/firewall rules in the actual hosting environment and verify that Backend is not reachable from public clients.
 4. Set HTTPS, trusted reverse-proxy forwarding, `SESSION_COOKIE_SECURE=true`, exact CORS origins, backups, database least-privilege permissions, and production monitoring.
-5. Review the Trivy and CodeQL artifacts on each release and remediate confirmed findings.
+5. Configure edge rate limits for `/iti/login.do`, captcha verification and public registration endpoints; the current CAPTCHA attempt limit is session-scoped and is not a substitute for an IP-aware, shared rate limiter.
+6. Review the Trivy and CodeQL artifacts on each release and remediate confirmed findings.
 
 ## Local smoke-test sequence
 
