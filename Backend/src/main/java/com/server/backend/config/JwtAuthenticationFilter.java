@@ -108,9 +108,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static boolean isPublicCandidatePath(String method, String path) {
         if ("GET".equalsIgnoreCase(method)) {
-            return "/api/student/apply-gate".equals(path)
-                    || "/api/student/verify-identity".equals(path)
-                    || "/api/student/castes".equals(path)
+            return "/api/student/castes".equals(path)
                     || "/api/dsc/caste-list".equals(path)
                     || "/api/districts".equals(path)
                     || "/api/reports/current-admission-phase".equals(path)
@@ -121,7 +119,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     || path.matches("^/admission/iti/[A-Za-z0-9_-]+/(info|trades)$");
         }
         return "POST".equalsIgnoreCase(method)
-                && ("/api/student/save".equals(path) || "/api/student/register".equals(path)
+                && ("/api/student/apply-gate".equals(path)
+                    || "/api/student/verify-identity".equals(path)
+                    || "/api/student/save".equals(path)
+                    || "/api/student/register".equals(path)
                     || "/api/student/lookup-regid".equals(path));
     }
 
