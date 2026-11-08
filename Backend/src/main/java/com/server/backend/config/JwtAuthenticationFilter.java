@@ -366,7 +366,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return "3".equals(role) || "4".equals(role);
         }
         Matcher schedule = Pattern.compile("^/admission-timings/([A-Za-z0-9_-]+)/([^/]+)$").matcher(path);
-        if (!schedule.matches() || !"GET".equals(request.getMethod().toUpperCase())) return false;
+        String method = request.getMethod().toUpperCase();
+        if (!schedule.matches() || !Set.of("GET", "PUT", "DELETE").contains(method)) return false;
         String itiCode = schedule.group(1);
         if ("4".equals(role)) return insCode.equalsIgnoreCase(itiCode);
         return "3".equals(role) && studentObjects.isItiInDistrict(itiCode, insCode);
