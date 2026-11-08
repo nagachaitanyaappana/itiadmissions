@@ -106,6 +106,18 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void deniesUnknownDistrictVerificationRoutesToEveryRole() throws Exception {
+        for (int role : new int[] { 2, 3, 4, 10 }) {
+            MockHttpServletRequest request = gatewayRequest("GET", "/api/dv/unreviewed-export");
+            request.addHeader("Authorization", "Bearer " + tokens.issue("official", role, "07").value());
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            filter.doFilter(request, response,
+                    (req, res) -> fail("Unknown district verification routes must be denied"));
+            assertEquals(403, response.getStatus());
+        }
+    }
+
+    @Test
     void rejectsDistrictVerificationMutationFromAnItiRole() throws Exception {
         MockHttpServletRequest request = gatewayRequest("POST", "/api/dv/approve");
         request.addHeader("Authorization", "Bearer " + tokens.issue("iti-user", 4, "1234").value());
