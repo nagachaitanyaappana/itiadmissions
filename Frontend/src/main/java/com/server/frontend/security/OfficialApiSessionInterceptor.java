@@ -13,9 +13,9 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import com.server.frontend.controller.BackendGatewayController;
 
 /**
- * Protects legacy same-origin server-side API proxy controllers. These routes
- * do not pass through /backend/**, so they need their own session, role and
- * CSRF checks before they call the private Backend service.
+ * Enforces same-origin checks for every unsafe Frontend request and adds role
+ * checks for legacy server-side API proxy controllers. The Backend is reached
+ * only from the Frontend and has its own internal-service/JWT filters.
  */
 @Component
 public class OfficialApiSessionInterceptor implements HandlerInterceptor {
@@ -45,6 +45,14 @@ public class OfficialApiSessionInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws IOException {
+        // Apply origin verification to every unsafe Frontend request, not just
+        // the legacy official-page routes below. This is the CSRF boundary for
+        // browser-facing form posts and same-origin API controllers.
+        if (requiresCsrf(request.getMethod()) && !BackendGatewayController.sameOrigin(request)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Cross-origin writes are not allowed");
+            return false;
+        }
+
         String path = request.getRequestURI().substring(request.getContextPath().length());
         Set<String> allowedRoles = rolesFor(path);
         if (allowedRoles == null) return true;
@@ -63,10 +71,6 @@ public class OfficialApiSessionInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        if (requiresCsrf(request.getMethod()) && !BackendGatewayController.sameOrigin(request)) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Cross-origin writes are not allowed");
-            return false;
-        }
         return true;
     }
 
