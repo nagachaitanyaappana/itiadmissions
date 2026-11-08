@@ -188,6 +188,41 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void derivesItiReportDistrictFilterInsteadOfTrustingBrowserParameter() throws Exception {
+        when(studentObjects.districtForIti("ITI-001")).thenReturn("07");
+        MockHttpServletRequest request = gatewayRequest("GET", "/api/reports/iti-wise-status");
+        request.addParameter("distCode", "99");
+        request.addParameter("itiCode", "ITI-999");
+        request.addHeader("Authorization", "Bearer " + tokens.issue("iti-user", 4, "ITI-001").value());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        boolean[] reached = {false};
+
+        filter.doFilter(request, response, (req, res) -> {
+            reached[0] = true;
+            HttpServletRequest trusted = (HttpServletRequest) req;
+            assertEquals("07", trusted.getParameter("distCode"));
+            assertEquals("ITI-001", trusted.getParameter("itiCode"));
+            assertEquals("07", trusted.getHeader("X-Dist-Code"));
+            assertEquals("ITI-001", trusted.getHeader("X-Iti-Code"));
+        });
+
+        assertTrue(reached[0]);
+    }
+
+    @Test
+    void deniesItiReportsWhenTheItiHasNoTrustedDistrictMapping() throws Exception {
+        when(studentObjects.districtForIti("ITI-001")).thenReturn(null);
+        MockHttpServletRequest request = gatewayRequest("GET", "/api/reports/iti-wise-status");
+        request.addHeader("Authorization", "Bearer " + tokens.issue("iti-user", 4, "ITI-001").value());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response,
+                (req, res) -> fail("ITI reports require a resolvable district scope"));
+
+        assertEquals(403, response.getStatus());
+    }
+
+    @Test
     void allowsItiOfficialsToReadOnlyTheirOwnMeritList() throws Exception {
         MockHttpServletRequest own = gatewayRequest("GET", "/api/meritlist/iti/ITI-001");
         own.addHeader("Authorization", "Bearer " + tokens.issue("iti-user", 4, "ITI-001").value());
