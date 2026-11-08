@@ -67,7 +67,7 @@ public class BackendGatewayController {
             @Value("${app.internal-auth.secret:}") String internalApiSecret,
             ObjectMapper objectMapper) {
         this.backendBaseUrl = backendBaseUrl;
-        this.internalApiSecret = internalApiSecret == null ? "" : internalApiSecret;
+        this.internalApiSecret = internalApiSecret == null ? "" : internalApiSecret.trim();
         this.objectMapper = objectMapper;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(connectTimeout);
