@@ -25,7 +25,11 @@ import org.springframework.web.client.RestTemplate;
 @Controller
 public class LoginController {
 
-    private final RestTemplate rest = new RestTemplate();
+    private final RestTemplate rest;
+
+    public LoginController(RestTemplate rest) {
+        this.rest = rest;
+    }
     @Value("${backend.api.base-url}/api/auth/login")
     private String AUTH_URL;
 
