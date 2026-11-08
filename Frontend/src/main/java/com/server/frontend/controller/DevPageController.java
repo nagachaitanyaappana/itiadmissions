@@ -89,16 +89,21 @@ public class DevPageController {
     /**
      * Whether the signed-in developer may open this view through /dev/view.
      *
-     * <p>Admin opens everything. A session with no roleId is not filtered, which matches
-     * ReportsController's deliberate "role not stored yet - don't lock out" behaviour.
+     * <p>Admin opens everything. Sessions with a missing or unknown roleId are denied;
+     * WIP pages without a page-specific rule remain available only to recognized official roles.
      */
     private static boolean canOpen(String viewName, Object roleId) {
-        List<String> allowed = allowedRoles(viewName);
-        if (allowed == null || roleId == null || String.valueOf(roleId).isBlank()) {
+        String role = roleId == null ? "" : String.valueOf(roleId).trim();
+        // A session without a recognized official role is not an authenticated
+        // developer identity, even for WIP pages that have no page-specific rule.
+        if (!ROLE_LABELS.containsKey(role)) {
+            return false;
+        }
+        if (ADMIN_ROLE.equals(role)) {
             return true;
         }
-        String role = String.valueOf(roleId).trim();
-        return ADMIN_ROLE.equals(role) || allowed.contains(role);
+        List<String> allowed = allowedRoles(viewName);
+        return allowed == null || allowed.contains(role);
     }
 
     /** "ITI Login", "District Login, Nodal Login", or "" when the view has no role guard. */
