@@ -157,6 +157,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // District and ITI verification have distinct authorities.
         if (path.startsWith("/api/dv/")) {
+            if ("/api/dv/window-status".equals(path)) {
+                return "GET".equals(method)
+                        && ("2".equals(role) || "3".equals(role) || "4".equals(role) || "10".equals(role));
+            }
             if (path.endsWith("/approve-iti") || path.endsWith("/reject-iti")) {
                 return "4".equals(role) && hasScope(insCode);
             }
@@ -164,9 +168,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return "3".equals(role) && hasScope(insCode);
             }
             if (path.endsWith("/lookup")) {
-                return ("3".equals(role) || "4".equals(role)) && hasScope(insCode);
+                return "GET".equals(method)
+                        && ("3".equals(role) || "4".equals(role)) && hasScope(insCode);
             }
-            return "2".equals(role) || "3".equals(role) || "4".equals(role) || "10".equals(role);
+            return false;
         }
 
         if ("/admission/admission-image-upload".equals(path)) {
