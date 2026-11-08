@@ -63,9 +63,9 @@ public class CorsConfig {
             return;
         }
 
-        if (origins.contains("*")) {
+        if (origins.stream().anyMatch(origin -> origin.contains("*"))) {
             throw new IllegalStateException(
-                    "Wildcard CORS origins are forbidden when credentials are enabled. "
+                    "Wildcard CORS origins and origin patterns are forbidden when credentials are enabled. "
                     + "Configure CORS_ALLOWED_ORIGINS with exact trusted origins.");
         }
 
