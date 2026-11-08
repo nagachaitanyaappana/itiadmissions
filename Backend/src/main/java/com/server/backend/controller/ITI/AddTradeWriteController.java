@@ -97,6 +97,7 @@ public class AddTradeWriteController {
         if (!(value instanceof Claims claims)) return; // trusted Frontend server-side compatibility
         String role = String.valueOf(claims.get("roleId"));
         String scope = claims.get("insCode") == null ? "" : String.valueOf(claims.get("insCode"));
+        if ("2".equals(role) || "10".equals(role)) return;
         if (!"4".equals(role) || itiCode == null || !itiCode.trim().equalsIgnoreCase(scope.trim())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "An ITI official may only manage the ITI assigned to their account");
