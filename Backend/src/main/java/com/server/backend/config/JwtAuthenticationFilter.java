@@ -206,7 +206,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         || studentObjects.isItiInDistrict(requestedIti, insCode);
             }
             if ("4".equals(role) && hasScope(insCode) && itiScopedReport(path)) {
-                return true;
+                return hasScope(studentObjects.districtForIti(insCode));
             }
             if ("/api/reports/student-details".equals(path)) {
                 String regid = request.getParameter("regid");
@@ -540,11 +540,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 "/api/reports/permitted-shift-unit").contains(path);
     }
 
-    private static HttpServletRequest withTrustedIdentityHeaders(HttpServletRequest request, Claims claims) {
+    private HttpServletRequest withTrustedIdentityHeaders(HttpServletRequest request, Claims claims) {
         String role = claim(claims, "roleId");
         String insCode = claim(claims, "insCode");
         String itiCode = "4".equals(role) ? insCode : null;
-        String distCode = "3".equals(role) ? insCode : null;
+        String distCode = "3".equals(role) ? insCode
+                : "4".equals(role) ? studentObjects.districtForIti(insCode) : null;
 
         return new HttpServletRequestWrapper(request) {
             @Override
@@ -568,7 +569,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             @Override
             public String getParameter(String name) {
-                if ("3".equals(role) && isDistrictParameter(name)) return insCode;
+                if (("3".equals(role) || "4".equals(role)) && isDistrictParameter(name)) {
+                    return distCode;
+                }
                 if ("4".equals(role) && isItiParameter(name)) return insCode;
                 return super.getParameter(name);
             }
@@ -585,11 +588,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @Override
             public Map<String, String[]> getParameterMap() {
                 Map<String, String[]> parameters = new HashMap<>(super.getParameterMap());
-                if ("3".equals(role)) {
-                    for (String name : new String[] { "distCode", "dist_code", "districtCode", "dist" }) {
-                        parameters.put(name, new String[] { insCode });
+                if ("3".equals(role) || "4".equals(role)) {
+                    if (distCode != null) {
+                        for (String name : new String[] { "distCode", "dist_code", "districtCode", "dist" }) {
+                            parameters.put(name, new String[] { distCode });
+                        }
                     }
-                } else if ("4".equals(role)) {
+                }
+                if ("4".equals(role)) {
                     for (String name : new String[] { "itiCode", "iti_code" }) {
                         parameters.put(name, new String[] { insCode });
                     }
