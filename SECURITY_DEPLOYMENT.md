@@ -72,7 +72,7 @@ Legacy plaintext/MD5 verification remains temporarily for backward compatibility
 
 ## Static analysis and dependency reports
 
-- Gitleaks scans repository history/current changes for accidental secrets.
+- Gitleaks scans the pull-request diff or latest pushed commit for accidental secrets. It does not certify earlier Git history; run a full-history scan after the known historical database credential is rotated and the coordinated history-cleanup decision is completed.
 - Trivy scans Maven/npm dependencies and configuration for high/critical vulnerabilities; its JSON report is retained as a workflow artifact.
 - CodeQL analyzes Java and JavaScript/TypeScript using extended security queries; its SARIF report is retained as a workflow artifact.
 - The current Trivy report for both Maven modules contains no CRITICAL/HIGH dependency vulnerabilities. CodeQL is retained as SARIF for review; its static findings are not automatically treated as a clean bill of health. The latest reviewed report included query-parameter-to-fixed-Backend-URL SSRF taint paths, backend POST handlers protected by the Frontend gateway/internal-service boundary, route-policy taint paths, and quality findings. Confirm any future SSRF/CSRF finding against the actual sink and request boundary instead of suppressing it blindly.
